@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>欧盟洪水监测系统 - 真实数据搜索</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .search-section {
+            padding: 40px;
+            background: #f8f9fa;
+        }
+        
+        .search-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 20px;
+            align-items: end;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
+        
+        .form-group input, .form-group select {
+            padding: 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        
+        .search-btn {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+        
+        .search-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .results-section {
+            padding: 40px;
+            min-height: 400px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #7f8c8d;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .result-card {
+            background: white;
+            border: 1px solid #e1e5e9;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .result-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .result-header {
+            display: flex;
+            justify-content: between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        
+        .result-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .severity-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .severity-extreme { background: #e74c3c; color: white; }
+        .severity-high { background: #f39c12; color: white; }
+        .severity-medium { background: #f1c40f; color: #2c3e50; }
+        .severity-low { background: #27ae60; color: white; }
+        .severity-unknown { background: #95a5a6; color: white; }
+        
+        .result-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .meta-label {
+            font-size: 12px;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .meta-value {
+            font-size: 14px;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+        
+        .result-description {
+            color: #34495e;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        
+        .result-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 15px;
+            border-top: 1px solid #ecf0f1;
+        }
+        
+        .source-link {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .source-link:hover {
+            text-decoration: underline;
+        }
+        
+        .confidence {
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 60px;
+            color: #7f8c8d;
+        }
+        
+        .stats {
+            background: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+        
+        @media (max-width: 768px) {
+            .search-form {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .result-meta {
+                grid-template-columns: 1fr;
+            }
+            
+            .result-footer {
+                flex-direction: column;
+                gap: 10px;
+                align-items: flex-start;
+            }
+        }
+        
+        .search-info-section {
+            padding: 20px 40px;
+            background: #e8f4fd;
+            border-top: 1px solid #bde0ff;
+            margin: 0;
+        }
+        
+        .search-info {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #3498db;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .search-info h4 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        
+        .search-info p {
+            margin-bottom: 8px;
+            color: #34495e;
+            font-size: 0.95em;
+        }
+        
+        .search-info p:last-child {
+            margin-bottom: 0;
+        }
+        
+        @media (max-width: 768px) {
+            .search-info-section {
+                padding: 15px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌊 欧盟洪水监测系统</h1>
+            <p>实时搜索真实洪水数据 - 来自官方气象API和社交媒体</p>
+        </div>
+        
+        <div class="search-section">
+            <div class="stats" id="stats">
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-number" id="totalRecords">-</div>
+                        <div class="stat-label">总记录数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="processedRecords">-</div>
+                        <div class="stat-label">已处理记录</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="averageRisk">-</div>
+                        <div class="stat-label">平均风险</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="maxWaterLevel">-</div>
+                        <div class="stat-label">最大水位(m)</div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-bar" style="padding: 0 40px 10px 40px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button id="btnIngest" class="search-btn" type="button">📥 采集示例数据</button>
+                <button id="btnProcess" class="search-btn" type="button">⚙️ 处理数据</button>
+                <button id="btnRefresh" class="search-btn" type="button">🔄 刷新统计</button>
+                <a href="/export" target="_blank" class="search-btn">⬇️ 导出 CSV</a>
+            </div>
+            
+            <form class="search-form" id="searchForm">
+                <div class="form-group">
+                    <label for="country">国家/地区</label>
+                    <select id="country" name="country">
+                        <option value="">所有国家</option>
+                        <option value="Spain">西班牙</option>
+                        <option value="Germany">德国</option>
+                        <option value="Italy">意大利</option>
+                        <option value="France">法国</option>
+                        <option value="Denmark">丹麦</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="date">日期</label>
+                    <input type="date" id="date" name="date" value="2025-10-07">
+                </div>
+                
+                <div class="form-group">
+                    <label for="severity">严重程度</label>
+                    <select id="severity" name="severity">
+                        <option value="">所有级别</option>
+                        <option value="extreme">极高</option>
+                        <option value="high">高</option>
+                        <option value="medium">中等</option>
+                        <option value="low">低</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="search-btn" id="searchBtn">
+                    🔍 搜索数据
+                </button>
+            </form>
+        </div>
+        
+        <!-- 搜索信息显示区域 -->
+        <div class="search-info-section" id="searchInfo" style="display: none;">
+            <div class="search-info">
+                <h4>🔍 智能搜索状态</h4>
+                <div id="searchInfoContent"></div>
+            </div>
+        </div>
+        
+        <div class="results-section" id="resultsSection">
+            <div class="no-results">
+                <h3>📊 系统已就绪</h3>
+                <p>使用上方搜索表单查找真实洪水数据</p>
+                <p style="margin-top: 10px; font-size: 0.9em;">
+                    💡 提示：系统每6小时自动收集最新数据
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 加载统计数据（改为调用本地接口）
+        async function loadStats() {
+            try {
+                const response = await fetch('/analysis/summary');
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('totalRecords').textContent = data.total_records ?? 0;
+                    document.getElementById('processedRecords').textContent = data.processed_records ?? 0;
+                    document.getElementById('averageRisk').textContent = (data.average_risk ?? 0).toFixed(2);
+                    document.getElementById('maxWaterLevel').textContent = data.max_water_level ?? 0;
+                }
+            } catch (error) {
+                console.error('加载统计数据失败:', error);
+            }
+        }
+
+        // 搜索功能（改为调用本地 /search）
+        document.getElementById('searchForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const searchBtn = document.getElementById('searchBtn');
+            const resultsSection = document.getElementById('resultsSection');
+            searchBtn.disabled = true;
+            searchBtn.textContent = '🔄 搜索中...';
+            resultsSection.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>正在搜索本地数据...</p>
+                </div>
+            `;
+            try {
+                const formData = new FormData(e.target);
+                const params = new URLSearchParams();
+                const country = (formData.get('country') || '').toString();
+                const date = (formData.get('date') || '').toString();
+                const severity = (formData.get('severity') || '').toString();
+                if (country) params.set('country', country);
+                if (date) params.set('date', date);
+                if (severity) params.set('severity', severity);
+                const response = await fetch('/search' + (params.toString() ? ('?' + params.toString()) : ''));
+                if (!response.ok) throw new Error('本地搜索失败');
+                const data = await response.json();
+                displayResults(data.items || []);
+            } catch (error) {
+                console.error('搜索错误:', error);
+                resultsSection.innerHTML = `
+                    <div class="no-results">
+                        <h3>❌ 搜索失败</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            } finally {
+                searchBtn.disabled = false;
+                searchBtn.textContent = '🔍 搜索数据';
+            }
+        });
+
+            // 采集/处理/刷新 按钮绑定
+            document.getElementById('btnIngest').addEventListener('click', async function() {
+                try {
+                    const res = await fetch('/ingestion/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ count: 10 }) });
+                    const j = await res.json();
+                    alert('已采集示例数据：' + (j.inserted ?? 0) + ' 条');
+                    await loadStats();
+                } catch (e) {
+                    alert('采集失败');
+                }
+            });
+            document.getElementById('btnProcess').addEventListener('click', async function() {
+                try {
+                    const res = await fetch('/processing/run', { method: 'POST' });
+                    const j = await res.json();
+                    alert('已处理：' + (j.processed ?? 0) + ' 条');
+                    await loadStats();
+                } catch (e) {
+                    alert('处理失败');
+                }
+            });
+            document.getElementById('btnRefresh').addEventListener('click', function() { loadStats(); });
+
+        function displayResults(results) {
+            const resultsSection = document.getElementById('resultsSection');
+            if (!Array.isArray(results) || results.length === 0) {
+                resultsSection.innerHTML = `
+                    <div class="no-results">
+                        <h3>🔍 未找到数据</h3>
+                        <p>没有找到符合条件的记录</p>
+                    </div>
+                `;
+                return;
+            }
+            const getSeverityClass = (s) => {
+                if (!s) return 'severity-unknown';
+                const sev = s.toLowerCase();
+                if (sev === 'extreme') return 'severity-extreme';
+                if (sev === 'high') return 'severity-high';
+                if (sev === 'medium') return 'severity-medium';
+                return 'severity-low';
+            };
+            const getSourceTypeLabel = (st) => {
+                const map = { 'official_api': '官方API', 'social_media': '社交媒体', 'news': '新闻', 'sensor': '传感器' };
+                return map[st] || st || '未知';
+            };
+            const resultsHTML = results.map(r => `
+                <div class="result-card">
+                    <div class="result-header">
+                        <div style="flex: 1;">
+                            <div class="result-title">${escapeHtml(r.title || `记录 #${r.id}`)}</div>
+                            ${r.severity ? `<div class="severity-badge ${getSeverityClass(r.severity)}">${escapeHtml(r.severity)}</div>` : ''}
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            ${r.confidence != null ? `<div class="confidence" style="font-size: 12px; color: ${r.confidence >= 0.7 ? '#27ae60' : r.confidence >= 0.5 ? '#f39c12' : '#95a5a6'};">
+                                置信度: ${(r.confidence * 100).toFixed(0)}%
+                            </div>` : ''}
+                            ${r.evidence_count > 1 ? `<div style="font-size: 11px; color: #3498db;">📊 ${r.evidence_count}个来源</div>` : ''}
+                        </div>
+                    </div>
+                    <div class="result-meta">
+                        <div class="meta-item">
+                            <div class="meta-label">国家/地区</div>
+                            <div class="meta-value">${escapeHtml(r.country || '未知')}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">具体位置</div>
+                            <div class="meta-value">${escapeHtml(r.specific_location || '未知')}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">事件时间</div>
+                            <div class="meta-value">${formatDate(r.event_time || r.created_at)}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">水位(m)</div>
+                            <div class="meta-value">${r.water_level ?? '-'}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">数据来源</div>
+                            <div class="meta-value">${escapeHtml(getSourceTypeLabel(r.source_type))}${r.source_name ? ` (${escapeHtml(r.source_name)})` : ''}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">状态</div>
+                            <div class="meta-value">${r.status || 'new'}</div>
+                        </div>
+                    </div>
+                    <div class="result-description">${escapeHtml(r.description || '无描述')}</div>
+                    ${r.source_url ? `<div class="result-footer">
+                        <a href="${escapeHtml(r.source_url)}" target="_blank" class="source-link">📄 查看原始来源</a>
+                    </div>` : ''}
+                </div>
+            `).join('');
+            resultsSection.innerHTML = `
+                <div style="margin-bottom: 20px;">
+                    <h3>📊 搜索结果 (${results.length} 条记录)</h3>
+                </div>
+                ${resultsHTML}
+            `;
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return String(dateString);
+            return date.toLocaleString('zh-CN');
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStats();
+        });
+    </script>
+</body>
+</html>
