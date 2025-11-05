@@ -1,0 +1,43 @@
+/* 地图相关样式 */
+
+/* NUTS工具提示样式 */
+.nuts-tooltip {
+    background: rgba(255, 255, 255, 0.95) !important;
+    border: 2px solid #3498db !important;
+    border-radius: 8px !important;
+    padding: 10px 15px !important;
+    font-size: 13px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    max-width: 300px !important;
+    color: #2c3e50 !important;
+}
+
+.nuts-tooltip div {
+    margin: 4px 0;
+    line-height: 1.5;
+}
+
+.nuts-tooltip strong {
+    color: #1e3c72;
+    margin-right: 5px;
+}
+
+/* NUTS弹出窗口样式 */
+.nuts-popup {
+    font-size: 13px;
+}
+
+.nuts-popup .leaflet-popup-content {
+    margin: 15px;
+    line-height: 1.6;
+}
+
+.nuts-popup .leaflet-popup-content div {
+    margin: 6px 0;
+}
+
+.nuts-popup .leaflet-popup-content strong {
+    color: #1e3c72;
+    margin-right: 8px;
+}
+

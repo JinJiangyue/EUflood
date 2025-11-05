@@ -9,10 +9,16 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@types/multer": "^2.0.0",
+    "@types/node-cron": "^3.0.11",
+    "@types/uuid": "^10.0.0",
     "better-sqlite3": "^9.4.3",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "multer": "^2.0.2",
+    "node-cron": "^4.2.1",
     "pino": "^9.4.0",
+    "uuid": "^13.0.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {

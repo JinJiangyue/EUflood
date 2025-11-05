@@ -4,6 +4,10 @@ import { registerIngestionModule } from '../modules/ingestion/routes';
 import { registerProcessingModule } from '../modules/processing/routes';
 import { registerAnalysisModule } from '../modules/analysis/routes';
 import { registerExportingModule } from '../modules/exporting/routes';
+import { registerTriggerModule } from '../modules/trigger/routes';
+import { registerEventsModule } from '../modules/events/routes';
+import { registerMergerModule } from '../modules/events/merger-routes';
+import { registerPythonModule } from '../modules/python/routes';
 
 export function registerRoutes(app: Express) {
   app.get('/health', (_req: Request, res: Response) => res.json({ ok: true }));
@@ -12,6 +16,10 @@ export function registerRoutes(app: Express) {
   registerProcessingModule(app);
   registerAnalysisModule(app);
   registerExportingModule(app);
+  registerTriggerModule(app);
+  registerEventsModule(app);
+  registerMergerModule(app);
+  registerPythonModule(app);
 }
 
 
