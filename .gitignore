@@ -13,7 +13,10 @@ dist/
 apps/api/dist/
 
 # 本地数据库与导出
+apps/api/uploads/
 apps/api/dev.db
+apps/api/dev.db-shm
+apps/api/dev.db-wal
 deploy/local/export.csv
 
 # 日志
@@ -35,4 +38,11 @@ apps/api/src/modules/python/scripts/test_example
 # 嵌入式Python（可选，如果要版本控制可以删除这行）
 python-embed/
 apps/api/python-embed/
+
+# GeoJSON（体积大，全部忽略）
+*.geojson
+**/*.geojson
+
+*.gpkg
+**/*.gpkg
 

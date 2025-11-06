@@ -5,15 +5,7 @@ import fs from 'fs';
 import { getUploadDir, getOutputDir } from './config';
 import crypto from 'crypto';
 
-// 生成唯一文件名
-function generateUniqueFilename(originalname: string): string {
-  const ext = path.extname(originalname);
-  const name = path.basename(originalname, ext);
-  const timestamp = Date.now();
-  const randomId = crypto.randomBytes(4).toString('hex');
-  return `${name}_${timestamp}_${randomId}${ext}`;
-}
-
+// 直接使用原始文件名（同名文件会覆盖）
 // 配置multer存储
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -21,8 +13,9 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    const uniqueName = generateUniqueFilename(file.originalname);
-    cb(null, uniqueName);
+    // 直接使用原始文件名，同名文件会覆盖
+    // 如果文件已存在，multer 会自动覆盖
+    cb(null, file.originalname);
   }
 });
 

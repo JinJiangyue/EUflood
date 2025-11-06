@@ -72,6 +72,31 @@ if (isNew) {
     CREATE INDEX IF NOT EXISTS idx_event_candidates_country ON event_candidates(country);
     CREATE INDEX IF NOT EXISTS idx_event_candidates_source ON event_candidates(source);
     CREATE INDEX IF NOT EXISTS idx_event_candidates_enriched ON event_candidates(enriched);
+
+    -- 降雨事件表（一行=一个地点的一次降雨），主键由触发器生成：YYYYMMDD_Province_seq
+    CREATE TABLE IF NOT EXISTS rain_event (
+      id TEXT PRIMARY KEY,
+      date TEXT NOT NULL,
+      country TEXT,
+      province TEXT NOT NULL,
+      city TEXT,
+      longitude REAL NOT NULL,
+      latitude REAL NOT NULL,
+      value REAL,
+      threshold REAL,
+      file_name TEXT NOT NULL,
+      seq INTEGER,
+      searched INTEGER DEFAULT 0 -- 0: 未搜索；1: 已搜索
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_re_date ON rain_event(date);
+    CREATE INDEX IF NOT EXISTS idx_re_region ON rain_event(province);
+    CREATE INDEX IF NOT EXISTS idx_re_value ON rain_event(value);
+    -- 同一天同一文件的同一坐标不重复
+    CREATE UNIQUE INDEX IF NOT EXISTS uniq_rain_event_dupe ON rain_event(date, file_name, longitude, latitude);
+
+    -- 说明：SQLite 触发器不支持为 NEW 赋值，这里不创建触发器。
+    -- id 与 seq 改为在应用层（Node 路由）计算后写入。
   `);
 }
 
@@ -127,6 +152,40 @@ try {
       CREATE INDEX IF NOT EXISTS idx_event_candidates_enriched ON event_candidates(enriched);
     `);
   }
+
+  // 确保存在 rain_event 表与索引/触发器（老库升级）
+  if (!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='rain_event'`).get()) {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS rain_event (
+        id TEXT PRIMARY KEY,
+        date TEXT NOT NULL,
+        country TEXT,
+        province TEXT NOT NULL,
+        city TEXT,
+        longitude REAL NOT NULL,
+        latitude REAL NOT NULL,
+        value REAL,
+        threshold REAL,
+        file_name TEXT NOT NULL,
+        seq INTEGER,
+        searched INTEGER DEFAULT 0
+      );
+      CREATE INDEX IF NOT EXISTS idx_re_date ON rain_event(date);
+      CREATE INDEX IF NOT EXISTS idx_re_region ON rain_event(province);
+      CREATE INDEX IF NOT EXISTS idx_re_value ON rain_event(value);
+      CREATE UNIQUE INDEX IF NOT EXISTS uniq_rain_event_dupe ON rain_event(date, file_name, longitude, latitude);
+      -- 不创建触发器；由应用层写入 id/seq。
+    `);
+  }
+
+  // 升级：为 rain_event 增加 searched 列（0/1 标识是否已搜索）
+  try {
+    const info = db.prepare(`PRAGMA table_info(rain_event)`).all() as any[];
+    const hasSearched = info.some(c => c.name === 'searched');
+    if (!hasSearched) {
+      db.exec(`ALTER TABLE rain_event ADD COLUMN searched INTEGER DEFAULT 0`);
+    }
+  } catch {}
 } catch {}
 
 

@@ -52,19 +52,26 @@
                         </div>
                     </div>
                     <div style="margin-bottom: 15px;">
-                        <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #2c3e50;">阈值设置（固定：50.0，只显示值大于50的点）</label>
-                        <input type="number" id="valueThreshold" value="50.0" min="0" step="0.1" style="padding: 10px; border: 2px solid #e1e5e9; border-radius: 8px; width: 200px; font-size: 14px; background: #f8f9fa;" readonly>
-                        <small style="display: block; margin-top: 5px; color: #666; font-size: 12px;">当前阈值：50.0（只显示值大于50的点）</small>
+                        <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #2c3e50;">确认日期（可手动修改，用于生成事件ID）</label>
+                        <input type="date" id="confirmedDateInput" style="padding: 10px; border: 2px solid #e1e5e9; border-radius: 8px; width: 220px; font-size: 14px; background: #ffffff;">
+                        <small style="display: block; margin-top: 5px; color: #666; font-size: 12px;">默认从文件名解析（如 20251106），可改</small>
                     </div>
-                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #2c3e50;">阈值设置（默认 50.0，可修改；显示值大于该阈值的点）</label>
+                        <input type="number" id="valueThreshold" value="50.0" min="0" step="0.1" style="padding: 10px; border: 2px solid #e1e5e9; border-radius: 8px; width: 200px; font-size: 14px; background: #ffffff;">
+                        <small style="display: block; margin-top: 5px; color: #666; font-size: 12px;">留空或非法时按 50.0 处理</small>
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
                         <button id="btnUploadInterpolationFile" class="search-btn" type="button" style="flex: 1;">📤 上传文件</button>
-                        <button id="btnRunInterpolation" class="search-btn" type="button" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);" disabled>🗺️ 运行空间插值</button>
+                        <button id="btnSaveRainEvents" class="search-btn" type="button" style="flex: 1; background: linear-gradient(135deg, #27ae60 0%, #229954 100%);" disabled>💾 筛选入库</button>
                     </div>
                     <div id="interpolationStatus" style="margin-top: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
                     <!-- 地图容器 -->
                     <div id="mapContainer" style="margin-top: 20px; height: 600px; border-radius: 8px; overflow: hidden; display: block; border: 2px solid #e1e5e9;">
                         <div id="map" style="width: 100%; height: 100%;"></div>
                     </div>
+                    <!-- 地点列表（省/市）显示区域 -->
+                    <div id="interpolationPlaces" style="margin-top: 16px; background: #ffffff; border: 1px solid #e1e5e9; border-radius: 8px; padding: 12px; display: none;"></div>
                 </div>
                 
                 <h2 style="margin-bottom: 15px; color: #1e3c72; margin-top: 40px;">📅 查询事件（支持日期范围）</h2>

@@ -1,4 +1,4 @@
-# 代码结构解析（v1.0.1）
+# 代码结构解析（v1.0.2）
 
 ## 根目录结构
 
@@ -98,8 +98,10 @@ europe/
 - `interpolation.py`: 空间插值分析主脚本
   - 自动检测坐标列（支持无表头）
   - EPSG:3035 → WGS84 坐标转换
-  - 阈值筛选（固定 50.0）
-  - GeoJSON 空间筛选
+  - 阈值筛选（可配置，默认 50.0）
+  - GeoJSON 空间筛选（域多边形）
+  - 从域 GeoJSON 解析国家/省（CNTR_CODE/NUTS_NAME/NAME）
+  - 从 LAU_2019.gpkg 获取城市（LAU_NAME）
   - 每区域最大值点选择
 - `test_interpolation.py`: 测试脚本（可直接运行）
 - `run_test.bat`: Windows 批处理测试脚本
@@ -160,9 +162,11 @@ frontend/
 - 提供按钮：采集、处理、刷新统计、导出 CSV
 - **空间插值分析界面**：
   - 文件上传功能
+  - 阈值可配置（默认 50.0，可修改）
   - Leaflet 地图集成
   - 自动加载 GeoJSON 底图
   - 数据点可视化（基于阈值着色）
+  - 地点列表显示（国家/省/市，按唯一组合统计）
   - 错误处理和超时处理
 
 ### 地图功能
@@ -207,13 +211,18 @@ X坐标        Y坐标        值
     "total_points": 8,
     "value_threshold": 50.0,
     "coordinate_transform": true,
-    "geojson_filtered": true
+    "geojson_filtered": true,
+    "lau_join": true
   },
   "points": [
     {
       "longitude": -0.4459,
       "latitude": 39.1134,
-      "value": 102.0
+      "value": 102.0,
+      "country_code": "ES",
+      "country_name": "Spain",
+      "province_name": "Valencia/València",
+      "city_name": "Carcaixent"
     }
   ]
 }

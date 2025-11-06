@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 REM 测试 interpolation.py 脚本的批处理文件
 REM 使用方法：直接双击此文件，或从命令行运行
 

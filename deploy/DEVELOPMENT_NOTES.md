@@ -1,5 +1,39 @@
 # Development Notes
 
+## 1.0.2 - 2025-01-13（新增条目，旧内容保留在本条目下方）
+
+### 空间插值分析增强经验
+
+**行政区解析策略**：
+- 采用"先域 GeoJSON，后 LAU"的顺序：先用域 GeoJSON 做空间筛选并解析国家/省，再用 LAU 补充城市
+- 域 GeoJSON 字段优先级：CNTR_CODE → country_code，NUTS_NAME → province_name，NAME 作为兼容（如 ES_Murcia）
+- LAU 仅取 LAU_NAME → city_name，不覆盖已解析的国家/省
+
+**sjoin 列名后缀问题**：
+- GeoPandas 的 sjoin 在左右表有同名列时会自动加后缀（_right/_left）
+- 解决方案：代码中同时查找 ['NAME', 'NAME_right', 'NAME_left'] 等变体
+- 关键发现：域 GeoJSON 的 NAME 在 sjoin 后可能变成 NAME_right，必须兼容
+
+**数据流设计**：
+- 第一阶段：域 GeoJSON 空间筛选 → 解析国家/省（保留在 final_points）
+- 第二阶段：LAU sjoin → 仅补充 city_name，不触碰国家/省
+- 避免覆盖：删除 NUTS 省级 sjoin 分支，防止覆盖已解析的 province_name
+
+**阈值可配置化**：
+- 前端输入框改为可编辑（去掉 readonly）
+- 后端默认值 50.0，前端传值则覆盖
+- 验证逻辑：非法值回退到 50.0
+
+**代码精简原则**：
+- 删除所有"尝试多种字段"的冗余逻辑，只保留实际使用的字段
+- 移除不必要的日志和调试代码
+- 保持表结构干净：只存必需字段，不存文件名/版本等元数据
+
+**测试脚本增强**：
+- 使用子进程方式运行，捕获 stdout/stderr 分别处理
+- 高亮显示关键日志（域 GeoJSON 字段解析）
+- 统计缺失省名的点，便于快速定位问题
+
 ## 1.0.1 - 2025-01-13（新增条目，旧内容保留在本条目下方）
 
 ### 前端重构经验

@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.0.2 - 2025-01-13
+
+### ✨ 新增功能
+- **空间插值分析增强**：
+  - 阈值可配置：前端支持修改阈值（默认 50.0），不再固定
+  - 行政区解析：从域 GeoJSON 自动解析国家代码（CNTR_CODE）和省名（NUTS_NAME/NAME）
+  - 城市识别：从 LAU_2019.gpkg 自动获取城市名（LAU_NAME）
+  - 地点列表：地图下方显示国家/省/市列表，按唯一组合统计点数
+  - 国家显示：前端优先显示国家全称（Spain/United Kingdom），而非代码
+
+### 🛠️ 技术改进
+- **代码精简**：
+  - 删除 NUTS 省级 sjoin 分支，避免覆盖从域 GeoJSON 解析的省名
+  - 精简 LAU sjoin 逻辑，仅取 LAU_NAME 作为城市名
+  - 移除冗余字段（geojson_name, lau_name, source_file）和多余日志
+  - 优化字段解析：优先使用 CNTR_CODE/NUTS_NAME，兼容 NAME 字段（如 ES_Murcia）
+- **文件管理**：
+  - `.gitignore` 更新：忽略 uploads 目录、数据库辅助文件（.db-shm, .db-wal）、GeoJSON/GPKG 大文件
+- **测试增强**：
+  - `test_interpolation.py` 增强调试输出，显示域 GeoJSON 字段解析详情
+  - 统计缺失省名的点，便于快速定位问题
+
+### 🐛 问题修复
+- 修复省名被 NUTS sjoin 覆盖的问题（保留域 GeoJSON 解析结果）
+- 修复 sjoin 后列名后缀问题（兼容 NAME_right/NAME_left 等）
+- 修复编码问题（Windows GBK 编码错误，改用 UTF-8 二进制输出）
+
 ## 1.0.1 - 2025-01-13
 
 ### ✨ 新增功能

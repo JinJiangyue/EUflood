@@ -100,6 +100,11 @@ def main():
         sys.exit(1)
     
     geojson_file = args.get('geojson_file')
+    # 行政区落区：可选 NUTS（省级）与 LAU（市级）数据源（支持 GeoPackage/GeoJSON）
+    nuts_file = args.get('nuts_file')  # 例如: data/NUTS_RG_20M_2021_4326.gpkg 或 .geojson
+    nuts_layer = args.get('nuts_layer')  # GPKG 图层名（可选）
+    lau_file = args.get('lau_file')  # 例如: data/LAU_2024.gpkg 或 .geojson
+    lau_layer = args.get('lau_layer')  # GPKG 图层名（可选）
     # 设置固定阈值（大于50才保留）
     value_threshold = args.get('value_threshold', 50.0)  # 默认阈值为50
     # 如果用户没有提供阈值，使用固定阈值50.0
@@ -266,6 +271,106 @@ def main():
                     else:
                         # 保留所有在区域内的点
                         final_points = points_within
+                    # 从域 GeoJSON 中提取国家/省（优先使用 NAME，如 ES_Murcia）
+                    try:
+                        base_cols = set(final_points.columns)
+                        # 先强制使用 NAME 系列列解析（避免依赖其它字段）
+                        name_candidates = ['NAME', 'NAME_right', 'NAME_left', 'name', 'Name']
+                        name_col = next((c for c in name_candidates if c in base_cols), None)
+                        if name_col:
+                            def parse_name(val):
+                                s = str(val) if val is not None else ''
+                                if '_' in s:
+                                    cc, prov = s.split('_', 1)
+                                    return cc.strip(), prov.replace('_', ' ').strip()
+                                # 无下划线时，认为整列就是省名（国家码留空）
+                                return None, s.strip()
+                            parsed = final_points[name_col].map(parse_name)
+                            final_points['country_code'] = parsed.map(lambda x: x[0] if x else None)
+                            final_points['province_name'] = parsed.map(lambda x: x[1] if x else None)
+                        
+                        # 以下为兼容兜底（若 NAME 不存在时才尝试）
+                        base_cols = set(final_points.columns)
+                        # 常见国家字段
+                        country_candidates = ['CNTR_CODE', 'country', 'COUNTRY', 'CNTR', 'CNTR_NAME', 'CNTRNAME', 'ISO2', 'ISO3']
+                        # 常见省/区域（NUTS）名称字段（注意：你的域GeoJSON里使用 NAME 组合字段）
+                        province_candidates = ['NUTS_NAME', 'NAME_LATN', 'NAME_ENGL', 'NAME', 'NAME_EN', 'nuts_name']
+                        country_col = next((c for c in country_candidates if c in base_cols), None)
+                        province_col = next((c for c in province_candidates if c in base_cols), None)
+                        # 特例：如果存在 NAME（如 "ES_Murcia"），优先用它解析
+                        if 'NAME' in base_cols:
+                            def _parse_name(val):
+                                try:
+                                    s = str(val)
+                                    if '_' in s:
+                                        cc, rest = s.split('_', 1)
+                                        return cc, rest.replace('_', ' ').strip()
+                                except Exception:
+                                    pass
+                                return None, None
+                            parsed = final_points['NAME'].map(_parse_name)
+                            final_points['country_code_from_name'] = parsed.map(lambda x: x[0] if x else None)
+                            final_points['province_from_name'] = parsed.map(lambda x: x[1] if x else None)
+                        else:
+                            final_points['country_code_from_name'] = None
+                            final_points['province_from_name'] = None
+                        # 统一国家代码：优先 NAME 解析，其次 country_col
+                        if 'country_code_from_name' in final_points.columns:
+                            final_points['country_code'] = final_points['country_code_from_name']
+                        if country_col:
+                            final_points['country_code'] = final_points['country_code'].fillna(final_points[country_col]) if 'country_code' in final_points.columns else final_points[country_col]
+                        # 统一省名：优先 NAME 解析，其次 province_col
+                        if 'province_from_name' in final_points.columns:
+                            final_points['province_name'] = final_points['province_from_name']
+                        if province_col:
+                            # 若为空或疑似代码，再回退到 province_col
+                            try:
+                                import re
+                                code_like = re.compile(r'^[A-Z]{2,3}[-_]?\w{2,5}$')
+                                base = final_points['province_name'] if 'province_name' in final_points.columns else None
+                                if base is not None:
+                                    mask_na = base.isna() | (base.astype(str).str.strip() == '') | base.astype(str).str.match(code_like)
+                                    final_points.loc[mask_na, 'province_name'] = final_points.loc[mask_na, province_col]
+                                else:
+                                    final_points['province_name'] = final_points[province_col]
+                            except Exception:
+                                final_points['province_name'] = final_points[province_col]
+                        # 如果通过 NAME 解析不到省名，或省名看起来像代码（如 ES511），则回退到 province_col
+                        try:
+                            import re
+                            code_like = re.compile(r'^[A-Z]{2,3}[-_]?\w{2,5}$')
+                            if 'province_name' in final_points.columns and province_col and province_col in final_points.columns:
+                                mask_na = final_points['province_name'].isna() | (final_points['province_name'].astype(str).str.strip() == '')
+                                mask_code = final_points['province_name'].astype(str).str.match(code_like)
+                                fallback_mask = mask_na | mask_code
+                                if fallback_mask.any():
+                                    final_points.loc[fallback_mask, 'province_name'] = final_points.loc[fallback_mask, province_col]
+                        except Exception:
+                            pass
+                        if country_col:
+                            # 简单国家码到名称映射
+                            code_to_name = {
+                                'ES': 'Spain', 'PT': 'Portugal', 'FR': 'France', 'DE': 'Germany', 'IT': 'Italy',
+                                'NO': 'Norway', 'SE': 'Sweden', 'FI': 'Finland', 'DK': 'Denmark', 'NL': 'Netherlands',
+                                'BE': 'Belgium', 'LU': 'Luxembourg', 'IE': 'Ireland', 'GB': 'United Kingdom', 'UK': 'United Kingdom',
+                                'HR': 'Croatia', 'RO': 'Romania', 'BG': 'Bulgaria', 'GR': 'Greece', 'PL': 'Poland', 'CZ': 'Czechia',
+                                'AT': 'Austria'
+                            }
+                            # 如果已经从 NAME/其它列得到 country_code，则优先用该列映射
+                            if 'country_code' in final_points.columns:
+                                final_points['country_name'] = final_points['country_code'].map(lambda x: code_to_name.get(str(x), str(x)))
+                            else:
+                                final_points['country_name'] = final_points[country_col].map(lambda x: code_to_name.get(str(x), str(x)))
+                        # 日志（样例值）
+                        try:
+                            sample_cc = (final_points['country_code'].dropna().astype(str).head(1).tolist() or [''])[0]
+                            sample_prov = (final_points['province_name'].dropna().astype(str).head(1).tolist() or [''])[0]
+                        except Exception:
+                            sample_cc = ''
+                            sample_prov = ''
+                        print(f"[Progress] Attributes from domain join: name_col={name_col}, country_col={country_col}, province_col={province_col}, sample=({sample_cc}, {sample_prov})", file=sys.stderr)
+                    except Exception as _attr_err:
+                        print(f"[Warning] Failed to map attributes from domain polygons: {_attr_err}", file=sys.stderr)
                 else:
                     # 没有点在区域内，返回空结果
                     print("[Progress] No points found within polygons", file=sys.stderr)
@@ -288,6 +393,64 @@ def main():
                 print(error_msg, file=sys.stderr)
                 sys.exit(1)
         
+        # 行政区落区（在最终点集基础上进行，可与 GeoJSON 过滤配合）
+        province_name_col = None
+        city_name_col = None
+        points_gdf_for_join = None
+        try:
+            if len(final_points) > 0 and ('longitude' in final_points.columns and 'latitude' in final_points.columns):
+                # 防止上一次 sjoin 遗留的 index_right 列与下一次 sjoin 冲突
+                if 'index_right' in final_points.columns:
+                    try:
+                        final_points = final_points.drop(columns=['index_right'])
+                    except Exception:
+                        pass
+                try:
+                    import geopandas as gpd
+                    from shapely.geometry import Point
+                except ImportError:
+                    gpd = None
+                if gpd is not None:
+                    # 将最终点集转为 GeoDataFrame
+                    geometry = [Point(xy) for xy in zip(final_points['longitude'], final_points['latitude'])]
+                    points_gdf_for_join = gpd.GeoDataFrame(final_points.copy(), geometry=geometry, crs="EPSG:4326")
+                    # 再次确保不存在 index_right 列（避免与 sjoin 生成列名冲突）
+                    if 'index_right' in points_gdf_for_join.columns:
+                        try:
+                            points_gdf_for_join = points_gdf_for_join.drop(columns=['index_right'])
+                        except Exception:
+                            pass
+
+                    # 不再执行 NUTS 省级 sjoin；省名已由域 GeoJSON 提供
+
+                    # 市级（LAU）：仅取 LAU_NAME 为 city_name
+                    if lau_file and os.path.exists(lau_file):
+                        print(f"[Progress] Loading LAU for city join: {lau_file}", file=sys.stderr)
+                        lau_gdf = gpd.read_file(lau_file, layer=lau_layer) if lau_layer else gpd.read_file(lau_file)
+                        if lau_gdf.crs != "EPSG:4326":
+                            lau_gdf = lau_gdf.to_crs(epsg=4326)
+                        city_name_col = None
+                        for c in ['LAU_NAME', 'LAU_NAME_right', 'LAU_NAME_left']:
+                            if c in lau_gdf.columns:
+                                city_name_col = c
+                                break
+                        select_cols = [city_name_col, 'geometry'] if city_name_col else ['geometry']
+                        lau_gdf = lau_gdf[select_cols]
+                        joined = gpd.sjoin(points_gdf_for_join, lau_gdf, how='left', predicate='within')
+                        if city_name_col and city_name_col in joined.columns:
+                            points_gdf_for_join['city_name'] = joined[city_name_col]
+                        else:
+                            points_gdf_for_join['city_name'] = None
+                        # 不写入/覆盖国家与省
+                    else:
+                        points_gdf_for_join = points_gdf_for_join.assign(city_name=None)
+
+                    # 回写到 DataFrame（保留非几何列）
+                    if points_gdf_for_join is not None:
+                        final_points = pd.DataFrame(points_gdf_for_join.drop(columns=['geometry']))
+        except Exception as e:
+            print(f"[Warning] NUTS/LAU join failed: {str(e)}", file=sys.stderr)
+
         # 限制点数
         if len(final_points) > max_points:
             final_points = final_points.head(max_points)
@@ -295,11 +458,29 @@ def main():
         # 构建结果
         points = []
         for _, row in final_points.iterrows():
-            points.append({
+            item = {
                 "longitude": float(row['longitude']),
                 "latitude": float(row['latitude']),
                 "value": float(row['value']) if pd.notna(row['value']) else None
-            })
+            }
+            # 附加行政区（如果有）
+            if 'province_name' in row and pd.notna(row['province_name']):
+                item['province_name'] = str(row['province_name'])
+            if 'city_name' in row and pd.notna(row['city_name']):
+                item['city_name'] = str(row['city_name'])
+            if 'country_code' in row and pd.notna(row['country_code']):
+                code = str(row['country_code'])
+                item['country_code'] = code
+                # 简单国家码到名称映射（可按需补充）
+                code_to_name = {
+                    'ES': 'Spain', 'PT': 'Portugal', 'FR': 'France', 'DE': 'Germany', 'IT': 'Italy',
+                    'NO': 'Norway', 'SE': 'Sweden', 'FI': 'Finland', 'DK': 'Denmark', 'NL': 'Netherlands',
+                    'BE': 'Belgium', 'LU': 'Luxembourg', 'IE': 'Ireland', 'GB': 'United Kingdom',
+                    'UK': 'United Kingdom', 'HR': 'Croatia', 'RO': 'Romania', 'BG': 'Bulgaria',
+                    'GR': 'Greece', 'PL': 'Poland', 'CZ': 'Czechia', 'AT': 'Austria'
+                }
+                item['country_name'] = code_to_name.get(code, code)
+            points.append(item)
         
         result = {
             "success": True,
@@ -310,13 +491,24 @@ def main():
                 "coordinate_transform": bool(needs_transform),
                 "geojson_filtered": bool(geojson_file is not None and os.path.exists(geojson_file) if geojson_file else False),
                 "total_before_filter": len(df_valid),
-                "points_after_geojson": len(final_points) if geojson_file else None
+                "points_after_geojson": len(final_points) if geojson_file else None,
+                "lau_join": bool(lau_file is not None and os.path.exists(lau_file) if lau_file else False)
             },
             "points": points
         }
         
         print("[Progress] Generating output...", file=sys.stderr)
-        print(json.dumps(result, ensure_ascii=False))
+        try:
+            # 使用 UTF-8 明确输出，避免 Windows 上 GBK 编码报错
+            sys.stdout.buffer.write(json.dumps(result, ensure_ascii=False).encode('utf-8'))
+            sys.stdout.buffer.write(b"\n")
+            sys.stdout.flush()
+        except Exception as enc_err:
+            # 退化到安全替代：强制 ASCII 转义，保证不中断
+            fallback = json.dumps(result, ensure_ascii=True)
+            sys.stdout.buffer.write(fallback.encode('ascii', errors='ignore'))
+            sys.stdout.buffer.write(b"\n")
+            sys.stdout.flush()
         print("[Progress] Done!", file=sys.stderr)
         
     except Exception as e:

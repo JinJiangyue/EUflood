@@ -29,6 +29,13 @@ TEST_DATA_FILE = 'test_data.txt'  # 或使用绝对路径，如：r'E:\Project\e
 GEOJSON_FILE = 'data/domain_xinyu_20250729_093415.geojson'  # 相对路径
 # GEOJSON_FILE = None  # 如果不需要GeoJSON筛选，设为None
 
+# LAU/NUTS 行政区数据（用于落区标注省/市）
+# 建议使用绝对路径，确保读取到
+LAU_FILE = r'E:\Project\europe\apps\api\src\modules\python\scripts\data\LAU_2019.gpkg'
+LAU_LAYER = None  # 若GPKG有多个图层，请填写具体图层名；否则保持None
+NUTS_FILE = None  # 可选：省级（NUTS3）数据源；无则保持None
+NUTS_LAYER = None
+
 # 固定阈值（值大于此值才保留）
 VALUE_THRESHOLD = 50.0
 
@@ -117,54 +124,93 @@ def test_interpolation():
     else:
         print(f"[测试] 不使用GeoJSON文件（将跳过空间筛选）")
     
+    # 行政区数据：如果存在则加入参数
+    if LAU_FILE and os.path.exists(LAU_FILE):
+        test_args['lau_file'] = LAU_FILE
+        if LAU_LAYER:
+            test_args['lau_layer'] = LAU_LAYER
+        print(f"[测试] 使用LAU文件: {LAU_FILE}{' | 图层: '+LAU_LAYER if LAU_LAYER else ''}")
+    else:
+        print(f"[测试] ⚠️ 未找到LAU文件，跳过城市落区: {LAU_FILE}")
+
+    if NUTS_FILE and os.path.exists(NUTS_FILE):
+        test_args['nuts_file'] = NUTS_FILE
+        if NUTS_LAYER:
+            test_args['nuts_layer'] = NUTS_LAYER
+        print(f"[测试] 使用NUTS文件: {NUTS_FILE}{' | 图层: '+NUTS_LAYER if NUTS_LAYER else ''}")
+    else:
+        if NUTS_FILE:
+            print(f"[测试] ⚠️ 未找到NUTS文件，跳过省级落区: {NUTS_FILE}")
+
     # 将参数转换为JSON字符串（模拟命令行参数）
     args_json = json.dumps(test_args, ensure_ascii=False)
-    
-    # 设置sys.argv（模拟命令行调用）
-    sys.argv = ['interpolation.py', args_json]
-    
+
     print("\n" + "=" * 60)
     print("[测试] 开始测试 interpolation.py")
     print("=" * 60)
     print(f"[测试] 输入文件: {test_data_file}")
     print(f"[测试] 阈值: {VALUE_THRESHOLD}（只保留值 > {VALUE_THRESHOLD} 的点）")
     print(f"[测试] GeoJSON: {geojson_path if geojson_path else '不使用'}")
+    print(f"[测试] LAU: {LAU_FILE if (LAU_FILE and os.path.exists(LAU_FILE)) else '未使用'}{(' | 图层: '+LAU_LAYER) if LAU_LAYER else ''}")
+    print(f"[测试] NUTS: {NUTS_FILE if (NUTS_FILE and os.path.exists(NUTS_FILE)) else '未使用'}{(' | 图层: '+NUTS_LAYER) if NUTS_LAYER else ''}")
     print(f"[测试] 坐标转换: {'启用' if ENABLE_COORD_TRANSFORM else '禁用'}")
     print(f"[测试] 每区域最大值: {'是' if TAKE_MAX_PER_POLYGON else '否'}")
     print(f"[测试] 最大点数: {MAX_POINTS}")
     print("-" * 60)
-    print("[测试] 进度信息（stderr）:")
+    print("[测试] 进度信息（stderr）：见下方 [Progress] 行")
     print("-" * 60)
-    
+
+    # 以子进程方式运行 interpolation.py，捕获 stdout/stderr，便于解析 JSON
+    import subprocess
+    env = dict(os.environ)
+    env['PYTHONIOENCODING'] = 'utf-8'
+    proc = subprocess.Popen(
+        [sys.executable, str(script_dir / 'interpolation.py'), args_json],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=env
+    )
+    out, err = proc.communicate()
+
+    # 打印进度
     try:
-        # 导入并调用main函数
-        from interpolation import main
-        main()
-        
-        print("\n" + "=" * 60)
-        print("[测试] 测试完成！")
-        print("=" * 60)
-        print("[测试] 结果已输出到 stdout（上方）")
-        print("[测试] 进度信息已输出到 stderr（上方标记为[Progress]的行）")
-        
-    except SystemExit as e:
-        # main()函数可能调用sys.exit()，这是正常的
-        if e.code == 0:
-            print("\n" + "=" * 60)
-            print("[测试] 测试完成（正常退出）")
-            print("=" * 60)
-        else:
-            print("\n" + "=" * 60)
-            print(f"[测试] 测试失败（退出码: {e.code}）")
-            print("=" * 60)
-            sys.exit(e.code)
+        err_text = err.decode('utf-8', errors='ignore')
+    except Exception:
+        err_text = err.decode(errors='ignore')
+    print(err_text)
+    # 提取并高亮关键信息（域GeoJSON字段解析）
+    try:
+        lines = [ln for ln in err_text.splitlines() if 'Attributes from domain join' in ln or 'NAME only' in ln]
+        if lines:
+            print("\n[测试] 域GeoJSON字段解析:")
+            for ln in lines:
+                print("  ", ln)
+    except Exception:
+        pass
+
+    # 解析结果
+    try:
+        out_text = out.decode('utf-8', errors='ignore')
+        result = json.loads(out_text.strip())
+        print("\n[测试] 摘要:")
+        print(json.dumps(result.get('summary', {}), ensure_ascii=False, indent=2))
+        pts = result.get('points', [])
+        print("\n[测试] 示例点（最多前10条）：国家名称 / 省 / 市 → (value, lat, lon)")
+        for p in pts[:10]:
+            cc = p.get('country_name') or p.get('country_code') or '—'
+            prov = p.get('province_name') or '—'
+            city = p.get('city_name') or '—'
+            print(f" - {cc} / {prov} / {city} → ({p.get('value')}, {p.get('latitude')}, {p.get('longitude')})")
+
+        # 统计缺失省名的点，便于快速定位问题
+        missing_prov = [p for p in pts if not p.get('province_name')]
+        if missing_prov:
+            print(f"\n[测试] 有 {len(missing_prov)} 个点没有解析到省（仅显示前10条城市名）:")
+            for p in missing_prov[:10]:
+                print("  -", p.get('country_code') or '—', '/', '—', '/', p.get('city_name') or '—')
     except Exception as e:
-        print("\n" + "=" * 60)
-        print(f"[测试] 测试失败: {str(e)}")
-        print("=" * 60)
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
+        print("[测试] 解析输出失败：", str(e))
+        print("[测试] 原始输出：\n", out[:500])
 
 if __name__ == '__main__':
     test_interpolation()

@@ -5,6 +5,93 @@
 let uploadedFileInfo = null;
 
 /**
+ * 显示地点列表（国家/省/市）
+ */
+function renderPlacesList(points, containerId = 'interpolationPlaces') {
+    try {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        
+        const uniqueSet = new Map();
+        for (const p of points) {
+            const country = p.country_name || p.country_code || '';
+            const province = p.province_name || '';
+            const city = p.city_name || '';
+            const key = `${country}||${province}||${city}`;
+            if (!uniqueSet.has(key)) {
+                uniqueSet.set(key, { country, province, city, count: 1 });
+            } else {
+                uniqueSet.get(key).count += 1;
+            }
+        }
+        
+        if (uniqueSet.size > 0) {
+            const rows = Array.from(uniqueSet.values()).map(item => {
+                const country = item.country || '—';
+                const prov = item.province || '—';
+                const city = item.city || '—';
+                return `<li style="padding:6px 8px; border-bottom:1px dashed #eef3f7;">
+                    <span style="color:#1e3c72; font-weight:600;">${escapeHtml(country)}</span>
+                    <span style="color:#2c3e50; margin-left:8px;">${escapeHtml(prov)}</span>
+                    <span style="color:#2c3e50; margin-left:8px;">${escapeHtml(city)}</span>
+                    <span style="color:#999; float:right;">${item.count} 点</span>
+                </li>`;
+            }).join('');
+            container.innerHTML = `<div style="font-weight:600; color:#1e3c72; margin-bottom:8px;">📍 地点列表（国家/省/市，按唯一组合）</div>
+                <ul style="list-style:none; padding-left:0; margin:0;">${rows}</ul>`;
+            container.style.display = 'block';
+        } else {
+            container.innerHTML = '<div style="color:#999;">未识别到国家/省/市信息</div>';
+            container.style.display = 'block';
+        }
+    } catch (e) {
+        console.error('[Frontend] 渲染地点列表失败:', e);
+    }
+}
+
+/**
+ * 初始化地图并添加标记
+ */
+function initMapAndAddMarkers(points, threshold, statusElement) {
+    // 初始化地图（如果还未初始化）
+    if (typeof initMap === 'function' && !window.map) {
+        const validPoints = points.filter(p => p.latitude && p.longitude);
+        let center = [50, 10]; // 默认中心（欧洲）
+        let zoom = 6;
+        
+        if (validPoints.length > 0) {
+            const avgLat = validPoints.reduce((sum, p) => sum + p.latitude, 0) / validPoints.length;
+            const avgLon = validPoints.reduce((sum, p) => sum + p.longitude, 0) / validPoints.length;
+            center = [avgLat, avgLon];
+            zoom = 8;
+        }
+        
+        initMap(center, zoom);
+    }
+    
+    // 等待地图完全初始化后再添加标记
+    if (typeof addMarkersToMap === 'function') {
+        if (!window.map) {
+            setTimeout(() => {
+                const markerCount = addMarkersToMap(points, threshold);
+                if (statusElement && markerCount > 0) {
+                    statusElement.innerHTML += `<div style="margin-top: 10px; color: #27ae60;">✅ 已在地图上显示 ${markerCount} 个数据点</div>`;
+                } else if (statusElement) {
+                    statusElement.innerHTML += `<div style="margin-top: 10px; color: #f39c12;">⚠️ 没有找到符合条件的数据点</div>`;
+                }
+            }, 500);
+        } else {
+            const markerCount = addMarkersToMap(points, threshold);
+            if (statusElement && markerCount > 0) {
+                statusElement.innerHTML += `<div style="margin-top: 10px; color: #27ae60;">✅ 已在地图上显示 ${markerCount} 个数据点</div>`;
+            } else if (statusElement) {
+                statusElement.innerHTML += `<div style="margin-top: 10px; color: #f39c12;">⚠️ 没有找到符合条件的数据点</div>`;
+            }
+        }
+    }
+}
+
+/**
  * 初始化空间插值分析模块
  */
 function initInterpolation() {
@@ -18,6 +105,17 @@ function initInterpolation() {
                 if (fileInfo) {
                     fileInfo.innerHTML = `<strong>文件名：</strong>${file.name}<br><strong>大小：</strong>${(file.size / 1024).toFixed(2)} KB`;
                     fileInfo.style.display = 'block';
+                }
+                // 从文件名解析日期，填充到 confirmedDateInput
+                const dateInput = document.getElementById('confirmedDateInput');
+                if (dateInput) {
+                    const m = file.name.match(/(20\d{6})/); // 如 20251106
+                    if (m) {
+                        const y = m[1].slice(0,4), mo = m[1].slice(4,6), d = m[1].slice(6,8);
+                        dateInput.value = `${y}-${mo}-${d}`;
+                    } else {
+                        dateInput.value = new Date().toISOString().slice(0,10);
+                    }
                 }
             }
         });
@@ -61,9 +159,10 @@ function initInterpolation() {
                     if (status) {
                         status.innerHTML = `<div style="color: #27ae60;">✅ 上传成功！文件名：${data.file.filename}</div>`;
                     }
-                    const btnRun = document.getElementById('btnRunInterpolation');
-                    if (btnRun) {
-                        btnRun.disabled = false;
+                    // 上传成功后，启用"筛选入库"按钮
+                    const btnSave = document.getElementById('btnSaveRainEvents');
+                    if (btnSave) {
+                        btnSave.disabled = false;
                     }
                     
                     // 更新文件信息
@@ -85,6 +184,86 @@ function initInterpolation() {
             }
         });
     }
+
+    // 筛选入库（对已上传的文件进行插值筛选并入库）
+    const btnSave = document.getElementById('btnSaveRainEvents');
+    if (btnSave) {
+        btnSave.addEventListener('click', async function() {
+            if (!uploadedFileInfo || !uploadedFileInfo.filename) {
+                alert('请先上传文件');
+                return;
+            }
+            
+            const dateInput = document.getElementById('confirmedDateInput');
+            const confirmedDate = dateInput?.value;
+            const status = document.getElementById('interpolationStatus');
+            if (!confirmedDate) {
+                alert('请先选择/确认日期');
+                return;
+            }
+
+            const btn = this;
+            btn.disabled = true;
+            btn.textContent = '💾 筛选入库中...';
+            if (status) {
+                status.style.display = 'block';
+                status.innerHTML = '<div style="color:#3498db;">正在筛选并入库，请稍候（可能需要几分钟）...</div>';
+            }
+
+            try {
+                // 获取阈值参数
+                let threshold = 50.0;
+                const thInput = document.getElementById('valueThreshold');
+                if (thInput && thInput.value !== undefined && thInput.value !== null && thInput.value !== '') {
+                    const v = parseFloat(thInput.value);
+                    if (!Number.isNaN(v) && Number.isFinite(v) && v >= 0) {
+                        threshold = v;
+                    }
+                }
+
+                // 使用已上传的文件信息，调用筛选入库接口
+                const formData = new FormData();
+                // 需要重新读取文件（因为后端需要文件内容）
+                const fileInput = document.getElementById('interpolationFileInput');
+                const file = fileInput?.files[0];
+                if (!file) {
+                    throw new Error('文件已丢失，请重新上传');
+                }
+                formData.append('file', file);
+                formData.append('confirmed_date', confirmedDate);
+                formData.append('value_threshold', String(threshold));
+
+                const res = await fetch('/python/rain/process-upload', { method: 'POST', body: formData });
+                if (!res.ok) {
+                    let msg = `入库失败 (HTTP ${res.status})`;
+                    try { const e = await res.json(); msg = e.error || msg; } catch {}
+                    throw new Error(msg);
+                }
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || '入库失败');
+
+                // 显示入库成功信息
+                if (status) {
+                    status.innerHTML = `<div style="color:#27ae60;">✅ 筛选入库完成！新增 ${data.inserted} 条</div>`;
+                }
+
+                // 如果有插值结果数据，显示地点列表和地图标记
+                const resultData = data.data || data;
+                if (resultData && resultData.points && Array.isArray(resultData.points)) {
+                    const points = resultData.points;
+                    renderPlacesList(points);
+                    initMapAndAddMarkers(points, threshold, status);
+                }
+            } catch (err) {
+                if (status) {
+                    status.innerHTML = `<div style="color:#e74c3c;">❌ 筛选入库失败：${(err && err.message) || err}</div>`;
+                }
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '💾 筛选入库';
+            }
+        });
+    }
     
     // 运行空间插值分析
     const btnRun = document.getElementById('btnRunInterpolation');
@@ -97,8 +276,15 @@ function initInterpolation() {
             
             const btn = this;
             const status = document.getElementById('interpolationStatus');
-            // 固定阈值为50.0（只显示值大于50的点）
-            const threshold = 50.0;
+            // 阈值：默认50，可由用户输入覆盖
+            let threshold = 50.0;
+            const thInput = document.getElementById('valueThreshold');
+            if (thInput && thInput.value !== undefined && thInput.value !== null && thInput.value !== '') {
+                const v = parseFloat(thInput.value);
+                if (!Number.isNaN(v) && Number.isFinite(v) && v >= 0) {
+                    threshold = v;
+                }
+            }
             
             btn.disabled = true;
             btn.textContent = '🗺️ 处理中...';
@@ -113,11 +299,6 @@ function initInterpolation() {
                     throw new Error('文件信息不存在，请重新上传文件');
                 }
                 
-                console.log('[Frontend] 发送插值分析请求:', {
-                    filename: uploadedFileInfo.filename,
-                    threshold: threshold
-                });
-                
                 // 创建带有超时的 fetch 请求（5分钟超时）
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5分钟
@@ -129,8 +310,10 @@ function initInterpolation() {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             filename: uploadedFileInfo.filename,
-                            value_threshold: threshold || undefined,
+                            value_threshold: threshold,
                             max_points: 1000,
+                            // 显式指定 LAU 数据源，避免自动探测失败
+                            lau_file: 'E:/Project/europe/apps/api/src/modules/python/scripts/data/LAU_2019.gpkg',
                             timeout: 4 * 60 * 1000 // 4分钟超时（给前端留1分钟缓冲）
                         }),
                         signal: controller.signal
@@ -163,7 +346,6 @@ function initInterpolation() {
                 
                 if (!data.success) {
                     const errorMsg = data.error || '处理失败';
-                    console.error('[Frontend] Interpolation API error:', errorMsg);
                     throw new Error(errorMsg);
                 }
                 
@@ -184,48 +366,10 @@ function initInterpolation() {
                         </div>`;
                     }
                     
-                    // 初始化地图（如果还未初始化）
-                    if (typeof initMap === 'function' && !window.map) {
-                        // 根据数据点计算中心点
-                        const points = result.points || [];
-                        let center = [50, 10]; // 默认中心（欧洲）
-                        let zoom = 6;
-                        
-                        if (points.length > 0) {
-                            const validPoints = points.filter(p => p.latitude && p.longitude);
-                            if (validPoints.length > 0) {
-                                const avgLat = validPoints.reduce((sum, p) => sum + p.latitude, 0) / validPoints.length;
-                                const avgLon = validPoints.reduce((sum, p) => sum + p.longitude, 0) / validPoints.length;
-                                center = [avgLat, avgLon];
-                                zoom = 8;
-                            }
-                        }
-                        
-                        initMap(center, zoom);
-                    }
-                    
-                    // 等待地图完全初始化后再添加标记
+                    // 显示地点列表和地图标记
                     const points = result.points || result.final_points || [];
-                    if (typeof addMarkersToMap === 'function') {
-                        // 如果地图还没初始化，等待一下
-                        if (!window.map) {
-                            setTimeout(() => {
-                                const markerCount = addMarkersToMap(points, threshold);
-                                if (status && markerCount > 0) {
-                                    status.innerHTML += `<div style="margin-top: 10px; color: #27ae60;">✅ 已在地图上显示 ${markerCount} 个数据点</div>`;
-                                } else if (status) {
-                                    status.innerHTML += `<div style="margin-top: 10px; color: #f39c12;">⚠️ 没有找到符合条件的数据点</div>`;
-                                }
-                            }, 500);
-                        } else {
-                            const markerCount = addMarkersToMap(points, threshold);
-                            if (status && markerCount > 0) {
-                                status.innerHTML += `<div style="margin-top: 10px; color: #27ae60;">✅ 已在地图上显示 ${markerCount} 个数据点</div>`;
-                            } else if (status) {
-                                status.innerHTML += `<div style="margin-top: 10px; color: #f39c12;">⚠️ 没有找到符合条件的数据点</div>`;
-                            }
-                        }
-                    }
+                    renderPlacesList(points);
+                    initMapAndAddMarkers(points, threshold, status);
                     
                     // 保存处理结果
                     window.interpolationResult = result;
@@ -234,7 +378,6 @@ function initInterpolation() {
                 }
             } catch (error) {
                 let errorMsg = error.message || '未知错误';
-                console.error('[Frontend] Interpolation error:', error);
                 
                 // 提供更详细的错误信息和解决建议
                 let suggestion = '';
