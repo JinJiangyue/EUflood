@@ -45,34 +45,6 @@ if (isNew) {
     CREATE INDEX IF NOT EXISTS idx_flood_records_source_type ON flood_records (source_type);
     CREATE INDEX IF NOT EXISTS idx_flood_records_confidence ON flood_records (confidence);
 
-    -- 事件候选表（按日期查询的已发生事件）
-    CREATE TABLE IF NOT EXISTS event_candidates (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      candidate_key TEXT UNIQUE, -- 去重用：source_date_country_location
-      event_date TEXT NOT NULL, -- YYYY-MM-DD
-      country TEXT NOT NULL,
-      city TEXT,
-      latitude REAL,
-      longitude REAL,
-      time_from TEXT, -- ISO 时间
-      time_to TEXT, -- ISO 时间
-      severity TEXT, -- low/medium/high/extreme
-      level INTEGER, -- 数值等级
-      source TEXT NOT NULL, -- meteoalarm/gdacs/...
-      source_url TEXT,
-      title TEXT,
-      description TEXT,
-      raw_data TEXT, -- JSON: 原始响应数据
-      enriched BOOLEAN DEFAULT 0, -- 是否已整理
-      enriched_at TEXT,
-      created_at TEXT DEFAULT (datetime('now'))
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_event_candidates_date ON event_candidates(event_date);
-    CREATE INDEX IF NOT EXISTS idx_event_candidates_country ON event_candidates(country);
-    CREATE INDEX IF NOT EXISTS idx_event_candidates_source ON event_candidates(source);
-    CREATE INDEX IF NOT EXISTS idx_event_candidates_enriched ON event_candidates(enriched);
-
     -- 降雨事件表（一行=一个地点的一次降雨），主键由触发器生成：YYYYMMDD_Province_seq
     CREATE TABLE IF NOT EXISTS rain_event (
       id TEXT PRIMARY KEY,
@@ -120,37 +92,6 @@ try {
                    col === 'evidence_count' ? 'INTEGER' : 'TEXT';
       db.exec(`ALTER TABLE flood_records ADD COLUMN ${col} ${type}`);
     }
-  }
-  
-  // 创建 event_candidates 表（如果不存在）
-  if (!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='event_candidates'`).get()) {
-    db.exec(`
-      CREATE TABLE event_candidates (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        candidate_key TEXT UNIQUE,
-        event_date TEXT NOT NULL,
-        country TEXT NOT NULL,
-        city TEXT,
-        latitude REAL,
-        longitude REAL,
-        time_from TEXT,
-        time_to TEXT,
-        severity TEXT,
-        level INTEGER,
-        source TEXT NOT NULL,
-        source_url TEXT,
-        title TEXT,
-        description TEXT,
-        raw_data TEXT,
-        enriched BOOLEAN DEFAULT 0,
-        enriched_at TEXT,
-        created_at TEXT DEFAULT (datetime('now'))
-      );
-      CREATE INDEX IF NOT EXISTS idx_event_candidates_date ON event_candidates(event_date);
-      CREATE INDEX IF NOT EXISTS idx_event_candidates_country ON event_candidates(country);
-      CREATE INDEX IF NOT EXISTS idx_event_candidates_source ON event_candidates(source);
-      CREATE INDEX IF NOT EXISTS idx_event_candidates_enriched ON event_candidates(enriched);
-    `);
   }
 
   // 确保存在 rain_event 表与索引/触发器（老库升级）

@@ -5,8 +5,8 @@ import { registerProcessingModule } from '../modules/processing/routes';
 import { registerAnalysisModule } from '../modules/analysis/routes';
 import { registerExportingModule } from '../modules/exporting/routes';
 import { registerTriggerModule } from '../modules/trigger/routes';
-import { registerEventsModule } from '../modules/events/routes';
 import { registerMergerModule } from '../modules/events/merger-routes';
+import { registerRainEventsModule } from '../modules/events/rain-routes';
 import { registerPythonModule } from '../modules/python/routes';
 
 export function registerRoutes(app: Express) {
@@ -17,8 +17,8 @@ export function registerRoutes(app: Express) {
   registerAnalysisModule(app);
   registerExportingModule(app);
   registerTriggerModule(app);
-  registerEventsModule(app);
   registerMergerModule(app);
+  registerRainEventsModule(app);
   registerPythonModule(app);
 }
 

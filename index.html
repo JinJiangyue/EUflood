@@ -74,23 +74,24 @@
                     <div id="interpolationPlaces" style="margin-top: 16px; background: #ffffff; border: 1px solid #e1e5e9; border-radius: 8px; padding: 12px; display: none;"></div>
                 </div>
                 
-                <h2 style="margin-bottom: 15px; color: #1e3c72; margin-top: 40px;">📅 查询事件（支持日期范围）</h2>
+                <h2 style="margin-bottom: 15px; color: #1e3c72; margin-top: 40px;">📅 查询降雨事件（支持日期范围和国家筛选）</h2>
                 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                     <label style="font-size: 14px; color: #666;">开始日期:</label>
                     <input type="date" id="eventDateFrom" style="padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px;" value="">
                     <label style="font-size: 14px; color: #666;">结束日期:</label>
                     <input type="date" id="eventDateTo" style="padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px;" value="">
+                    <label style="font-size: 14px; color: #666;">国家（可选）:</label>
+                    <input type="text" id="eventCountry" placeholder="留空查询所有国家" style="padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px; width: 200px;">
                     <button id="btnQueryEvents" class="search-btn" type="button" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">🔍 查询事件</button>
-                    <button id="btnRefreshEvents" class="search-btn" type="button" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">🔄 刷新重抓</button>
+                    <button id="btnRefreshEvents" class="search-btn" type="button" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">🔄 刷新查询</button>
                     <span id="eventsStatus" style="color: #666; font-size: 14px;"></span>
                 </div>
                 <div id="candidatesList" style="margin-top: 20px; display: none;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <h3 style="color: #1e3c72;">候选事件列表</h3>
-                        <button id="btnEnrichSelected" class="search-btn" type="button" style="background: linear-gradient(135deg, #27ae60 0%, #229954 100%);">✅ 整理选中事件</button>
+                        <h3 style="color: #1e3c72;">降雨事件列表</h3>
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; grid-template-rows: auto;">
-                        <div id="candidatesTable" style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); min-width: 0;"></div>
+                    <div id="eventsContainer" style="display: grid; grid-template-columns: 1fr; gap: 20px; grid-template-rows: auto; transition: grid-template-columns 0.3s ease;">
+                        <div id="candidatesTable" style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); min-width: 0; overflow-x: auto;"></div>
                         <div id="eventDetailsPanel" style="background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none; min-width: 0;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                                 <h3 style="color: #1e3c72; margin: 0;">📊 数据详情</h3>

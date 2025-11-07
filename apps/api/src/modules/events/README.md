@@ -5,26 +5,21 @@
 ```
 events/
 ├── README.md              # 本文件
-├── routes.ts              # 候选事件API（原始数据，按平台分开）
 ├── merger-routes.ts       # 合并事件API（多平台合并）
 ├── merger.ts              # 事件合并逻辑（核心）
 ├── matching.ts            # 事件匹配算法
-├── service.ts             # 候选事件服务（单平台采集）
-├── enrich.ts              # 事件整理（多源采集+入库）
 └── collectors/
     ├── gdacs.ts           # GDACS采集器
-    └── meteoalarm.ts      # Meteoalarm采集器（框架）
+    ├── meteoalarm.ts      # Meteoalarm采集器
+    ├── efas.ts            # EFAS采集器
+    └── open-meteo.ts      # Open-Meteo采集器
 ```
 
-## 两个工作流程
+## 工作流程
 
-### 1. 候选事件流程（`routes.ts`）
-- **用途**：查看各平台原始数据
-- **API**: `GET /events/candidates?date_from=...&date_to=...`
-- **特点**：不同平台的事件分开存储，不去重
-- **表**: `event_candidates`
+**注意**：`event_candidates` 表和相关功能已移除，改用 `rain_event` 表。
 
-### 2. 合并事件流程（`merger-routes.ts`）⭐ 推荐
+### 合并事件流程（`merger-routes.ts`）⭐ 推荐
 - **用途**：多平台查询 + 自动合并相同事件
 - **API**: `GET /events/merged?date_from=...&date_to=...`
 - **特点**：自动识别并合并相同事件，提高准确性
@@ -129,8 +124,13 @@ CREATE TABLE merged_flood_events (
 - ✅ 多源证据，提高准确性
 - ✅ 数据更完整（合并多个来源的信息）
 
-**使用候选事件API的场景**：
-- 需要查看原始数据（未合并）
-- 需要按平台区分数据
-- 调试数据采集问题
+## 数据采集器（Collectors）
+
+所有数据采集器都保留在 `collectors/` 目录下，可以独立使用：
+- `gdacs.ts` - GDACS（全球灾害警报系统）采集
+- `meteoalarm.ts` - Meteoalarm（欧洲气象警报）采集
+- `efas.ts` - EFAS（欧洲洪水预警系统）采集
+- `open-meteo.ts` - Open-Meteo（历史降雨数据）采集
+
+这些采集器可以直接导入使用，不依赖 `event_candidates` 表。
 
