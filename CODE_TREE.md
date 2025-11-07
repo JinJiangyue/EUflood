@@ -1,4 +1,4 @@
-# 代码结构解析（v1.0.2）
+# 代码结构解析（v1.0.4）
 
 ## 根目录结构
 
@@ -227,6 +227,153 @@ X坐标        Y坐标        值
   ]
 }
 ```
+
+## 搜索管线模块 (`search/`) ⭐ v1.0.4 新增
+
+### 核心架构
+- **LLM 驱动处理**：完全使用大语言模型（OpenAI GPT / Google Gemini）进行信息验证、提取和报告生成
+- **多语言支持**：自动识别国家官方语言，使用本地语言进行搜索，最终输出英文报告
+- **模块化设计**：参考 BettaFish 的 Agent 架构，按功能拆分为独立模块
+
+### 目录结构
+```
+search/
+├── config/                   配置管理
+│   ├── settings.py           全局配置（数据库、API密钥、LLM设置等）
+│   └── terminology.json      国家与官方语言术语表
+├── geolingua/                 地理与语言解析
+│   └── resolver.py           根据地点识别国家和官方语言
+├── query/                     查询规划
+│   ├── channels.py           搜索渠道配置
+│   └── keyword_planner.py    多语言关键词生成（省级优先、自然语言查询）
+├── collectors/                数据采集器（模块化、可配置）
+│   ├── collector_config.json 采集器配置（启用/禁用）
+│   ├── loader.py             动态加载采集器
+│   ├── base.py               采集器基类
+│   ├── news/                 新闻采集器
+│   │   ├── thenewsapi.py     The News API（支持历史数据）
+│   │   ├── gnews.py          GNews API（备选）
+│   │   └── serpapi.py        SerpAPI（备选）
+│   ├── officials/            官方来源采集器
+│   │   └── tavily.py         Tavily API（政府/气象网站）
+│   ├── medias/               多媒体采集器
+│   │   └── youtube.py        YouTube Data API
+│   └── socials/              社交媒体采集器
+│       ├── x_twitter.py      X (Twitter) API
+│       └── instagram.py      Instagram Graph API
+├── llm/                       LLM 处理模块
+│   ├── client.py              LLM 客户端抽象（OpenAI / Gemini）
+│   ├── processor.py           4 步处理流程
+│   └── prompts.py             Prompt 模板
+├── orchestrator/              流程编排
+│   └── workflow.py            主工作流（采集→处理→报告）
+├── utils/                     工具函数
+│   └── detailed_logger.py     详细日志记录（保存到 test_log.md）
+├── watcher/                   事件监控
+│   └── rain_event_watcher.py  从数据库读取降雨事件
+├── knowledge/                 知识存储
+│   └── state_store.py        状态存储（未来扩展）
+├── test_search.py            测试脚本
+├── test_api_keys.py          API 密钥测试
+├── requirements.txt           Python 依赖
+├── README.md                  项目说明
+├── INSTALL.md                 安装指南
+├── TEST.md                    测试指南
+└── CONFIGURATION_GUIDE.md     配置指南
+```
+
+### 处理流程
+
+#### 1. 事件识别与地理解析
+- **输入**：`rain_events` 表中的降雨事件（时间、地点、降雨量）
+- **处理**：`GeoLinguaResolver` 识别国家和官方语言
+- **输出**：国家代码、官方语言、本地术语（rain/flood 的翻译）
+
+#### 2. 关键词规划
+- **处理**：`KeywordPlanner` 生成多语言关键词
+  - 地点策略：省级优先（忽略具体雨量站城市）
+  - 时间格式：自然语言（如 "October 11, 2025"）
+  - 查询字符串：去重、自然语言组合
+- **输出**：多语言关键词包和查询字符串
+
+#### 3. 数据采集
+- **采集器**：根据 `collector_config.json` 动态加载
+  - 官方来源：Tavily（政府/气象网站）
+  - 新闻：The News API（支持历史数据）
+  - 多媒体：YouTube（视频）
+  - 社交媒体：X/Instagram（可选，当前禁用）
+- **时间过滤**：统一使用 `NEWS_SEARCH_WINDOW_DAYS` 配置（默认 3 天）
+- **输出**：原始搜索结果（标题、摘要、URL、发布时间等）
+
+#### 4. 预过滤（可选）
+- **目的**：在交给 LLM 前进行简单规则判断，减少 token 消耗
+- **检查项**：
+  - 时间匹配：从 URL/文本提取日期，只保留事件时间 + N 天内的结果
+  - 地点匹配：标题/摘要包含省名或国家名
+  - 关键词匹配：包含 rain/flood 等关键词
+- **模式**：strict（严格，必须同时满足）或 loose（宽松，满足任意一个）
+
+#### 5. LLM 处理（4 个步骤）
+
+**步骤 1：事件验证和冲突解决**
+- 判断搜索结果是否属于该特定事件
+- 验证信息准确性，解决冲突
+- 输出：相关项、不相关项（含排除原因）、已验证事实、冲突信息
+
+**步骤 2：时间线和影响提取**
+- 从验证后的信息中提取详细时间线
+- 提取影响评估（交通、经济、安全、应急响应）
+- 输出：时间段事件列表、量化数据
+
+**步骤 3：多媒体筛选**
+- 从视频/多媒体内容中选择最相关、最有价值的 5-10 条
+- 输出：选中的多媒体项、被拒绝的项
+
+**步骤 4：报告生成**
+- 根据所有处理结果生成完整的英文洪水事件报告
+- 包含：事件概述、洪水时间线、多媒体与新闻来源、影响评估、总结
+
+#### 6. 报告输出
+- **格式**：Markdown
+- **语言**：英文
+- **保存位置**：`search_outputs/{event_id}_report.md`
+- **中间结果**：同时保存原始结果、预过滤结果、LLM 验证结果
+
+### 配置项（`.env` 文件）
+
+#### LLM 配置
+- `LLM_PROVIDER`: openai 或 gemini
+- `OPENAI_API_KEY` / `GEMINI_API_KEY`: API 密钥
+- `OPENAI_MODEL` / `GEMINI_MODEL`: 模型名称
+- `LLM_TEMPERATURE`: 温度参数（默认 0.3）
+- `LLM_MAX_TOKENS`: 最大输出 token（默认 8000）
+
+#### 搜索配置
+- `NEWS_SEARCH_WINDOW_DAYS`: 新闻搜索时间窗口（默认 3 天）
+- `LLM_VALIDATION_TIME_WINDOW_DAYS`: LLM 验证时间窗口（默认 5 天）
+
+#### 预过滤配置
+- `PRE_FILTER_ENABLED`: 是否启用预过滤（默认 true）
+- `PRE_FILTER_MODE`: strict 或 loose（默认 strict）
+- `PRE_FILTER_TIME_WINDOW_DAYS`: 预过滤时间窗口（默认 3 天）
+- `MAX_ITEMS_FOR_LLM_VALIDATION`: 交给 LLM 验证的最大数量（默认 10）
+
+#### API 密钥
+- `TAVILY_API_KEY`: Tavily 搜索 API
+- `THENEWSAPI_KEY`: The News API
+- `YOUTUBE_API_KEY`: YouTube Data API
+
+### 关键特性
+
+1. **智能日期提取**：从 URL 和文本中自动提取日期，提高预过滤准确性
+2. **详细日志**：所有处理步骤的详细日志保存到 `test_log.md`
+3. **中间结果保存**：保存原始结果、预过滤结果、LLM 验证结果到独立文件
+4. **成本优化**：
+   - 无搜索结果时跳过 LLM 处理
+   - 预过滤减少输入 token
+   - 验证无相关结果时跳过后续步骤
+5. **错误处理**：完善的错误处理和重试机制
+6. **可配置性**：所有关键参数都可通过 `.env` 文件配置
 
 ## 部署脚本 (`deploy/local/`)
 - `run_e2e.bat`: 一键脚本（安装依赖→启动服务→健康检查→采集→处理→分析→导出）

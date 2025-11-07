@@ -1,0 +1,403 @@
+{
+  "Austria": {
+    "primary_name": "Austria",
+    "country_code": "AT",
+    "country_names": ["Austria", "Österreich"],
+    "languages": [
+      {
+        "name": "German",
+        "code": "de",
+        "rain_term": "Regen",
+        "flood_term": "Überschwemmung"
+      }
+    ]
+  },
+  "Belgium": {
+    "primary_name": "Belgium",
+    "country_code": "BE",
+    "country_names": ["Belgium", "België", "Belgique", "Belgia"],
+    "languages": [
+      {
+        "name": "Dutch",
+        "code": "nl",
+        "rain_term": "regen",
+        "flood_term": "overstroming"
+      },
+      {
+        "name": "French",
+        "code": "fr",
+        "rain_term": "pluie",
+        "flood_term": "inondation"
+      },
+      {
+        "name": "German",
+        "code": "de",
+        "rain_term": "Regen",
+        "flood_term": "Überschwemmung"
+      }
+    ]
+  },
+  "Bulgaria": {
+    "primary_name": "Bulgaria",
+    "country_code": "BG",
+    "country_names": ["Bulgaria", "България"],
+    "languages": [
+      {
+        "name": "Bulgarian",
+        "code": "bg",
+        "rain_term": "дъжд",
+        "flood_term": "наводнение"
+      }
+    ]
+  },
+  "Croatia": {
+    "primary_name": "Croatia",
+    "country_code": "HR",
+    "country_names": ["Croatia", "Hrvatska"],
+    "languages": [
+      {
+        "name": "Croatian",
+        "code": "hr",
+        "rain_term": "kiša",
+        "flood_term": "poplava"
+      }
+    ]
+  },
+  "Cyprus": {
+    "primary_name": "Cyprus",
+    "country_code": "CY",
+    "country_names": ["Cyprus", "Κύπρος", "Kıbrıs"],
+    "languages": [
+      {
+        "name": "Greek",
+        "code": "el",
+        "rain_term": "βροχή",
+        "flood_term": "πλημμύρα"
+      }
+    ]
+  },
+  "Czechia": {
+    "primary_name": "Czechia",
+    "country_code": "CZ",
+    "country_names": ["Czechia", "Czech Republic", "Česko", "Česká republika"],
+    "languages": [
+      {
+        "name": "Czech",
+        "code": "cs",
+        "rain_term": "déšť",
+        "flood_term": "povodeň"
+      }
+    ]
+  },
+  "Denmark": {
+    "primary_name": "Denmark",
+    "country_code": "DK",
+    "country_names": ["Denmark", "Danmark"],
+    "languages": [
+      {
+        "name": "Danish",
+        "code": "da",
+        "rain_term": "regn",
+        "flood_term": "oversvømmelse"
+      }
+    ]
+  },
+  "Estonia": {
+    "primary_name": "Estonia",
+    "country_code": "EE",
+    "country_names": ["Estonia", "Eesti"],
+    "languages": [
+      {
+        "name": "Estonian",
+        "code": "et",
+        "rain_term": "vihm",
+        "flood_term": "üleujutus"
+      }
+    ]
+  },
+  "Finland": {
+    "primary_name": "Finland",
+    "country_code": "FI",
+    "country_names": ["Finland", "Suomi"],
+    "languages": [
+      {
+        "name": "Finnish",
+        "code": "fi",
+        "rain_term": "sade",
+        "flood_term": "tulva"
+      }
+    ]
+  },
+  "France": {
+    "primary_name": "France",
+    "country_code": "FR",
+    "country_names": ["France", "French Republic", "République française"],
+    "languages": [
+      {
+        "name": "French",
+        "code": "fr",
+        "rain_term": "pluie",
+        "flood_term": "inondation"
+      }
+    ]
+  },
+  "Germany": {
+    "primary_name": "Germany",
+    "country_code": "DE",
+    "country_names": ["Germany", "Deutschland", "Federal Republic of Germany"],
+    "languages": [
+      {
+        "name": "German",
+        "code": "de",
+        "rain_term": "Regen",
+        "flood_term": "Überschwemmung"
+      }
+    ]
+  },
+  "Greece": {
+    "primary_name": "Greece",
+    "country_code": "GR",
+    "country_names": ["Greece", "Hellenic Republic", "Ελλάδα"],
+    "languages": [
+      {
+        "name": "Greek",
+        "code": "el",
+        "rain_term": "βροχή",
+        "flood_term": "πλημμύρα"
+      }
+    ]
+  },
+  "Hungary": {
+    "primary_name": "Hungary",
+    "country_code": "HU",
+    "country_names": ["Hungary", "Magyarország"],
+    "languages": [
+      {
+        "name": "Hungarian",
+        "code": "hu",
+        "rain_term": "eső",
+        "flood_term": "árvíz"
+      }
+    ]
+  },
+  "Ireland": {
+    "primary_name": "Ireland",
+    "country_code": "IE",
+    "country_names": ["Ireland", "Éire"],
+    "languages": [
+      {
+        "name": "Irish",
+        "code": "ga",
+        "rain_term": "báisteach",
+        "flood_term": "tuilte"
+      },
+      {
+        "name": "English",
+        "code": "en",
+        "rain_term": "rain",
+        "flood_term": "flood"
+      }
+    ]
+  },
+  "Italy": {
+    "primary_name": "Italy",
+    "country_code": "IT",
+    "country_names": ["Italy", "Italia"],
+    "languages": [
+      {
+        "name": "Italian",
+        "code": "it",
+        "rain_term": "pioggia",
+        "flood_term": "inondazione"
+      }
+    ]
+  },
+  "Latvia": {
+    "primary_name": "Latvia",
+    "country_code": "LV",
+    "country_names": ["Latvia", "Latvija"],
+    "languages": [
+      {
+        "name": "Latvian",
+        "code": "lv",
+        "rain_term": "lietus",
+        "flood_term": "plūdi"
+      }
+    ]
+  },
+  "Lithuania": {
+    "primary_name": "Lithuania",
+    "country_code": "LT",
+    "country_names": ["Lithuania", "Lietuva"],
+    "languages": [
+      {
+        "name": "Lithuanian",
+        "code": "lt",
+        "rain_term": "lietus",
+        "flood_term": "potvynis"
+      }
+    ]
+  },
+  "Luxembourg": {
+    "primary_name": "Luxembourg",
+    "country_code": "LU",
+    "country_names": ["Luxembourg", "Grand Duchy of Luxembourg", "Lëtzebuerg"],
+    "languages": [
+      {
+        "name": "Luxembourgish",
+        "code": "lb",
+        "rain_term": "Reen",
+        "flood_term": "Iwwerschwemmung"
+      },
+      {
+        "name": "French",
+        "code": "fr",
+        "rain_term": "pluie",
+        "flood_term": "inondation"
+      },
+      {
+        "name": "German",
+        "code": "de",
+        "rain_term": "Regen",
+        "flood_term": "Überschwemmung"
+      }
+    ]
+  },
+  "Malta": {
+    "primary_name": "Malta",
+    "country_code": "MT",
+    "country_names": ["Malta", "Repubblika ta' Malta"],
+    "languages": [
+      {
+        "name": "Maltese",
+        "code": "mt",
+        "rain_term": "xita",
+        "flood_term": "għargħar"
+      },
+      {
+        "name": "English",
+        "code": "en",
+        "rain_term": "rain",
+        "flood_term": "flood"
+      }
+    ]
+  },
+  "Netherlands": {
+    "primary_name": "Netherlands",
+    "country_code": "NL",
+    "country_names": ["Netherlands", "Holland", "Nederland"],
+    "languages": [
+      {
+        "name": "Dutch",
+        "code": "nl",
+        "rain_term": "regen",
+        "flood_term": "overstroming"
+      }
+    ]
+  },
+  "Poland": {
+    "primary_name": "Poland",
+    "country_code": "PL",
+    "country_names": ["Poland", "Polska"],
+    "languages": [
+      {
+        "name": "Polish",
+        "code": "pl",
+        "rain_term": "deszcz",
+        "flood_term": "powódź"
+      }
+    ]
+  },
+  "Portugal": {
+    "primary_name": "Portugal",
+    "country_code": "PT",
+    "country_names": ["Portugal", "Portuguese Republic", "Portugal"],
+    "languages": [
+      {
+        "name": "Portuguese",
+        "code": "pt",
+        "rain_term": "chuva",
+        "flood_term": "inundação"
+      }
+    ]
+  },
+  "Romania": {
+    "primary_name": "Romania",
+    "country_code": "RO",
+    "country_names": ["Romania", "România"],
+    "languages": [
+      {
+        "name": "Romanian",
+        "code": "ro",
+        "rain_term": "ploaie",
+        "flood_term": "inundație"
+      }
+    ]
+  },
+  "Slovakia": {
+    "primary_name": "Slovakia",
+    "country_code": "SK",
+    "country_names": ["Slovakia", "Slovak Republic", "Slovensko"],
+    "languages": [
+      {
+        "name": "Slovak",
+        "code": "sk",
+        "rain_term": "dážď",
+        "flood_term": "povodeň"
+      }
+    ]
+  },
+  "Slovenia": {
+    "primary_name": "Slovenia",
+    "country_code": "SI",
+    "country_names": ["Slovenia", "Slovenija"],
+    "languages": [
+      {
+        "name": "Slovenian",
+        "code": "sl",
+        "rain_term": "dež",
+        "flood_term": "poplava"
+      }
+    ]
+  },
+  "Spain": {
+    "primary_name": "Spain",
+    "country_code": "ES",
+    "country_names": ["Spain", "España"],
+    "languages": [
+      {
+        "name": "Spanish",
+        "code": "es",
+        "rain_term": "lluvia",
+        "flood_term": "inundación"
+      }
+    ]
+  },
+  "Sweden": {
+    "primary_name": "Sweden",
+    "country_code": "SE",
+    "country_names": ["Sweden", "Sverige"],
+    "languages": [
+      {
+        "name": "Swedish",
+        "code": "sv",
+        "rain_term": "regn",
+        "flood_term": "översvämning"
+      }
+    ]
+  },
+  "Norway": {
+    "primary_name": "Norway",
+    "country_code": "NO",
+    "country_names": ["Norway", "Norge", "Kingdom of Norway", "Kongeriket Norge"],
+    "languages": [
+      {
+        "name": "Norwegian",
+        "code": "no",
+        "rain_term": "regn",
+        "flood_term": "flom"
+      }
+    ]
+  }
+}
+

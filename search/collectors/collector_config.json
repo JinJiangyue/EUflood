@@ -1,0 +1,47 @@
+{
+  "collectors": {
+    "news": {
+      "enabled": [
+        
+      ],
+      "disabled": [
+        "news_thenewsapi",
+        "news_gnews",
+        "news_serpapi"
+      ]
+    },
+    "officials": {
+      "enabled": [
+        "official"
+      ],
+      "disabled": [
+        
+      ]
+    },
+    "medias": {
+      "enabled": [
+        
+      ],
+      "disabled": [
+        "media"
+      ]
+    },
+    "socials": {
+      "enabled": [],
+      "disabled": [
+        "social",
+        "social_instagram"
+      ]
+    }
+  },
+  "notes": {
+    "news_thenewsapi": "The News API - 支持历史数据（推荐）",
+    "news_gnews": "GNews API - 仅限30天内数据",
+    "news_serpapi": "SerpAPI - Google News 搜索",
+    "official": "Tavily - 官方/政府网站搜索",
+    "media": "YouTube - 视频搜索",
+    "social": "X (Twitter) - 社交媒体搜索（付费 $200/月）",
+    "social_instagram": "Instagram - Meta Graph API（需 App 审核）"
+  }
+}
+
