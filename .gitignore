@@ -16,7 +16,7 @@ apps/api/dist/
 
 # 本地数据库与导出
 apps/database
-
+deploy/local/export.csv
 # 日志
 *.log
 logs/

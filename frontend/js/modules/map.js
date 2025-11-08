@@ -262,14 +262,15 @@ function initMap(center = [50, 10], zoom = 6) {
  */
 function formatNUTSInfo(properties) {
     if (!properties) return '';
-    let info = '<div style="font-weight: bold; margin-bottom: 5px; color: #1e3c72;">NUTS 信息</div>';
+    const i18n = typeof t === 'function' ? t : (key) => key;
+    let info = `<div style="font-weight: bold; margin-bottom: 5px; color: #1e3c72;">${i18n('map.nuts.title')}</div>`;
     if (properties.NUTS_ID) info += `<div><strong>NUTS ID:</strong> ${properties.NUTS_ID}</div>`;
-    if (properties.NUTS_NAME) info += `<div><strong>名称:</strong> ${properties.NUTS_NAME}</div>`;
-    if (properties.NAME_LATN) info += `<div><strong>拉丁名:</strong> ${properties.NAME_LATN}</div>`;
-    if (properties.CNTR_CODE) info += `<div><strong>国家代码:</strong> ${properties.CNTR_CODE}</div>`;
-    if (properties.LEVL_CODE !== undefined) info += `<div><strong>级别:</strong> NUTS ${properties.LEVL_CODE}</div>`;
-    if (properties.NAME) info += `<div><strong>完整名称:</strong> ${properties.NAME}</div>`;
-    if (properties['cntr-nuts3']) info += `<div><strong>国家-NUTS3:</strong> ${properties['cntr-nuts3']}</div>`;
+    if (properties.NUTS_NAME) info += `<div><strong>${i18n('map.nuts.name')}:</strong> ${properties.NUTS_NAME}</div>`;
+    if (properties.NAME_LATN) info += `<div><strong>${i18n('map.nuts.latinName')}:</strong> ${properties.NAME_LATN}</div>`;
+    if (properties.CNTR_CODE) info += `<div><strong>${i18n('map.nuts.countryCode')}:</strong> ${properties.CNTR_CODE}</div>`;
+    if (properties.LEVL_CODE !== undefined) info += `<div><strong>${i18n('map.nuts.level')}:</strong> NUTS ${properties.LEVL_CODE}</div>`;
+    if (properties.NAME) info += `<div><strong>${i18n('map.nuts.fullName')}:</strong> ${properties.NAME}</div>`;
+    if (properties['cntr-nuts3']) info += `<div><strong>${i18n('map.nuts.countryNuts3')}:</strong> ${properties['cntr-nuts3']}</div>`;
     return info;
 }
 
@@ -421,7 +422,8 @@ async function loadDefaultGeoJSON() {
                 addGeoJSONLayer(data.data);
                 
                 if (status) {
-                    status.innerHTML = '<div style="color: #27ae60;">✅ GeoJSON区域已加载（鼠标悬停查看NUTS信息）</div>';
+                    const i18n = typeof t === 'function' ? t : (key) => key;
+                    status.innerHTML = `<div style="color: #27ae60;">✅ ${i18n('map.geojsonLoaded')}</div>`;
                     // 3秒后隐藏状态
                     setTimeout(() => {
                         status.style.display = 'none';

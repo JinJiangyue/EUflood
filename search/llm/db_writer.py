@@ -192,6 +192,16 @@ def fill_rain_flood_impact_table(
         ))
         
         conn.commit()
+        
+        # 更新表1的searched字段为1（已搜索）
+        try:
+            cursor.execute("UPDATE rain_event SET searched = 1 WHERE id = ?", (rain_event_id,))
+            conn.commit()
+            logger.info("✅ 已更新表1的searched字段为1: rain_event_id=%s", rain_event_id)
+        except Exception as update_error:
+            logger.warning("⚠️ 更新表1的searched字段失败: rain_event_id=%s, error=%s", rain_event_id, update_error)
+            # 不中断流程，表2数据已成功创建
+        
         conn.close()
         
         logger.info(
@@ -203,5 +213,18 @@ def fill_rain_flood_impact_table(
         
     except Exception as e:
         logger.exception("填充表2数据失败: rain_event_id=%s, error=%s", rain_event_id, e)
+        
+        # 填充表2失败，更新表1的searched字段为2（需重搜）
+        try:
+            if 'rain_event_id' in locals() and rain_event_id:
+                conn = sqlite3.connect(db_path)
+                cursor = conn.cursor()
+                cursor.execute("UPDATE rain_event SET searched = 2 WHERE id = ?", (rain_event_id,))
+                conn.commit()
+                conn.close()
+                logger.warning("⚠️ 已更新表1的searched字段为2（需重搜）: rain_event_id=%s", rain_event_id)
+        except Exception as update_error:
+            logger.warning("⚠️ 更新表1的searched字段失败: rain_event_id=%s, error=%s", rain_event_id if 'rain_event_id' in locals() else 'unknown', update_error)
+        
         return False
 

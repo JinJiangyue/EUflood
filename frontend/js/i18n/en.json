@@ -1,95 +1,241 @@
 {
-  "pageTitle": "EU Flood Monitoring System - Real Data Search",
-  "headerTitle": "🌊 EU Flood Monitoring System",
-  "headerSubtitle": "Real-time search for real flood data - from official weather APIs and social media",
-  "totalRecords": "Total Records",
-  "processedRecords": "Processed Records",
-  "averageRisk": "Average Risk",
-  "maxWaterLevel": "Max Water Level (m)",
-  "spatialInterpolation": "🗺️ Spatial Interpolation Analysis",
-  "selectDataFile": "Select Data File (CSV, Excel, TXT)",
-  "confirmDate": "Confirm Date (can be manually modified, used for generating event ID)",
-  "dateHint": "Default parsed from filename (e.g., 20251106), can be changed",
-  "thresholdSetting": "Threshold Setting (default 50.0, can be modified; shows points with values greater than this threshold)",
-  "thresholdHint": "Defaults to 50.0 if empty or invalid",
-  "uploadFile": "📤 Upload File",
-  "filterAndSave": "💾 Filter & Save",
-  "placeList": "📍 Place List (Country/Province/City, by unique combination)",
-  "points": "points",
-  "noLocationInfo": "No country/province/city information identified",
-  "queryRainEvents": "📅 Query Rain Events (supports date range and country filter)",
-  "startDate": "Start Date:",
-  "endDate": "End Date:",
-  "country": "Country (optional):",
-  "countryPlaceholder": "Leave empty to query all countries",
-  "queryEvents": "🔍 Query Events",
-  "refreshQuery": "🔄 Refresh Query",
-  "rainEventList": "Rain Event List",
-  "dataDetails": "📊 Data Details",
-  "close": "✕ Close",
-  "clickToViewDetails": "Click on an event row in the table to view detailed information",
-  "basicInfo": "Basic Information (Table 1)",
-  "impactInfo": "Impact Assessment (Table 2)",
-  "eventId": "Event ID",
-  "date": "Date",
-  "countryLabel": "Country",
-  "province": "Province",
-  "city": "City",
-  "coordinates": "Coordinates",
-  "value": "Value",
-  "threshold": "Threshold",
-  "fileName": "File Name",
-  "sequence": "Sequence",
-  "searchStatus": "Search Status",
-  "searched": "Searched",
-  "unsearched": "Unsearched",
-  "startDeepSearch": "🔍 Start Deep Search",
-  "deepSearchHint": "Click the button to perform deep search, generating impact assessment report and Table 2 data",
-  "level": "Overall Impact Level",
-  "transportImpact": "Transport Impact Level",
-  "economyImpact": "Economy Impact Level",
-  "safetyImpact": "Safety Impact Level",
-  "timeline": "Timeline",
-  "sourceCount": "Source Count",
-  "detailFile": "Detail File",
-  "triggerCheck": "🌧️ Trigger Check",
-  "ingestSample": "📥 Ingest Sample Data",
-  "processData": "⚙️ Process Data",
-  "refreshStats": "🔄 Refresh Statistics",
-  "exportCSV": "⬇️ Export CSV",
-  "countryRegion": "Country/Region",
-  "allCountries": "All Countries",
-  "spain": "Spain",
-  "germany": "Germany",
-  "italy": "Italy",
-  "france": "France",
-  "denmark": "Denmark",
-  "dateLabel": "Date",
-  "severity": "Severity",
-  "allLevels": "All Levels",
-  "extreme": "Extreme",
-  "high": "High",
-  "medium": "Medium",
-  "low": "Low",
-  "searchData": "🔍 Search Data",
-  "smartSearchStatus": "🔍 Smart Search Status",
-  "systemReady": "📊 System Ready",
-  "useSearchForm": "Use the search form above to find real flood data",
-  "autoCollectTip": "💡 Tip: The system automatically collects the latest data every 6 hours",
-  "na": "N/A",
-  "loading": "Loading...",
-  "error": "Error",
-  "success": "Success",
-  "confirm": "Confirm",
-  "cancel": "Cancel",
-  "deepSearchConfirm": "Are you sure you want to perform deep search on event \"{id}\"?\n\nThis will:\n1. Search related news and official information\n2. Use LLM to analyze impact\n3. Generate detailed report\n4. Fill Table 2 data\n\nEstimated time: 30 seconds - 1 minute",
-  "deepSearching": "Searching...",
-  "deepSearchCompleted": "Deep search completed! Impact assessment report and Table 2 data have been generated.",
-  "deepSearchFailed": "Deep search failed",
-  "deepSearchTimeout": "Deep search timeout (exceeded 4 minutes), please try again later",
-  "language": "Language",
-  "chinese": "中文",
-  "english": "English",
-  "spanish": "Español"
+  "common": {
+    "pageTitle": "EU Flood Monitoring System - Real Data Search",
+    "headerTitle": "🌊 EU Flood Monitoring System",
+    "headerSubtitle": "Real-time search for real flood data - from official weather APIs and social media",
+    "close": "✕ Close",
+    "na": "N/A",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "to": "to"
+  },
+  "stats": {
+    "totalRecords": "Total Records",
+    "processedRecords": "Processed Records",
+    "averageRisk": "Average Risk",
+    "maxWaterLevel": "Max Water Level (m)"
+  },
+  "table": {
+    "header": {
+      "date": "Date",
+      "country": "Country",
+      "province": "Province",
+      "city": "City",
+      "coordinates": "Coordinates",
+      "value": "Value",
+      "threshold": "Threshold",
+      "searchStatus": "Search Status"
+    },
+    "status": {
+      "searched": "Searched",
+      "unsearched": "Unsearched",
+      "needResearch": "Need Re-search"
+    },
+    "title": {
+      "rainEventList": "Rain Event List"
+    }
+  },
+  "pagination": {
+    "itemsPerPage": "Items per page:",
+    "items": "items",
+    "page": "page",
+    "totalItems": "Total {count} items",
+    "pageInfoWithTotal": "Page {page} / {totalPages}, Total {total} items",
+    "allDisplayed": "(All displayed)",
+    "firstPage": "First",
+    "prevPage": "Previous",
+    "nextPage": "Next",
+    "lastPage": "Last",
+    "jumpTo": "Jump to:",
+    "jump": "Go"
+  },
+  "message": {
+    "foundEvents": "Found {count} events ({dateRange})",
+    "noEventsFound": "No events found from {dateFrom} to {dateTo}",
+    "countryFilter": "Country: {country}",
+    "pageInfo": "Page {page}/{totalPages}, showing {showing} entries, total {total} entries",
+    "showingOnly": "Showing {count} entries",
+    "searchedCount": "Searched: {count}",
+    "unsearchedCount": "Unsearched: {count}",
+    "needResearchCount": "Need Re-search: {count}"
+  },
+  "form": {
+    "startDate": "Start Date:",
+    "endDate": "End Date:",
+    "country": "Country (optional):",
+    "countryPlaceholder": "Leave empty to query all countries",
+    "selectDateRange": "Please select start date and end date",
+    "startDateAfterEnd": "Start date cannot be later than end date",
+    "enterPageNumber": "Please enter a page number between 1 and {max}"
+  },
+  "button": {
+    "queryEvents": "🔍 Query Events",
+    "refreshQuery": "🔄 Refresh Query",
+    "startDeepSearch": "🔍 Start Deep Search",
+    "triggerCheck": "🌧️ Trigger Check",
+    "ingestSample": "📥 Ingest Sample Data",
+    "processData": "⚙️ Process Data",
+    "refreshStats": "🔄 Refresh Statistics",
+    "exportCSV": "⬇️ Export CSV",
+    "searchData": "🔍 Search Data"
+  },
+  "detail": {
+    "title": {
+      "dataDetails": "📊 Data Details",
+      "clickToViewDetails": "Click on an event row in the table to view detailed information"
+    },
+    "section": {
+      "basicInfo": "Basic Information (Table 1)",
+      "impactInfo": "Impact Assessment (Table 2)"
+    },
+    "field": {
+      "eventId": "Event ID",
+      "date": "Date",
+      "country": "Country",
+      "province": "Province",
+      "city": "City",
+      "coordinates": "Coordinates",
+      "value": "Value",
+      "threshold": "Threshold",
+      "fileName": "File Name",
+      "sequence": "Sequence",
+      "time": "Time",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At"
+    },
+    "impact": {
+      "level": "Overall Impact Level",
+      "transportImpact": "Transport Impact Level",
+      "economyImpact": "Economy Impact Level",
+      "safetyImpact": "Safety Impact Level",
+      "timeline": "Timeline",
+      "sourceCount": "Source Count",
+      "detailFile": "Detail File",
+      "impactAssessment": "Impact Assessment (Table 2)",
+      "levelSevere": "Severe",
+      "levelMedium": "Medium",
+      "levelMild": "Mild",
+      "levelLow": "Low",
+      "levelN": " Level",
+      "timelineData": "Timeline Data",
+      "timeSlot": "Time Slot",
+      "highlights": "Highlights",
+      "events": "Events"
+    },
+    "hint": {
+      "deepSearchHint": "Click the button to perform deep search, generating impact assessment report and Table 2 data"
+    }
+  },
+  "search": {
+    "title": {
+      "queryRainEvents": "📅 Query Rain Events (supports date range and country filter)"
+    },
+    "deepSearch": {
+      "confirm": "Are you sure you want to perform deep search on event \"{id}\"?\n\nThis will:\n1. Search related news and media content\n2. Perform LLM analysis and validation\n3. Generate impact assessment report\n4. Create Table 2 data\n\nThis operation may take a few minutes.",
+      "confirmShort": "Are you sure you want to perform deep search on event \"{id}\"?\n\nThis will:\n1. Search related news and official information\n2. Use LLM to analyze impact\n3. Generate detailed report\n4. Fill Table 2 data\n\nEstimated time: 30 seconds - 1 minute",
+      "searching": "Searching...",
+      "completed": "Deep search completed! Impact assessment report and Table 2 data have been generated.",
+      "failed": "Deep search failed",
+      "failedWithStatus": "Deep search failed ({status})",
+      "requestFailed": "Deep search request failed: Unable to get response",
+      "timeout": "Deep search timeout (exceeded 4 minutes), please try again later"
+    },
+    "status": {
+      "smartSearchStatus": "🔍 Smart Search Status",
+      "systemReady": "📊 System Ready",
+      "useSearchForm": "Use the search form above to find real flood data",
+      "autoCollectTip": "💡 Tip: The system automatically collects the latest data every 6 hours"
+    },
+    "error": {
+      "loadFailed": "Load Failed",
+      "openConsoleHint": "💡 Tip: Open browser console (F12) to view full error information"
+    }
+  },
+  "file": {
+    "upload": {
+      "file": "📤 Upload File",
+      "uploading": "📤 Uploading...",
+      "uploadingFile": "Uploading file...",
+      "failed": "Upload failed",
+      "success": "✅ Upload successful! File name: {filename}"
+    },
+    "select": {
+      "dataFile": "Select Data File (CSV, Excel, TXT)",
+      "pleaseSelectFile": "Please select a data file first",
+      "chooseFile": "Choose File",
+      "noFileChosen": "No file chosen",
+      "pleaseSelectFileFirst": "Please select a file first",
+      "pleaseUploadFileFirst": "Please upload a file first",
+      "fileLost": "File lost, please upload again"
+    },
+    "info": {
+      "fileName": "File Name",
+      "fileSize": "Size"
+    }
+  },
+  "interpolation": {
+    "title": {
+      "spatialInterpolation": "🗺️ Spatial Interpolation Analysis"
+    },
+    "form": {
+      "confirmDate": "Confirm Date (can be manually modified, used for generating event ID)",
+      "dateHint": "Default parsed from filename (e.g., 20251106), can be changed",
+      "thresholdSetting": "Threshold Setting (default 50.0, can be modified; shows points with values greater than this threshold)",
+      "thresholdHint": "Defaults to 50.0 if empty or invalid",
+      "pleaseSelectDateFirst": "Please select/confirm date first"
+    },
+    "action": {
+      "filterAndSave": "💾 Filter & Save",
+      "filteringAndSaving": "💾 Filtering and saving...",
+      "filteringAndSavingInProgress": "Filtering and saving, please wait (may take a few minutes)...",
+      "filterAndSaveCompleted": "Filter and save completed! Added {count} entries",
+      "filterAndSaveFailed": "Filter and save failed: {error}",
+      "saveFailed": "Save failed",
+      "saveFailedWithStatus": "Save failed (HTTP {status})"
+    },
+    "place": {
+      "placeList": "📍 Place List (Country/Province/City, by unique combination)",
+      "points": "points",
+      "pointsDisplayed": "{count} data points have been displayed on the map",
+      "noLocationInfo": "No country/province/city information identified"
+    }
+  },
+  "language": {
+    "language": "Language",
+    "chinese": "中文",
+    "english": "English",
+    "spanish": "Español"
+  },
+  "country": {
+    "countryRegion": "Country/Region",
+    "allCountries": "All Countries",
+    "spain": "Spain",
+    "germany": "Germany",
+    "italy": "Italy",
+    "france": "France",
+    "denmark": "Denmark"
+  },
+  "severity": {
+    "severity": "Severity",
+    "allLevels": "All Levels",
+    "extreme": "Extreme",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
+  },
+  "map": {
+    "nuts": {
+      "title": "NUTS Information",
+      "name": "Name",
+      "latinName": "Latin Name",
+      "countryCode": "Country Code",
+      "level": "Level",
+      "fullName": "Full Name",
+      "countryNuts3": "Country-NUTS3"
+    },
+    "geojsonLoaded": "GeoJSON region loaded (hover to view NUTS information)"
+  }
 }
-

@@ -231,8 +231,32 @@ class SearchWorkflow:
                         logger.info("✅ 表2数据填充成功: rain_event_id=%s (直接复制自表1)", table1_id)
                     else:
                         logger.warning("⚠️  表2数据填充失败: %s", table1_id)
+                        # 表2填充失败，更新表1的searched字段为2（需重搜）
+                        try:
+                            import sqlite3
+                            conn = sqlite3.connect(db_file)
+                            cursor = conn.cursor()
+                            cursor.execute("UPDATE rain_event SET searched = 2 WHERE id = ?", (table1_id,))
+                            conn.commit()
+                            conn.close()
+                            logger.warning("⚠️ 已更新表1的searched字段为2（需重搜）: rain_event_id=%s", table1_id)
+                        except Exception as update_error:
+                            logger.warning("⚠️ 更新表1的searched字段失败: rain_event_id=%s, error=%s", table1_id, update_error)
             except Exception as e:
                 logger.exception("填充表2数据时出错: %s", e)
+                # 填充表2时发生异常，更新表1的searched字段为2（需重搜）
+                try:
+                    table1_id = rain_event_data.get("id") if 'rain_event_data' in locals() else None
+                    if table1_id:
+                        import sqlite3
+                        conn = sqlite3.connect(db_file)
+                        cursor = conn.cursor()
+                        cursor.execute("UPDATE rain_event SET searched = 2 WHERE id = ?", (table1_id,))
+                        conn.commit()
+                        conn.close()
+                        logger.warning("⚠️ 已更新表1的searched字段为2（需重搜，异常）: rain_event_id=%s", table1_id)
+                except Exception as update_error:
+                    logger.warning("⚠️ 更新表1的searched字段失败: error=%s", update_error)
                 # 不中断主流程，继续返回LLM结果
 
             # 转换为兼容格式，并包含报告

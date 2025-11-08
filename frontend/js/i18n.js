@@ -59,17 +59,45 @@ async function loadTranslations() {
     }
 }
 
-// 当前语言
-let currentLang = localStorage.getItem('language') || 'zh';
+// 当前语言（默认中文）
+const supportedLanguages = ['zh', 'en', 'es'];
+const savedLang = localStorage.getItem('language');
+let currentLang = (savedLang && supportedLanguages.includes(savedLang)) ? savedLang : 'zh';
 
 /**
- * 获取翻译文本
- * @param {string} key - 翻译键
+ * 获取翻译文本（支持点号路径，如 'table.header.date'）
+ * @param {string} key - 翻译键（支持点号路径，如 'table.header.date'）
  * @param {object} params - 参数对象（用于替换占位符）
  * @returns {string} 翻译后的文本
  */
 function t(key, params = {}) {
-    const translation = translations[currentLang]?.[key] || translations['zh']?.[key] || key;
+    // 支持点号路径，如 'table.header.date' -> translations['zh']['table']['header']['date']
+    const keys = key.split('.');
+    let translation = translations[currentLang] || translations['zh'] || {};
+    
+    // 遍历路径获取嵌套值
+    for (const k of keys) {
+        if (translation && typeof translation === 'object' && k in translation) {
+            translation = translation[k];
+        } else {
+            // 如果找不到，尝试使用中文作为后备
+            translation = translations['zh'] || {};
+            for (const k2 of keys) {
+                if (translation && typeof translation === 'object' && k2 in translation) {
+                    translation = translation[k2];
+                } else {
+                    // 如果还是找不到，返回原始键
+                    return key;
+                }
+            }
+            break;
+        }
+    }
+    
+    // 如果最终值不是字符串，返回原始键
+    if (typeof translation !== 'string') {
+        return key;
+    }
     
     // 替换占位符
     if (params && Object.keys(params).length > 0) {
@@ -96,7 +124,18 @@ function setLanguage(lang) {
     if (translations[lang] && Object.keys(translations[lang]).length > 0) {
         currentLang = lang;
         localStorage.setItem('language', lang);
-        document.documentElement.lang = langMap[lang] || lang;
+        const htmlLang = langMap[lang] || lang;
+        
+        // 设置HTML的lang属性，影响浏览器原生组件（如日期选择器）
+        document.documentElement.lang = htmlLang;
+        document.documentElement.setAttribute('lang', htmlLang);
+        
+        // 设置所有日期输入框的lang属性，确保日期选择器使用正确语言
+        document.querySelectorAll('input[type="date"]').forEach(input => {
+            input.setAttribute('lang', htmlLang);
+            input.lang = htmlLang;
+        });
+        
         updatePageLanguage();
     } else {
         console.warn(`语言 ${lang} 未加载或为空`);
@@ -115,6 +154,9 @@ function updatePageLanguage() {
         if (element.tagName === 'INPUT' && element.type === 'text' && element.hasAttribute('data-i18n-placeholder')) {
             const placeholderKey = element.getAttribute('data-i18n-placeholder');
             element.placeholder = t(placeholderKey);
+        } else if (element.tagName === 'INPUT' && element.type === 'date') {
+            // 日期输入框：通过设置lang属性，浏览器会自动更新占位符格式
+            // 不需要手动设置，浏览器会根据document.documentElement.lang自动调整
         } else if (element.tagName === 'INPUT' && element.type === 'submit' || element.tagName === 'BUTTON') {
             element.textContent = text;
         } else if (element.tagName === 'OPTION') {
@@ -148,6 +190,18 @@ function updatePageLanguage() {
         const titleKey = titleElement.getAttribute('data-i18n');
         document.title = t(titleKey);
     }
+    
+    // 更新所有日期输入框的lang属性（影响浏览器原生日期选择器的语言）
+    const langMap = {
+        'zh': 'zh-CN',
+        'en': 'en',
+        'es': 'es'
+    };
+    const htmlLang = langMap[currentLang] || currentLang;
+    document.querySelectorAll('input[type="date"]').forEach(input => {
+        input.setAttribute('lang', htmlLang);
+        input.lang = htmlLang;
+    });
     
     // 触发自定义事件，通知其他模块更新
     window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang: currentLang } }));

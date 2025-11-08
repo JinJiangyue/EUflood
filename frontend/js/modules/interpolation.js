@@ -34,14 +34,16 @@ function renderPlacesList(points, containerId = 'interpolationPlaces') {
                     <span style="color:#1e3c72; font-weight:600;">${escapeHtml(country)}</span>
                     <span style="color:#2c3e50; margin-left:8px;">${escapeHtml(prov)}</span>
                     <span style="color:#2c3e50; margin-left:8px;">${escapeHtml(city)}</span>
-                    <span style="color:#999; float:right;">${item.count} 点</span>
+                    <span style="color:#999; float:right;">${item.count} ${typeof t === 'function' ? t('interpolation.place.points') : '点'}</span>
                 </li>`;
             }).join('');
-            container.innerHTML = `<div style="font-weight:600; color:#1e3c72; margin-bottom:8px;">📍 地点列表（国家/省/市，按唯一组合）</div>
+            const i18n = typeof t === 'function' ? t : (key) => key;
+            container.innerHTML = `<div style="font-weight:600; color:#1e3c72; margin-bottom:8px;">${i18n('interpolation.place.placeList')}</div>
                 <ul style="list-style:none; padding-left:0; margin:0;">${rows}</ul>`;
             container.style.display = 'block';
         } else {
-            container.innerHTML = '<div style="color:#999;">未识别到国家/省/市信息</div>';
+            const i18n = typeof t === 'function' ? t : (key) => key;
+            container.innerHTML = `<div style="color:#999;">${i18n('interpolation.place.noLocationInfo')}</div>`;
             container.style.display = 'block';
         }
     } catch (e) {
@@ -75,7 +77,12 @@ function initMapAndAddMarkers(points, threshold, statusElement) {
             setTimeout(() => {
                 const markerCount = addMarkersToMap(points, threshold);
                 if (statusElement && markerCount > 0) {
-                    statusElement.innerHTML += `<div style="margin-top: 10px; color: #27ae60;">✅ 已在地图上显示 ${markerCount} 个数据点</div>`;
+                    const i18n = typeof t === 'function' ? t : (key, params) => {
+                    let text = key;
+                    if (params) Object.keys(params).forEach(k => text = text.replace(`{${k}}`, params[k]));
+                    return text;
+                };
+                statusElement.innerHTML += `<div style="margin-top: 10px; color: #27ae60;">✅ ${i18n('interpolation.place.pointsDisplayed', { count: markerCount })}</div>`;
                 } else if (statusElement) {
                     statusElement.innerHTML += `<div style="margin-top: 10px; color: #f39c12;">⚠️ 没有找到符合条件的数据点</div>`;
                 }
@@ -83,7 +90,12 @@ function initMapAndAddMarkers(points, threshold, statusElement) {
         } else {
             const markerCount = addMarkersToMap(points, threshold);
             if (statusElement && markerCount > 0) {
-                statusElement.innerHTML += `<div style="margin-top: 10px; color: #27ae60;">✅ 已在地图上显示 ${markerCount} 个数据点</div>`;
+                const i18n = typeof t === 'function' ? t : (key, params) => {
+                    let text = key;
+                    if (params) Object.keys(params).forEach(k => text = text.replace(`{${k}}`, params[k]));
+                    return text;
+                };
+                statusElement.innerHTML += `<div style="margin-top: 10px; color: #27ae60;">✅ ${i18n('interpolation.place.pointsDisplayed', { count: markerCount })}</div>`;
             } else if (statusElement) {
                 statusElement.innerHTML += `<div style="margin-top: 10px; color: #f39c12;">⚠️ 没有找到符合条件的数据点</div>`;
             }
@@ -95,15 +107,36 @@ function initMapAndAddMarkers(points, threshold, statusElement) {
  * 初始化空间插值分析模块
  */
 function initInterpolation() {
+    // 设置确认日期输入框的默认值为今天
+    const confirmedDateInput = document.getElementById('confirmedDateInput');
+    if (confirmedDateInput && !confirmedDateInput.value) {
+        confirmedDateInput.value = new Date().toISOString().slice(0, 10);
+    }
+    
     // 文件选择
     const fileInput = document.getElementById('interpolationFileInput');
+    const fileButtonText = document.getElementById('fileButtonText');
+    const fileStatusText = document.getElementById('fileStatusText');
+    
     if (fileInput) {
         fileInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
+            const i18n = typeof t === 'function' ? t : (key) => key;
+            
             if (file) {
+                // 更新自定义按钮显示
+                if (fileButtonText) {
+                    fileButtonText.textContent = i18n('file.select.chooseFile');
+                }
+                if (fileStatusText) {
+                    fileStatusText.textContent = file.name;
+                    fileStatusText.style.color = '#27ae60';
+                    fileStatusText.style.fontWeight = '600';
+                }
+                
                 const fileInfo = document.getElementById('interpolationFileInfo');
                 if (fileInfo) {
-                    fileInfo.innerHTML = `<strong>文件名：</strong>${file.name}<br><strong>大小：</strong>${(file.size / 1024).toFixed(2)} KB`;
+                    fileInfo.innerHTML = `<strong>${i18n('file.info.fileName')}：</strong>${file.name}<br><strong>${i18n('file.info.fileSize')}：</strong>${(file.size / 1024).toFixed(2)} KB`;
                     fileInfo.style.display = 'block';
                 }
                 // 从文件名解析日期，填充到 confirmedDateInput
@@ -117,6 +150,26 @@ function initInterpolation() {
                         dateInput.value = new Date().toISOString().slice(0,10);
                     }
                 }
+            } else {
+                // 重置显示
+                if (fileStatusText) {
+                    fileStatusText.textContent = i18n('file.select.noFileChosen');
+                    fileStatusText.style.color = '#666';
+                    fileStatusText.style.fontWeight = 'normal';
+                }
+            }
+        });
+        
+        // 监听语言切换事件，更新文件选择按钮文本
+        window.addEventListener('languageChanged', function() {
+            const i18n = typeof t === 'function' ? t : (key) => key;
+            if (fileButtonText) {
+                fileButtonText.textContent = i18n('file.select.chooseFile');
+            }
+            if (fileStatusText && (!fileInput.files || fileInput.files.length === 0)) {
+                fileStatusText.textContent = i18n('file.select.noFileChosen');
+                fileStatusText.style.color = '#666';
+                fileStatusText.style.fontWeight = 'normal';
             }
         });
     }
@@ -129,17 +182,19 @@ function initInterpolation() {
             const file = fileInput?.files[0];
             
             if (!file) {
-                alert('请先选择文件');
+                const i18n = typeof t === 'function' ? t : (key) => key;
+                alert(i18n('file.select.pleaseSelectFileFirst'));
                 return;
             }
             
             const btn = document.getElementById('btnUploadInterpolationFile');
             const status = document.getElementById('interpolationStatus');
+            const i18n = typeof t === 'function' ? t : (key) => key;
             btn.disabled = true;
-            btn.textContent = '📤 上传中...';
+            btn.textContent = i18n('file.upload.uploading');
             if (status) {
                 status.style.display = 'block';
-                status.innerHTML = '<div style="color: #3498db;">正在上传文件...</div>';
+                status.innerHTML = `<div style="color: #3498db;">${i18n('file.upload.uploadingFile')}</div>`;
             }
             
             try {
@@ -153,14 +208,20 @@ function initInterpolation() {
                 
                 const data = await res.json();
                 if (!res.ok) {
-                    const errorMsg = data.error || data.details || '上传失败';
-                    throw new Error(`上传失败 (${res.status}): ${errorMsg}`);
+                    const i18n = typeof t === 'function' ? t : (key) => key;
+                    const errorMsg = data.error || data.details || i18n('file.upload.failed');
+                    throw new Error(`${i18n('file.upload.failed')} (${res.status}): ${errorMsg}`);
                 }
                 
                 if (data.success) {
                     uploadedFileInfo = data.file;
                     if (status) {
-                        status.innerHTML = `<div style="color: #27ae60;">✅ 上传成功！文件名：${data.file.filename}</div>`;
+                        const i18n = typeof t === 'function' ? t : (key, params) => {
+                            let text = key;
+                            if (params) Object.keys(params).forEach(k => text = text.replace(`{${k}}`, params[k]));
+                            return text;
+                        };
+                        status.innerHTML = `<div style="color: #27ae60;">${i18n('file.upload.success', { filename: data.file.filename })}</div>`;
                     }
                     // 上传成功后，启用"筛选入库"按钮
                     const btnSave = document.getElementById('btnSaveRainEvents');
@@ -171,19 +232,23 @@ function initInterpolation() {
                     // 更新文件信息
                     const fileInfo = document.getElementById('interpolationFileInfo');
                     if (fileInfo) {
+                        const i18n = typeof t === 'function' ? t : (key) => key;
                         fileInfo.innerHTML = 
-                            `<strong>文件名：</strong>${data.file.filename}<br><strong>大小：</strong>${(data.file.size / 1024).toFixed(2)} KB`;
+                            `<strong>${i18n('file.info.fileName')}：</strong>${data.file.filename}<br><strong>${i18n('file.info.fileSize')}：</strong>${(data.file.size / 1024).toFixed(2)} KB`;
                     }
                 } else {
-                    throw new Error(data.error || '上传失败');
+                    const i18n = typeof t === 'function' ? t : (key) => key;
+                    throw new Error(data.error || i18n('file.upload.failed'));
                 }
             } catch (error) {
+                const i18n = typeof t === 'function' ? t : (key) => key;
                 if (status) {
-                    status.innerHTML = `<div style="color: #e74c3c;">❌ 上传失败：${error.message}</div>`;
+                    status.innerHTML = `<div style="color: #e74c3c;">❌ ${i18n('file.upload.failed')}：${error.message}</div>`;
                 }
             } finally {
+                const i18n = typeof t === 'function' ? t : (key) => key;
                 btn.disabled = false;
-                btn.textContent = '📤 上传文件';
+                btn.textContent = i18n('file.upload.file');
             }
         });
     }
@@ -192,8 +257,9 @@ function initInterpolation() {
     const btnSave = document.getElementById('btnSaveRainEvents');
     if (btnSave) {
         btnSave.addEventListener('click', async function() {
+            const i18n = typeof t === 'function' ? t : (key) => key;
             if (!uploadedFileInfo || !uploadedFileInfo.filename) {
-                alert('请先上传文件');
+                alert(i18n('file.select.pleaseUploadFileFirst'));
                 return;
             }
             
@@ -201,16 +267,16 @@ function initInterpolation() {
             const confirmedDate = dateInput?.value;
             const status = document.getElementById('interpolationStatus');
             if (!confirmedDate) {
-                alert('请先选择/确认日期');
+                alert(i18n('interpolation.form.pleaseSelectDateFirst'));
                 return;
             }
 
             const btn = this;
             btn.disabled = true;
-            btn.textContent = '💾 筛选入库中...';
+            btn.textContent = i18n('interpolation.action.filteringAndSaving');
             if (status) {
                 status.style.display = 'block';
-                status.innerHTML = '<div style="color:#3498db;">正在筛选并入库，请稍候（可能需要几分钟）...</div>';
+                status.innerHTML = `<div style="color:#3498db;">${i18n('interpolation.action.filteringAndSavingInProgress')}</div>`;
             }
 
             try {
@@ -230,24 +296,30 @@ function initInterpolation() {
                 const fileInput = document.getElementById('interpolationFileInput');
                 const file = fileInput?.files[0];
                 if (!file) {
-                    throw new Error('文件已丢失，请重新上传');
+                    const i18n = typeof t === 'function' ? t : (key) => key;
+                    throw new Error(i18n('file.select.fileLost'));
                 }
                 formData.append('file', file);
                 formData.append('confirmed_date', confirmedDate);
                 formData.append('value_threshold', String(threshold));
 
                 const res = await fetch('/python/rain/process-upload', { method: 'POST', body: formData });
+                const i18n = typeof t === 'function' ? t : (key, params) => {
+                    let text = key;
+                    if (params) Object.keys(params).forEach(k => text = text.replace(`{${k}}`, params[k]));
+                    return text;
+                };
                 if (!res.ok) {
-                    let msg = `入库失败 (HTTP ${res.status})`;
+                    let msg = i18n('interpolation.action.saveFailedWithStatus', { status: res.status });
                     try { const e = await res.json(); msg = e.error || msg; } catch {}
                     throw new Error(msg);
                 }
                 const data = await res.json();
-                if (!data.success) throw new Error(data.error || '入库失败');
+                if (!data.success) throw new Error(data.error || i18n('interpolation.action.saveFailed'));
 
                 // 显示入库成功信息
                 if (status) {
-                    status.innerHTML = `<div style="color:#27ae60;">✅ 筛选入库完成！新增 ${data.inserted} 条</div>`;
+                    status.innerHTML = `<div style="color:#27ae60;">✅ ${i18n('interpolation.action.filterAndSaveCompleted', { count: data.inserted })}</div>`;
                 }
 
                 // 如果有插值结果数据，显示地点列表和地图标记
@@ -258,12 +330,18 @@ function initInterpolation() {
                     initMapAndAddMarkers(points, threshold, status);
                 }
             } catch (err) {
+                const i18n = typeof t === 'function' ? t : (key, params) => {
+                    let text = key;
+                    if (params) Object.keys(params).forEach(k => text = text.replace(`{${k}}`, params[k]));
+                    return text;
+                };
                 if (status) {
-                    status.innerHTML = `<div style="color:#e74c3c;">❌ 筛选入库失败：${(err && err.message) || err}</div>`;
+                    status.innerHTML = `<div style="color:#e74c3c;">❌ ${i18n('interpolation.action.filterAndSaveFailed', { error: (err && err.message) || err })}</div>`;
                 }
             } finally {
+                const i18n = typeof t === 'function' ? t : (key) => key;
                 btn.disabled = false;
-                btn.textContent = '💾 筛选入库';
+                btn.textContent = i18n('interpolation.action.filterAndSave');
             }
         });
     }

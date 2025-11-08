@@ -52,6 +52,7 @@ export function registerRainEventsModule(app: Express) {
           COUNT(*) as event_count,
           COUNT(CASE WHEN searched = 1 THEN 1 END) as searched_count,
           COUNT(CASE WHEN searched = 0 THEN 1 END) as unsearched_count,
+          COUNT(CASE WHEN searched = 2 THEN 1 END) as need_research_count,
           AVG(value) as avg_value,
           MAX(value) as max_value,
           MIN(value) as min_value
@@ -111,7 +112,8 @@ export function registerRainEventsModule(app: Express) {
           COUNT(DISTINCT country) as country_count,
           COUNT(DISTINCT province) as province_count,
           COUNT(CASE WHEN searched = 1 THEN 1 END) as total_searched,
-          COUNT(CASE WHEN searched = 0 THEN 1 END) as total_unsearched
+          COUNT(CASE WHEN searched = 0 THEN 1 END) as total_unsearched,
+          COUNT(CASE WHEN searched = 2 THEN 1 END) as total_need_research
         FROM rain_event
         ${whereClause}
       `;
@@ -127,7 +129,8 @@ export function registerRainEventsModule(app: Express) {
           countryCount: stats.country_count || 0,
           provinceCount: stats.province_count || 0,
           totalSearched: stats.total_searched || 0,
-          totalUnsearched: stats.total_unsearched || 0
+          totalUnsearched: stats.total_unsearched || 0,
+          totalNeedResearch: stats.total_need_research || 0
         },
         events: events,
         details: includeDetails ? details : undefined,
@@ -200,11 +203,11 @@ export function registerRainEventsModule(app: Express) {
         
         return res.json({
           success: true,
-          searched: false, // 标记为未搜索
+          searched: event.searched === 1, // 向后兼容：布尔值
           event: {
             ...event,
-            searched: event.searched === 1,
-            searchedText: event.searched === 1 ? '已搜索' : '未搜索'
+            searched: event.searched || 0, // 返回数值：0=未搜索，1=已搜索，2=需重搜
+            searchedText: event.searched === 1 ? '已搜索' : (event.searched === 2 ? '需重搜' : '未搜索')
           }
         });
       }
@@ -557,6 +560,21 @@ export function registerRainEventsModule(app: Express) {
                 const impact = db.prepare('SELECT * FROM rain_flood_impact WHERE rain_event_id = ?').get(id) as any;
                 if (impact) {
                   console.log(`[深度搜索] ✅ 找到表2数据:`, impact);
+                  
+                  // 更新表1的searched字段为1（已搜索）
+                  try {
+                    const updateSearched = db.prepare('UPDATE rain_event SET searched = 1 WHERE id = ?');
+                    const updateResult = updateSearched.run(id);
+                    if (updateResult.changes > 0) {
+                      console.log(`[深度搜索] ✅ 已更新表1的searched字段为1: ${id}`);
+                    } else {
+                      console.warn(`[深度搜索] ⚠️ 更新表1的searched字段失败（可能事件不存在）: ${id}`);
+                    }
+                  } catch (updateError) {
+                    console.error(`[深度搜索] ❌ 更新表1的searched字段时出错:`, updateError);
+                    // 不中断流程，继续返回成功响应
+                  }
+                  
                   sendResponse(true, '深度搜索完成，已生成影响评估报告和表2数据');
                 } else {
                   checkCount++;
@@ -598,6 +616,20 @@ export function registerRainEventsModule(app: Express) {
                     
                     console.log(`[深度搜索] 表2相关日志行:`, table2RelatedLines);
                     
+                    // 深度搜索失败，更新表1的searched字段为2（需重搜）
+                    try {
+                      const updateSearched = db.prepare('UPDATE rain_event SET searched = 2 WHERE id = ?');
+                      const updateResult = updateSearched.run(id);
+                      if (updateResult.changes > 0) {
+                        console.log(`[深度搜索] ⚠️ 已更新表1的searched字段为2（需重搜）: ${id}`);
+                      } else {
+                        console.warn(`[深度搜索] ⚠️ 更新表1的searched字段失败（可能事件不存在）: ${id}`);
+                      }
+                    } catch (updateError) {
+                      console.error(`[深度搜索] ❌ 更新表1的searched字段时出错:`, updateError);
+                      // 不中断流程，继续返回错误响应
+                    }
+                    
                     sendResponse(false, errorSummary, {
                       stdout: stdout, // 完整输出
                       stderr: stderr, // 完整错误输出
@@ -635,6 +667,20 @@ export function registerRainEventsModule(app: Express) {
                 line.toLowerCase().includes('traceback')
               ).slice(-20);
               
+              // 深度搜索失败（进程退出码非0），更新表1的searched字段为2（需重搜）
+              try {
+                const updateSearched = db.prepare('UPDATE rain_event SET searched = 2 WHERE id = ?');
+                const updateResult = updateSearched.run(id);
+                if (updateResult.changes > 0) {
+                  console.log(`[深度搜索] ⚠️ 已更新表1的searched字段为2（需重搜）: ${id}`);
+                } else {
+                  console.warn(`[深度搜索] ⚠️ 更新表1的searched字段失败（可能事件不存在）: ${id}`);
+                }
+              } catch (updateError) {
+                console.error(`[深度搜索] ❌ 更新表1的searched字段时出错:`, updateError);
+                // 不中断流程，继续返回错误响应
+              }
+              
               sendResponse(false, `深度搜索执行失败（退出码: ${code}）`, {
                 stdout: stdout,
                 stderr: stderr,
@@ -646,6 +692,21 @@ export function registerRainEventsModule(app: Express) {
           
           pythonProcess.on('error', (error: Error) => {
             if (responseSent) return;
+            
+            // 深度搜索失败（无法启动进程），更新表1的searched字段为2（需重搜）
+            try {
+              const updateSearched = db.prepare('UPDATE rain_event SET searched = 2 WHERE id = ?');
+              const updateResult = updateSearched.run(id);
+              if (updateResult.changes > 0) {
+                console.log(`[深度搜索] ⚠️ 已更新表1的searched字段为2（需重搜）: ${id}`);
+              } else {
+                console.warn(`[深度搜索] ⚠️ 更新表1的searched字段失败（可能事件不存在）: ${id}`);
+              }
+            } catch (updateError) {
+              console.error(`[深度搜索] ❌ 更新表1的searched字段时出错:`, updateError);
+              // 不中断流程，继续返回错误响应
+            }
+            
             sendResponse(false, `无法启动搜索进程: ${error.message}`);
           });
           
@@ -654,6 +715,20 @@ export function registerRainEventsModule(app: Express) {
             if (!pythonProcess.killed) {
               pythonProcess.kill();
               if (!responseSent) {
+                // 深度搜索超时，更新表1的searched字段为2（需重搜）
+                try {
+                  const updateSearched = db.prepare('UPDATE rain_event SET searched = 2 WHERE id = ?');
+                  const updateResult = updateSearched.run(id);
+                  if (updateResult.changes > 0) {
+                    console.log(`[深度搜索] ⚠️ 已更新表1的searched字段为2（需重搜，超时）: ${id}`);
+                  } else {
+                    console.warn(`[深度搜索] ⚠️ 更新表1的searched字段失败（可能事件不存在）: ${id}`);
+                  }
+                } catch (updateError) {
+                  console.error(`[深度搜索] ❌ 更新表1的searched字段时出错:`, updateError);
+                  // 不中断流程，继续返回错误响应
+                }
+                
                 sendResponse(false, '深度搜索超时（超过4分钟）。如果搜索确实需要更长时间，请增加超时设置。', {
                   stdout: stdout.substring(0, 1000),
                   stderr: stderr.substring(0, 1000)

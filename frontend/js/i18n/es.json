@@ -1,95 +1,241 @@
 {
-  "pageTitle": "Sistema de Monitoreo de Inundaciones de la UE - Búsqueda de Datos Reales",
-  "headerTitle": "🌊 Sistema de Monitoreo de Inundaciones de la UE",
-  "headerSubtitle": "Búsqueda en tiempo real de datos reales de inundaciones - de APIs meteorológicas oficiales y redes sociales",
-  "totalRecords": "Total de Registros",
-  "processedRecords": "Registros Procesados",
-  "averageRisk": "Riesgo Promedio",
-  "maxWaterLevel": "Nivel Máximo de Agua (m)",
-  "spatialInterpolation": "🗺️ Análisis de Interpolación Espacial",
-  "selectDataFile": "Seleccionar Archivo de Datos (CSV, Excel, TXT)",
-  "confirmDate": "Confirmar Fecha (se puede modificar manualmente, se usa para generar el ID del evento)",
-  "dateHint": "Por defecto se analiza desde el nombre del archivo (ej., 20251106), se puede cambiar",
-  "thresholdSetting": "Configuración de Umbral (por defecto 50.0, se puede modificar; muestra puntos con valores mayores que este umbral)",
-  "thresholdHint": "Por defecto 50.0 si está vacío o es inválido",
-  "uploadFile": "📤 Subir Archivo",
-  "filterAndSave": "💾 Filtrar y Guardar",
-  "placeList": "📍 Lista de Lugares (País/Provincia/Ciudad, por combinación única)",
-  "points": "puntos",
-  "noLocationInfo": "No se identificó información de país/provincia/ciudad",
-  "queryRainEvents": "📅 Consultar Eventos de Lluvia (admite rango de fechas y filtro por país)",
-  "startDate": "Fecha de Inicio:",
-  "endDate": "Fecha de Fin:",
-  "country": "País (opcional):",
-  "countryPlaceholder": "Dejar vacío para consultar todos los países",
-  "queryEvents": "🔍 Consultar Eventos",
-  "refreshQuery": "🔄 Actualizar Consulta",
-  "rainEventList": "Lista de Eventos de Lluvia",
-  "dataDetails": "📊 Detalles de Datos",
-  "close": "✕ Cerrar",
-  "clickToViewDetails": "Haga clic en una fila de evento en la tabla para ver información detallada",
-  "basicInfo": "Información Básica (Tabla 1)",
-  "impactInfo": "Evaluación de Impacto (Tabla 2)",
-  "eventId": "ID del Evento",
-  "date": "Fecha",
-  "countryLabel": "País",
-  "province": "Provincia",
-  "city": "Ciudad",
-  "coordinates": "Coordenadas",
-  "value": "Valor",
-  "threshold": "Umbral",
-  "fileName": "Nombre del Archivo",
-  "sequence": "Secuencia",
-  "searchStatus": "Estado de Búsqueda",
-  "searched": "Buscado",
-  "unsearched": "No Buscado",
-  "startDeepSearch": "🔍 Iniciar Búsqueda Profunda",
-  "deepSearchHint": "Haga clic en el botón para realizar una búsqueda profunda, generando un informe de evaluación de impacto y datos de la Tabla 2",
-  "level": "Nivel de Impacto General",
-  "transportImpact": "Nivel de Impacto en el Transporte",
-  "economyImpact": "Nivel de Impacto Económico",
-  "safetyImpact": "Nivel de Impacto en la Seguridad",
-  "timeline": "Línea de Tiempo",
-  "sourceCount": "Cantidad de Fuentes",
-  "detailFile": "Archivo Detallado",
-  "triggerCheck": "🌧️ Verificación de Disparador",
-  "ingestSample": "📥 Ingestionar Datos de Ejemplo",
-  "processData": "⚙️ Procesar Datos",
-  "refreshStats": "🔄 Actualizar Estadísticas",
-  "exportCSV": "⬇️ Exportar CSV",
-  "countryRegion": "País/Región",
-  "allCountries": "Todos los Países",
-  "spain": "España",
-  "germany": "Alemania",
-  "italy": "Italia",
-  "france": "Francia",
-  "denmark": "Dinamarca",
-  "dateLabel": "Fecha",
-  "severity": "Severidad",
-  "allLevels": "Todos los Niveles",
-  "extreme": "Extremo",
-  "high": "Alto",
-  "medium": "Medio",
-  "low": "Bajo",
-  "searchData": "🔍 Buscar Datos",
-  "smartSearchStatus": "🔍 Estado de Búsqueda Inteligente",
-  "systemReady": "📊 Sistema Listo",
-  "useSearchForm": "Use el formulario de búsqueda arriba para encontrar datos reales de inundaciones",
-  "autoCollectTip": "💡 Consejo: El sistema recopila automáticamente los últimos datos cada 6 horas",
-  "na": "N/A",
-  "loading": "Cargando...",
-  "error": "Error",
-  "success": "Éxito",
-  "confirm": "Confirmar",
-  "cancel": "Cancelar",
-  "deepSearchConfirm": "¿Está seguro de que desea realizar una búsqueda profunda en el evento \"{id}\"?\n\nEsto hará:\n1. Buscar noticias relacionadas e información oficial\n2. Usar LLM para analizar el impacto\n3. Generar un informe detallado\n4. Llenar los datos de la Tabla 2\n\nTiempo estimado: 30 segundos - 1 minuto",
-  "deepSearching": "Buscando...",
-  "deepSearchCompleted": "¡Búsqueda profunda completada! Se ha generado el informe de evaluación de impacto y los datos de la Tabla 2.",
-  "deepSearchFailed": "Búsqueda profunda fallida",
-  "deepSearchTimeout": "Tiempo de espera de búsqueda profunda agotado (excedió 4 minutos), por favor intente nuevamente más tarde",
-  "language": "Idioma",
-  "chinese": "中文",
-  "english": "English",
-  "spanish": "Español"
+  "common": {
+    "pageTitle": "Sistema de Monitoreo de Inundaciones de la UE - Búsqueda de Datos Reales",
+    "headerTitle": "🌊 Monitoreo de Inundaciones UE",
+    "headerSubtitle": "Búsqueda en tiempo real de datos de inundaciones",
+    "close": "✕ Cerrar",
+    "na": "N/A",
+    "loading": "Cargando...",
+    "error": "Error",
+    "success": "Éxito",
+    "confirm": "Confirmar",
+    "cancel": "Cancelar",
+    "to": "a"
+  },
+  "stats": {
+    "totalRecords": "Total de Registros",
+    "processedRecords": "Registros Procesados",
+    "averageRisk": "Riesgo Promedio",
+    "maxWaterLevel": "Nivel Máximo de Agua (m)"
+  },
+  "table": {
+    "header": {
+      "date": "Fecha",
+      "country": "País",
+      "province": "Provincia",
+      "city": "Ciudad",
+      "coordinates": "Coordenadas",
+      "value": "Valor",
+      "threshold": "Umbral",
+      "searchStatus": "Estado de Búsqueda"
+    },
+    "status": {
+      "searched": "Buscado",
+      "unsearched": "No Buscado",
+      "needResearch": "Necesita Re-búsqueda"
+    },
+    "title": {
+      "rainEventList": "Lista de Eventos de Lluvia"
+    }
+  },
+  "pagination": {
+    "itemsPerPage": "Elementos por página:",
+    "items": "elementos",
+    "page": "página",
+    "totalItems": "Total {count} elementos",
+    "pageInfoWithTotal": "Página {page} / {totalPages}, Total {total} elementos",
+    "allDisplayed": "(Todos mostrados)",
+    "firstPage": "Primera",
+    "prevPage": "Anterior",
+    "nextPage": "Siguiente",
+    "lastPage": "Última",
+    "jumpTo": "Ir a:",
+    "jump": "Ir"
+  },
+  "message": {
+    "foundEvents": "Encontrados {count} eventos ({dateRange})",
+    "noEventsFound": "No se encontraron eventos del {dateFrom} al {dateTo}",
+    "countryFilter": "País: {country}",
+    "pageInfo": "Página {page}/{totalPages}, mostrando {showing} entradas, total {total} entradas",
+    "showingOnly": "Mostrando {count} entradas",
+    "searchedCount": "Buscados: {count}",
+    "unsearchedCount": "No Buscados: {count}",
+    "needResearchCount": "Necesita Re-búsqueda: {count}"
+  },
+  "form": {
+    "startDate": "Fecha de Inicio:",
+    "endDate": "Fecha de Fin:",
+    "country": "País (opcional):",
+    "countryPlaceholder": "Dejar vacío para consultar todos los países",
+    "selectDateRange": "Por favor seleccione la fecha de inicio y la fecha de fin",
+    "startDateAfterEnd": "La fecha de inicio no puede ser posterior a la fecha de fin",
+    "enterPageNumber": "Por favor ingrese un número de página entre 1 y {max}"
+  },
+  "button": {
+    "queryEvents": "🔍 Consultar Eventos",
+    "refreshQuery": "🔄 Actualizar Consulta",
+    "startDeepSearch": "🔍 Iniciar Búsqueda Profunda",
+    "triggerCheck": "🌧️ Verificación de Disparador",
+    "ingestSample": "📥 Ingestionar Datos de Ejemplo",
+    "processData": "⚙️ Procesar Datos",
+    "refreshStats": "🔄 Actualizar Estadísticas",
+    "exportCSV": "⬇️ Exportar CSV",
+    "searchData": "🔍 Buscar Datos"
+  },
+  "detail": {
+    "title": {
+      "dataDetails": "📊 Detalles de Datos",
+      "clickToViewDetails": "Haga clic en una fila de evento en la tabla para ver información detallada"
+    },
+    "section": {
+      "basicInfo": "Información Básica (Tabla 1)",
+      "impactInfo": "Evaluación de Impacto (Tabla 2)"
+    },
+    "field": {
+      "eventId": "ID del Evento",
+      "date": "Fecha",
+      "country": "País",
+      "province": "Provincia",
+      "city": "Ciudad",
+      "coordinates": "Coordenadas",
+      "value": "Valor",
+      "threshold": "Umbral",
+      "fileName": "Nombre del Archivo",
+      "sequence": "Secuencia",
+      "time": "Tiempo",
+      "createdAt": "Creado En",
+      "updatedAt": "Actualizado En"
+    },
+    "impact": {
+      "level": "Nivel de Impacto General",
+      "transportImpact": "Nivel de Impacto en Transporte",
+      "economyImpact": "Nivel de Impacto Económico",
+      "safetyImpact": "Nivel de Impacto en Seguridad",
+      "timeline": "Línea de Tiempo",
+      "sourceCount": "Cantidad de Fuentes",
+      "detailFile": "Archivo Detallado",
+      "impactAssessment": "Información de Evaluación de Impacto (Tabla 2)",
+      "levelSevere": "Severo",
+      "levelMedium": "Medio",
+      "levelMild": "Leve",
+      "levelLow": "Bajo",
+      "levelN": " Nivel",
+      "timelineData": "Datos de Línea de Tiempo",
+      "timeSlot": "Franja Horaria",
+      "highlights": "Puntos Destacados",
+      "events": "Eventos"
+    },
+    "hint": {
+      "deepSearchHint": "Haga clic en el botón para realizar una búsqueda profunda, generando un informe de evaluación de impacto y datos de la Tabla 2"
+    }
+  },
+  "search": {
+    "title": {
+      "queryRainEvents": "📅 Consultar Eventos de Lluvia (admite rango de fechas y filtro por país)"
+    },
+    "deepSearch": {
+      "confirm": "¿Está seguro de que desea realizar una búsqueda profunda en el evento \"{id}\"?\n\nEsto hará:\n1. Buscar noticias y contenido de medios relacionados\n2. Realizar análisis y validación LLM\n3. Generar informe de evaluación de impacto\n4. Crear datos de la Tabla 2\n\nEsta operación puede tardar unos minutos.",
+      "confirmShort": "¿Está seguro de que desea realizar una búsqueda profunda en el evento \"{id}\"?\n\nEsto hará:\n1. Buscar noticias relacionadas e información oficial\n2. Usar LLM para analizar el impacto\n3. Generar un informe detallado\n4. Llenar los datos de la Tabla 2\n\nTiempo estimado: 30 segundos - 1 minuto",
+      "searching": "Buscando...",
+      "completed": "¡Búsqueda profunda completada! Se ha generado el informe de evaluación de impacto y los datos de la Tabla 2.",
+      "failed": "Búsqueda profunda fallida",
+      "failedWithStatus": "Búsqueda profunda fallida ({status})",
+      "requestFailed": "Solicitud de búsqueda profunda fallida: No se pudo obtener respuesta",
+      "timeout": "Tiempo de espera de búsqueda profunda agotado (excedió 4 minutos), por favor intente nuevamente más tarde"
+    },
+    "status": {
+      "smartSearchStatus": "🔍 Estado de Búsqueda Inteligente",
+      "systemReady": "📊 Sistema Listo",
+      "useSearchForm": "Use el formulario de búsqueda arriba para encontrar datos reales de inundaciones",
+      "autoCollectTip": "💡 Consejo: El sistema recopila automáticamente los últimos datos cada 6 horas"
+    },
+    "error": {
+      "loadFailed": "Error de Carga",
+      "openConsoleHint": "💡 Consejo: Abra la consola del navegador (F12) para ver la información completa del error"
+    }
+  },
+  "file": {
+    "upload": {
+      "file": "📤 Subir Archivo",
+      "uploading": "📤 Subiendo...",
+      "uploadingFile": "Subiendo archivo...",
+      "failed": "Error al subir",
+      "success": "✅ ¡Carga exitosa! Nombre del archivo: {filename}"
+    },
+    "select": {
+      "dataFile": "Seleccionar Archivo de Datos (CSV, Excel, TXT)",
+      "pleaseSelectFile": "Por favor seleccione un archivo de datos primero",
+      "chooseFile": "Seleccionar Archivo",
+      "noFileChosen": "Ningún archivo seleccionado",
+      "pleaseSelectFileFirst": "Por favor seleccione un archivo primero",
+      "pleaseUploadFileFirst": "Por favor suba un archivo primero",
+      "fileLost": "Archivo perdido, por favor suba nuevamente"
+    },
+    "info": {
+      "fileName": "Nombre del Archivo",
+      "fileSize": "Tamaño"
+    }
+  },
+  "interpolation": {
+    "title": {
+      "spatialInterpolation": "🗺️ Análisis de Interpolación Espacial"
+    },
+    "form": {
+      "confirmDate": "Confirmar Fecha (se puede modificar manualmente, se usa para generar el ID del evento)",
+      "dateHint": "Por defecto se analiza desde el nombre del archivo (ej., 20251106), se puede cambiar",
+      "thresholdSetting": "Configuración de Umbral (por defecto 50.0, se puede modificar; muestra puntos con valores mayores que este umbral)",
+      "thresholdHint": "Por defecto 50.0 si está vacío o es inválido",
+      "pleaseSelectDateFirst": "Por favor seleccione/confirme la fecha primero"
+    },
+    "action": {
+      "filterAndSave": "💾 Filtrar y Guardar",
+      "filteringAndSaving": "💾 Filtrando y guardando...",
+      "filteringAndSavingInProgress": "Filtrando y guardando, por favor espere (puede tardar unos minutos)...",
+      "filterAndSaveCompleted": "¡Filtrado y guardado completado! Se agregaron {count} entradas",
+      "filterAndSaveFailed": "Error al filtrar y guardar: {error}",
+      "saveFailed": "Error al guardar",
+      "saveFailedWithStatus": "Error al guardar (HTTP {status})"
+    },
+    "place": {
+      "placeList": "📍 Lista de Lugares (País/Provincia/Ciudad, por combinación única)",
+      "points": "puntos",
+      "pointsDisplayed": "Se han mostrado {count} puntos de datos en el mapa",
+      "noLocationInfo": "No se identificó información de país/provincia/ciudad"
+    }
+  },
+  "language": {
+    "language": "Idioma",
+    "chinese": "中文",
+    "english": "English",
+    "spanish": "Español"
+  },
+  "country": {
+    "countryRegion": "País/Región",
+    "allCountries": "Todos los Países",
+    "spain": "España",
+    "germany": "Alemania",
+    "italy": "Italia",
+    "france": "Francia",
+    "denmark": "Dinamarca"
+  },
+  "severity": {
+    "severity": "Severidad",
+    "allLevels": "Todos los Niveles",
+    "extreme": "Extremo",
+    "high": "Alto",
+    "medium": "Medio",
+    "low": "Bajo"
+  },
+  "map": {
+    "nuts": {
+      "title": "Información NUTS",
+      "name": "Nombre",
+      "latinName": "Nombre en Latín",
+      "countryCode": "Código de País",
+      "level": "Nivel",
+      "fullName": "Nombre Completo",
+      "countryNuts3": "País-NUTS3"
+    },
+    "geojsonLoaded": "Región GeoJSON cargada (pase el mouse para ver información NUTS)"
+  }
 }
-

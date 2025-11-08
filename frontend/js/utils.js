@@ -3,6 +3,148 @@
  */
 
 /**
+ * 自定义确认对话框（居中显示）
+ * @param {string} message - 确认消息
+ * @returns {Promise<boolean>} - 返回 true 如果确认，false 如果取消
+ */
+function customConfirm(message) {
+    return new Promise((resolve) => {
+        const i18n = typeof t === 'function' ? t : (key) => key;
+        
+        // 创建遮罩层
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
+        
+        // 创建对话框
+        const dialog = document.createElement('div');
+        dialog.style.cssText = `
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            z-index: 10001;
+            animation: fadeIn 0.2s ease-in;
+        `;
+        
+        // 添加动画样式（如果还没有）
+        if (!document.getElementById('customConfirmStyles')) {
+            const style = document.createElement('style');
+            style.id = 'customConfirmStyles';
+            style.textContent = `
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: scale(0.9); }
+                    to { opacity: 1; transform: scale(1); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // 消息内容（支持换行）
+        const messageDiv = document.createElement('div');
+        messageDiv.style.cssText = `
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 15px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        `;
+        messageDiv.textContent = message;
+        dialog.appendChild(messageDiv);
+        
+        // 按钮容器
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.cssText = `
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        `;
+        
+        // 确认按钮
+        const confirmBtn = document.createElement('button');
+        confirmBtn.textContent = i18n('common.confirm');
+        confirmBtn.style.cssText = `
+            padding: 10px 20px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s;
+        `;
+        confirmBtn.onmouseover = () => confirmBtn.style.background = '#229954';
+        confirmBtn.onmouseout = () => confirmBtn.style.background = '#27ae60';
+        confirmBtn.onclick = () => {
+            document.body.removeChild(overlay);
+            resolve(true);
+        };
+        
+        // 取消按钮
+        const cancelBtn = document.createElement('button');
+        cancelBtn.textContent = i18n('common.cancel');
+        cancelBtn.style.cssText = `
+            padding: 10px 20px;
+            background: #ecf0f1;
+            color: #2c3e50;
+            border: 1px solid #bdc3c7;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s;
+        `;
+        cancelBtn.onmouseover = () => cancelBtn.style.background = '#d5dbdb';
+        cancelBtn.onmouseout = () => cancelBtn.style.background = '#ecf0f1';
+        cancelBtn.onclick = () => {
+            document.body.removeChild(overlay);
+            resolve(false);
+        };
+        
+        buttonContainer.appendChild(cancelBtn);
+        buttonContainer.appendChild(confirmBtn);
+        dialog.appendChild(buttonContainer);
+        overlay.appendChild(dialog);
+        
+        // 点击遮罩层关闭（可选）
+        overlay.onclick = (e) => {
+            if (e.target === overlay) {
+                document.body.removeChild(overlay);
+                resolve(false);
+            }
+        };
+        
+        // ESC 键关闭
+        const handleEsc = (e) => {
+            if (e.key === 'Escape') {
+                document.body.removeChild(overlay);
+                document.removeEventListener('keydown', handleEsc);
+                resolve(false);
+            }
+        };
+        document.addEventListener('keydown', handleEsc);
+        
+        document.body.appendChild(overlay);
+        
+        // 自动聚焦确认按钮
+        setTimeout(() => confirmBtn.focus(), 100);
+    });
+}
+
+/**
  * HTML转义，防止XSS攻击
  */
 function escapeHtml(text) {

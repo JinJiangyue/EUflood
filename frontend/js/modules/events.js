@@ -42,7 +42,8 @@ async function loadRainEvents(dateFrom, dateTo, country, page = 1, limit = null)
         const res = await fetch(url);
         if (!res.ok) {
             const errorData = await res.json();
-            throw new Error(errorData.error || '查询失败');
+            const i18n = typeof t === 'function' ? t : (key) => key;
+            throw new Error(errorData.error || i18n('search.error.loadFailed'));
         }
         
         const data = await res.json();
@@ -51,21 +52,31 @@ async function loadRainEvents(dateFrom, dateTo, country, page = 1, limit = null)
             throw new Error(data.error || '查询失败');
         }
         
+        const i18n = typeof t === 'function' ? t : (key, params) => {
+            let text = key;
+            if (params) Object.keys(params).forEach(k => text = text.replace(`{${k}}`, params[k]));
+            return text;
+        };
+        
         if (!data.details || data.details.length === 0) {
-            statusEl.textContent = `未找到 ${dateFrom} 至 ${dateTo} 期间的事件${country ? `（国家：${country}）` : ''}`;
+            const dateRangeText = dateFrom === dateTo ? dateFrom : `${dateFrom} ${i18n('common.to')} ${dateTo}`;
+            statusEl.textContent = i18n('message.noEventsFound', { dateFrom, dateTo }) + (country ? ` (${i18n('message.countryFilter', { country })})` : '');
             listEl.style.display = 'none';
             return;
         }
         
         const stats = data.stats;
         const pagination = data.pagination || {};
-        const dateRangeText = dateFrom === dateTo ? dateFrom : `${dateFrom} 至 ${dateTo}`;
+        const dateRangeText = dateFrom === dateTo ? dateFrom : `${dateFrom} ${i18n('common.to')} ${dateTo}`;
         
         // 显示分页信息
         const pageInfo = pagination.total ? 
-            `第 ${pagination.page}/${pagination.totalPages} 页，显示 ${data.details.length} 条，共 ${pagination.total} 条` : 
-            `显示 ${data.details.length} 条`;
-        statusEl.textContent = `找到 ${stats.totalEvents} 个事件（${dateRangeText}）${country ? `，国家：${country}` : ''} | ${pageInfo} | 已搜索：${stats.totalSearched}，未搜索：${stats.totalUnsearched}`;
+            i18n('message.pageInfo', { page: pagination.page, totalPages: pagination.totalPages, showing: data.details.length, total: pagination.total }) : 
+            i18n('message.showingOnly', { count: data.details.length });
+        statusEl.textContent = i18n('message.foundEvents', { count: stats.totalEvents, dateRange: dateRangeText }) + 
+            (country ? ` (${i18n('message.countryFilter', { country })})` : '') + 
+            ` | ${pageInfo} | ${i18n('message.searchedCount', { count: stats.totalSearched })}, ${i18n('message.unsearchedCount', { count: stats.totalUnsearched })}` +
+            (stats.totalNeedResearch ? `, ${i18n('message.needResearchCount', { count: stats.totalNeedResearch })}` : '');
         listEl.style.display = 'block';
         
         // 重置布局为全宽（隐藏详情面板）
@@ -84,23 +95,28 @@ async function loadRainEvents(dateFrom, dateTo, country, page = 1, limit = null)
                 <table style="width: 100%; min-width: 100%; border-collapse: collapse; table-layout: auto;">
                     <thead style="background: #f8f9fa; position: sticky; top: 0;">
                         <tr>
-                            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">日期</th>
-                            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">国家</th>
-                            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">省份</th>
-                            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">城市</th>
-                            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">坐标</th>
-                            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">数值</th>
-                            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">阈值</th>
-                            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">搜索状态</th>
+                            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">${i18n('table.header.date')}</th>
+                            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">${i18n('table.header.country')}</th>
+                            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">${i18n('table.header.province')}</th>
+                            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">${i18n('table.header.city')}</th>
+                            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">${i18n('table.header.coordinates')}</th>
+                            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">${i18n('table.header.value')}</th>
+                            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">${i18n('table.header.threshold')}</th>
+                            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">${i18n('table.header.searchStatus')}</th>
                         </tr>
                     </thead>
                     <tbody>
         `;
         
         data.details.forEach((event, index) => {
-            const searchedStatus = event.searched === 1 ? 
-                '<span style="color: #27ae60; font-weight: bold;">✅ 已搜索</span>' : 
-                '<span style="color: #e74c3c; font-weight: bold;">⏳ 未搜索</span>';
+            let searchedStatus;
+            if (event.searched === 1) {
+                searchedStatus = `<span style="color: #27ae60; font-weight: bold;">✅ ${i18n('table.status.searched')}</span>`;
+            } else if (event.searched === 2) {
+                searchedStatus = `<span style="color: #f39c12; font-weight: bold;">⚠️ ${i18n('table.status.needResearch')}</span>`;
+            } else {
+                searchedStatus = `<span style="color: #e74c3c; font-weight: bold;">⏳ ${i18n('table.status.unsearched')}</span>`;
+            }
             const valueColor = event.value && event.threshold && event.value > event.threshold ? '#e74c3c' : '#3498db';
             
             // 确保使用正确的ID（URL编码）
@@ -131,44 +147,44 @@ async function loadRainEvents(dateFrom, dateTo, country, page = 1, limit = null)
             html += `
                 <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
                     <div style="display: flex; align-items: center; gap: 10px;">
-                        <label style="font-size: 14px; color: #666;">每页显示:</label>
+                        <label style="font-size: 14px; color: #666;">${i18n('pagination.itemsPerPage')}</label>
                         <select id="pageSizeSelect" style="padding: 8px 12px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px; cursor: pointer;">
                             <option value="10" ${pageSize === 10 ? 'selected' : ''}>10</option>
                             <option value="20" ${pageSize === 20 ? 'selected' : ''}>20</option>
                             <option value="50" ${pageSize === 50 ? 'selected' : ''}>50</option>
                             <option value="100" ${pageSize === 100 ? 'selected' : ''}>100</option>
                         </select>
-                        <span style="font-size: 14px; color: #666;">条</span>
+                        <span style="font-size: 14px; color: #666;">${i18n('pagination.items')}</span>
                     </div>
                     ${showPaginationButtons ? `
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <span style="font-size: 14px; color: #666;">
-                            第 ${pagination.page} / ${pagination.totalPages} 页，共 ${pagination.total} 条
+                            ${i18n('pagination.pageInfoWithTotal', { page: pagination.page, totalPages: pagination.totalPages, total: pagination.total })}
                         </span>
                         <button id="btnFirstPage" ${pagination.page === 1 ? 'disabled' : ''} 
                             style="padding: 8px 15px; border: 1px solid #ddd; border-radius: 5px; background: white; cursor: pointer; font-size: 14px; ${pagination.page === 1 ? 'opacity: 0.5; cursor: not-allowed;' : ''}"
-                            ${pagination.page === 1 ? 'disabled' : ''}>首页</button>
+                            ${pagination.page === 1 ? 'disabled' : ''}>${i18n('pagination.firstPage')}</button>
                         <button id="btnPrevPage" ${!pagination.hasPrev ? 'disabled' : ''} 
                             style="padding: 8px 15px; border: 1px solid #ddd; border-radius: 5px; background: white; cursor: pointer; font-size: 14px; ${!pagination.hasPrev ? 'opacity: 0.5; cursor: not-allowed;' : ''}"
-                            ${!pagination.hasPrev ? 'disabled' : ''}>上一页</button>
+                            ${!pagination.hasPrev ? 'disabled' : ''}>${i18n('pagination.prevPage')}</button>
                         <button id="btnNextPage" ${!pagination.hasNext ? 'disabled' : ''} 
                             style="padding: 8px 15px; border: 1px solid #ddd; border-radius: 5px; background: white; cursor: pointer; font-size: 14px; ${!pagination.hasNext ? 'opacity: 0.5; cursor: not-allowed;' : ''}"
-                            ${!pagination.hasNext ? 'disabled' : ''}>下一页</button>
+                            ${!pagination.hasNext ? 'disabled' : ''}>${i18n('pagination.nextPage')}</button>
                         <button id="btnLastPage" ${pagination.page === pagination.totalPages ? 'disabled' : ''} 
                             style="padding: 8px 15px; border: 1px solid #ddd; border-radius: 5px; background: white; cursor: pointer; font-size: 14px; ${pagination.page === pagination.totalPages ? 'opacity: 0.5; cursor: not-allowed;' : ''}"
-                            ${pagination.page === pagination.totalPages ? 'disabled' : ''}>末页</button>
+                            ${pagination.page === pagination.totalPages ? 'disabled' : ''}>${i18n('pagination.lastPage')}</button>
                         <div style="display: flex; align-items: center; gap: 5px;">
-                            <span style="font-size: 14px; color: #666;">跳转到:</span>
+                            <span style="font-size: 14px; color: #666;">${i18n('pagination.jumpTo')}</span>
                             <input type="number" id="pageJumpInput" min="1" max="${pagination.totalPages}" value="${pagination.page}" 
                                 style="width: 60px; padding: 8px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px; text-align: center;">
                             <button id="btnJumpPage" 
-                                style="padding: 8px 15px; border: 1px solid #667eea; border-radius: 5px; background: #667eea; color: white; cursor: pointer; font-size: 14px;">跳转</button>
+                                style="padding: 8px 15px; border: 1px solid #667eea; border-radius: 5px; background: #667eea; color: white; cursor: pointer; font-size: 14px;">${i18n('pagination.jump')}</button>
                         </div>
                     </div>
                     ` : `
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <span style="font-size: 14px; color: #666;">
-                            共 ${pagination.total} 条（全部显示）
+                            ${i18n('pagination.totalItems', { count: pagination.total })} ${i18n('pagination.allDisplayed')}
                         </span>
                     </div>
                     `}
@@ -234,7 +250,12 @@ async function loadRainEvents(dateFrom, dateTo, country, page = 1, limit = null)
                         if (targetPage >= 1 && targetPage <= pagination.totalPages) {
                             loadRainEvents(dateFrom, dateTo, country, targetPage, pageSize);
                         } else {
-                            alert(`请输入 1 到 ${pagination.totalPages} 之间的页码`);
+                            const i18n = typeof t === 'function' ? t : (key, params) => {
+                                let text = key;
+                                if (params) Object.keys(params).forEach(k => text = text.replace(`{${k}}`, params[k]));
+                                return text;
+                            };
+                            alert(i18n('form.enterPageNumber', { max: pagination.totalPages }));
                         }
                     });
                     
@@ -271,7 +292,8 @@ async function loadRainEvents(dateFrom, dateTo, country, page = 1, limit = null)
             });
         });
     } catch (e) {
-        statusEl.textContent = '查询失败: ' + e.message;
+        const i18n = typeof t === 'function' ? t : (key) => key;
+        statusEl.textContent = i18n('search.error.loadFailed') + ': ' + e.message;
         listEl.style.display = 'none';
     }
 }
@@ -291,7 +313,8 @@ async function showRainEventDetails(eventId) {
         container.style.gridTemplateColumns = '1fr 1fr';
     }
     panel.style.display = 'block';
-    content.innerHTML = '<div style="text-align: center; padding: 20px;"><div class="spinner"></div><p>加载中...</p></div>';
+    const i18n = typeof t === 'function' ? t : (key) => key;
+    content.innerHTML = `<div style="text-align: center; padding: 20px;"><div class="spinner"></div><p>${i18n('common.loading')}</p></div>`;
     
     try {
         // 确保 eventId 已经正确编码（如果前端传入的是原始ID，需要编码）
@@ -322,31 +345,103 @@ async function showRainEventDetails(eventId) {
             };
             
             const getLevelText = (level) => {
-                if (!level) return 'N/A';
-                if (level >= 4) return '严重 (4级)';
-                if (level >= 3) return '中等 (3级)';
-                if (level >= 2) return '轻微 (2级)';
-                return '低 (1级)';
+                if (!level) return i18n('common.na');
+                if (level >= 4) return `${i18n('detail.impact.levelSevere')} (4${i18n('detail.impact.levelN')})`;
+                if (level >= 3) return `${i18n('detail.impact.levelMedium')} (3${i18n('detail.impact.levelN')})`;
+                if (level >= 2) return `${i18n('detail.impact.levelMild')} (2${i18n('detail.impact.levelN')})`;
+                return `${i18n('detail.impact.levelLow')} (1${i18n('detail.impact.levelN')})`;
+            };
+            
+            const getImpactLevelColor = (level) => {
+                if (!level) return '#95a5a6';
+                if (level >= 4) return '#e74c3c';
+                if (level >= 3) return '#f39c12';
+                if (level >= 2) return '#f1c40f';
+                return '#27ae60';
             };
             
             html = `
-                <div style="margin-bottom: 20px;">
-                    <h4 style="color: #1e3c72; margin-bottom: 10px; border-bottom: 2px solid #667eea; padding-bottom: 5px;">影响评估信息（表2）</h4>
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold; width: 150px;">事件ID</td><td style="padding: 8px;">${event.rain_event_id || 'N/A'}</td></tr>
-                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">时间</td><td style="padding: 8px;">${event.time || 'N/A'}</td></tr>
-                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">国家</td><td style="padding: 8px;">${event.country || 'N/A'}</td></tr>
-                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">省份</td><td style="padding: 8px;">${(event.province || 'N/A').split('/')[0].trim()}</td></tr>
-                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">城市</td><td style="padding: 8px;">${event.city || 'N/A'}</td></tr>
-                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">整体影响级别</td><td style="padding: 8px;"><span style="color: ${getLevelColor(event.level)}; font-weight: bold;">${getLevelText(event.level)}</span></td></tr>
-                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">交通影响级别</td><td style="padding: 8px;">${event.transport_impact_level !== null && event.transport_impact_level !== undefined ? event.transport_impact_level : 'N/A'}</td></tr>
-                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">经济影响级别</td><td style="padding: 8px;">${event.economy_impact_level !== null && event.economy_impact_level !== undefined ? event.economy_impact_level : 'N/A'}</td></tr>
-                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">安全影响级别</td><td style="padding: 8px;">${event.safety_impact_level !== null && event.safety_impact_level !== undefined ? event.safety_impact_level : 'N/A'}</td></tr>
-                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">数据源数量</td><td style="padding: 8px;">${event.source_count !== null && event.source_count !== undefined ? event.source_count : 'N/A'}</td></tr>
-                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">详情报告</td><td style="padding: 8px;">${event.detail_file || 'N/A'}</td></tr>
-                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">创建时间</td><td style="padding: 8px;">${event.created_at || 'N/A'}</td></tr>
-                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">更新时间</td><td style="padding: 8px;">${event.updated_at || 'N/A'}</td></tr>
-                    </table>
+                <div style="margin-bottom: 30px;">
+                    <h4 style="color: #1e3c72; margin-bottom: 20px; border-bottom: 2px solid #667eea; padding-bottom: 8px; font-size: 18px;">${i18n('detail.impact.impactAssessment')}</h4>
+                    
+                    <!-- 基本信息卡片 -->
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 20px; margin-bottom: 20px; color: white; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                            <div>
+                                <div style="font-size: 12px; opacity: 0.9; margin-bottom: 5px;">${i18n('detail.field.eventId')}</div>
+                                <div style="font-size: 16px; font-weight: 600;">${event.rain_event_id || i18n('common.na')}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 12px; opacity: 0.9; margin-bottom: 5px;">${i18n('detail.field.time')}</div>
+                                <div style="font-size: 16px; font-weight: 600;">${event.time || i18n('common.na')}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 12px; opacity: 0.9; margin-bottom: 5px;">${i18n('detail.field.country')}</div>
+                                <div style="font-size: 16px; font-weight: 600;">${event.country || i18n('common.na')}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 12px; opacity: 0.9; margin-bottom: 5px;">${i18n('detail.field.province')}</div>
+                                <div style="font-size: 16px; font-weight: 600;">${(event.province || i18n('common.na')).split('/')[0].trim()}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 12px; opacity: 0.9; margin-bottom: 5px;">${i18n('detail.field.city')}</div>
+                                <div style="font-size: 16px; font-weight: 600;">${event.city || i18n('common.na')}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 影响级别卡片 -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                        <!-- 整体影响级别 -->
+                        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); border-left: 5px solid ${getLevelColor(event.level)}; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
+                            <div style="font-size: 13px; color: #666; margin-bottom: 8px; font-weight: 500;">${i18n('detail.impact.level')}</div>
+                            <div style="font-size: 28px; font-weight: bold; color: ${getLevelColor(event.level)}; margin-bottom: 5px;">${event.level || i18n('common.na')}</div>
+                            <div style="font-size: 14px; color: #666;">${getLevelText(event.level)}</div>
+                        </div>
+                        
+                        <!-- 交通影响级别 -->
+                        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); border-left: 5px solid ${getImpactLevelColor(event.transport_impact_level)}; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
+                            <div style="font-size: 13px; color: #666; margin-bottom: 8px; font-weight: 500;">${i18n('detail.impact.transportImpact')}</div>
+                            <div style="font-size: 28px; font-weight: bold; color: ${getImpactLevelColor(event.transport_impact_level)}; margin-bottom: 5px;">${event.transport_impact_level !== null && event.transport_impact_level !== undefined ? event.transport_impact_level : i18n('common.na')}</div>
+                            <div style="font-size: 14px; color: #666;">${event.transport_impact_level !== null && event.transport_impact_level !== undefined ? getLevelText(event.transport_impact_level) : ''}</div>
+                        </div>
+                        
+                        <!-- 经济影响级别 -->
+                        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); border-left: 5px solid ${getImpactLevelColor(event.economy_impact_level)}; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
+                            <div style="font-size: 13px; color: #666; margin-bottom: 8px; font-weight: 500;">${i18n('detail.impact.economyImpact')}</div>
+                            <div style="font-size: 28px; font-weight: bold; color: ${getImpactLevelColor(event.economy_impact_level)}; margin-bottom: 5px;">${event.economy_impact_level !== null && event.economy_impact_level !== undefined ? event.economy_impact_level : i18n('common.na')}</div>
+                            <div style="font-size: 14px; color: #666;">${event.economy_impact_level !== null && event.economy_impact_level !== undefined ? getLevelText(event.economy_impact_level) : ''}</div>
+                        </div>
+                        
+                        <!-- 安全影响级别 -->
+                        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); border-left: 5px solid ${getImpactLevelColor(event.safety_impact_level)}; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
+                            <div style="font-size: 13px; color: #666; margin-bottom: 8px; font-weight: 500;">${i18n('detail.impact.safetyImpact')}</div>
+                            <div style="font-size: 28px; font-weight: bold; color: ${getImpactLevelColor(event.safety_impact_level)}; margin-bottom: 5px;">${event.safety_impact_level !== null && event.safety_impact_level !== undefined ? event.safety_impact_level : i18n('common.na')}</div>
+                            <div style="font-size: 14px; color: #666;">${event.safety_impact_level !== null && event.safety_impact_level !== undefined ? getLevelText(event.safety_impact_level) : ''}</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 其他信息 -->
+                    <div style="background: #f8f9fa; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                            <div>
+                                <div style="font-size: 13px; color: #666; margin-bottom: 5px; font-weight: 500;">${i18n('detail.impact.sourceCount')}</div>
+                                <div style="font-size: 18px; font-weight: 600; color: #2c3e50;">${event.source_count !== null && event.source_count !== undefined ? event.source_count : i18n('common.na')}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 13px; color: #666; margin-bottom: 5px; font-weight: 500;">${i18n('detail.impact.detailFile')}</div>
+                                <div style="font-size: 14px; color: #2c3e50; word-break: break-all;">${event.detail_file || i18n('common.na')}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 13px; color: #666; margin-bottom: 5px; font-weight: 500;">${i18n('detail.field.createdAt')}</div>
+                                <div style="font-size: 14px; color: #2c3e50;">${event.created_at || i18n('common.na')}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 13px; color: #666; margin-bottom: 5px; font-weight: 500;">${i18n('detail.field.updatedAt')}</div>
+                                <div style="font-size: 14px; color: #2c3e50;">${event.updated_at || i18n('common.na')}</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             `;
             
@@ -354,17 +449,17 @@ async function showRainEventDetails(eventId) {
             if (event.timeline_data && Array.isArray(event.timeline_data) && event.timeline_data.length > 0) {
                 html += `
                     <div style="margin-bottom: 20px;">
-                        <h4 style="color: #1e3c72; margin-bottom: 10px; border-bottom: 2px solid #667eea; padding-bottom: 5px;">时间线数据</h4>
+                        <h4 style="color: #1e3c72; margin-bottom: 10px; border-bottom: 2px solid #667eea; padding-bottom: 5px;">${i18n('detail.impact.timelineData')}</h4>
                         <div style="max-height: 300px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 5px; padding: 10px;">
                 `;
                 event.timeline_data.forEach((item, index) => {
                     html += `
                         <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-                            <div style="font-weight: bold; color: #667eea; margin-bottom: 5px;">${item.time_slot || 'N/A'}</div>
-                            <div style="margin-top: 5px; color: #333;">${item.highlights || 'N/A'}</div>
+                            <div style="font-weight: bold; color: #667eea; margin-bottom: 5px;">${item.time_slot || i18n('common.na')}</div>
+                            <div style="margin-top: 5px; color: #333;">${item.highlights || i18n('common.na')}</div>
                             ${item.events && Array.isArray(item.events) && item.events.length > 0 ? `
                                 <div style="margin-top: 5px; font-size: 12px; color: #666;">
-                                    事件: ${item.events.join(', ')}
+                                    ${i18n('detail.impact.events')}: ${item.events.join(', ')}
                                 </div>
                             ` : ''}
                         </div>
@@ -374,29 +469,30 @@ async function showRainEventDetails(eventId) {
             }
         } else {
             // 未搜索：显示表1（rain_event）的内容
+            const i18n = typeof t === 'function' ? t : (key) => key;
             html = `
                 <div style="margin-bottom: 20px;">
-                    <h4 style="color: #1e3c72; margin-bottom: 10px; border-bottom: 2px solid #667eea; padding-bottom: 5px;">基本信息（表1）</h4>
+                    <h4 style="color: #1e3c72; margin-bottom: 10px; border-bottom: 2px solid #667eea; padding-bottom: 5px;">${i18n('detail.section.basicInfo')}</h4>
                     <table style="width: 100%; border-collapse: collapse;">
-                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold; width: 150px;">事件ID</td><td style="padding: 8px;">${event.id}</td></tr>
-                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">日期</td><td style="padding: 8px;">${event.date}</td></tr>
-                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">国家</td><td style="padding: 8px;">${event.country || 'N/A'}</td></tr>
-                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">省份</td><td style="padding: 8px;">${(event.province || 'N/A').split('/')[0].trim()}</td></tr>
-                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">城市</td><td style="padding: 8px;">${event.city || 'N/A'}</td></tr>
-                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">坐标</td><td style="padding: 8px;">${event.latitude && event.longitude ? `${event.latitude}, ${event.longitude}` : 'N/A'}</td></tr>
-                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">数值</td><td style="padding: 8px;"><span style="color: ${event.value && event.threshold && event.value > event.threshold ? '#e74c3c' : '#3498db'}; font-weight: bold;">${event.value !== null && event.value !== undefined ? event.value.toFixed(2) : 'N/A'}</span></td></tr>
-                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">阈值</td><td style="padding: 8px;">${event.threshold !== null && event.threshold !== undefined ? event.threshold.toFixed(2) : 'N/A'}</td></tr>
-                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">文件名</td><td style="padding: 8px;">${event.file_name || 'N/A'}</td></tr>
-                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">序号</td><td style="padding: 8px;">${event.seq !== null && event.seq !== undefined ? event.seq : 'N/A'}</td></tr>
-                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">搜索状态</td><td style="padding: 8px;"><span style="color: #e74c3c; font-weight: bold;">未搜索</span></td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold; width: 150px;">${i18n('detail.field.eventId')}</td><td style="padding: 8px;">${event.id}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">${i18n('detail.field.date')}</td><td style="padding: 8px;">${event.date}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">${i18n('detail.field.country')}</td><td style="padding: 8px;">${event.country || i18n('common.na')}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">${i18n('detail.field.province')}</td><td style="padding: 8px;">${(event.province || i18n('common.na')).split('/')[0].trim()}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">${i18n('detail.field.city')}</td><td style="padding: 8px;">${event.city || i18n('common.na')}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">${i18n('detail.field.coordinates')}</td><td style="padding: 8px;">${event.latitude && event.longitude ? `${event.latitude}, ${event.longitude}` : i18n('common.na')}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">${i18n('detail.field.value')}</td><td style="padding: 8px;"><span style="color: ${event.value && event.threshold && event.value > event.threshold ? '#e74c3c' : '#3498db'}; font-weight: bold;">${event.value !== null && event.value !== undefined ? event.value.toFixed(2) : i18n('common.na')}</span></td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">${i18n('detail.field.threshold')}</td><td style="padding: 8px;">${event.threshold !== null && event.threshold !== undefined ? event.threshold.toFixed(2) : i18n('common.na')}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">${i18n('detail.field.fileName')}</td><td style="padding: 8px;">${event.file_name || i18n('common.na')}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">${i18n('detail.field.sequence')}</td><td style="padding: 8px;">${event.seq !== null && event.seq !== undefined ? event.seq : i18n('common.na')}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">${i18n('table.header.searchStatus')}</td><td style="padding: 8px;"><span style="color: #e74c3c; font-weight: bold;">${i18n('table.status.unsearched')}</span></td></tr>
                     </table>
                 </div>
                 <div style="margin-bottom: 20px;">
-                    <button id="btnStartDeepSearch" style="background: #667eea; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">
-                        🔍 开始深度搜索
+                    <button id="btnStartDeepSearch" style="background: ${event.searched === 2 ? '#f39c12' : '#667eea'}; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">
+                        ${event.searched === 2 ? '🔄' : '🔍'} ${i18n('button.startDeepSearch')}
                     </button>
                     <div style="margin-top: 10px; font-size: 12px; color: #666;">
-                        点击按钮将进行深度搜索，生成影响评估报告和表2数据
+                        ${i18n('detail.hint.deepSearchHint')}
                     </div>
                 </div>
             `;
@@ -409,8 +505,13 @@ async function showRainEventDetails(eventId) {
             const btnStartDeepSearch = document.getElementById('btnStartDeepSearch');
             if (btnStartDeepSearch) {
                 btnStartDeepSearch.addEventListener('click', async function() {
-                    // 弹出确认框
-                    const confirmed = confirm(`确定要对事件 "${event.id}" 进行深度搜索吗？\n\n这将执行以下操作：\n1. 搜索相关新闻和媒体内容\n2. 进行LLM分析和验证\n3. 生成影响评估报告\n4. 创建表2数据\n\n此操作可能需要几分钟时间。`);
+                    const i18n = typeof t === 'function' ? t : (key, params) => {
+                        let text = key;
+                        if (params) Object.keys(params).forEach(k => text = text.replace(`{${k}}`, params[k]));
+                        return text;
+                    };
+                    // 弹出确认框（使用自定义居中对话框）
+                    const confirmed = await customConfirm(i18n('search.deepSearch.confirm', { id: event.id }));
                     
                     if (!confirmed) {
                         return;
@@ -418,7 +519,7 @@ async function showRainEventDetails(eventId) {
                     
                     // 禁用按钮，显示加载状态
                     btnStartDeepSearch.disabled = true;
-                    btnStartDeepSearch.textContent = '搜索中...';
+                    btnStartDeepSearch.textContent = i18n('search.deepSearch.searching');
                     btnStartDeepSearch.style.background = '#95a5a6';
                     
                     let searchRes = null; // 在外部声明，确保在catch中可用
@@ -441,8 +542,9 @@ async function showRainEventDetails(eventId) {
                             console.log(`[前端] 响应Content-Type:`, searchRes.headers.get('Content-Type'));
                         } catch (fetchError) {
                             clearTimeout(timeoutId);
+                            const i18n = typeof t === 'function' ? t : (key) => key;
                             if (fetchError.name === 'AbortError') {
-                                throw new Error('深度搜索超时（超过4分钟），请稍后重试');
+                                throw new Error(i18n('search.deepSearch.timeout'));
                             }
                             throw fetchError;
                         }
@@ -458,22 +560,34 @@ async function showRainEventDetails(eventId) {
                                     try {
                                         searchData = JSON.parse(errorText);
                                         console.error(`[前端] 解析后的错误数据:`, searchData);
-                                        const error = new Error(searchData.error || '深度搜索失败');
+                                        const i18n = typeof t === 'function' ? t : (key) => key;
+                                        const error = new Error(searchData.error || i18n('search.deepSearch.failed'));
                                         error.responseData = searchData;
                                         throw error;
                                     } catch (jsonError) {
                                         // 如果不是JSON，直接使用文本
-                                        const error = new Error(errorText || `深度搜索失败 (${searchRes.status})`);
+                                        const i18n = typeof t === 'function' ? t : (key, params) => {
+                                            let text = key;
+                                            if (params) Object.keys(params).forEach(k => text = text.replace(`{${k}}`, params[k]));
+                                            return text;
+                                        };
+                                        const error = new Error(errorText || i18n('search.deepSearch.failedWithStatus', { status: searchRes.status }));
                                         error.responseData = { error: errorText, raw_response: errorText };
                                         throw error;
                                     }
                                 } else {
-                                    throw new Error('深度搜索请求失败：无法获取响应');
+                                    const i18n = typeof t === 'function' ? t : (key) => key;
+                                    throw new Error(i18n('search.deepSearch.requestFailed'));
                                 }
                             } catch (parseError) {
                                 console.error(`[前端] 解析错误响应失败:`, parseError);
                                 if (searchRes) {
-                                    throw new Error(`深度搜索失败 (${searchRes.status}): ${searchRes.statusText}`);
+                                    const i18n = typeof t === 'function' ? t : (key, params) => {
+                                        let text = key;
+                                        if (params) Object.keys(params).forEach(k => text = text.replace(`{${k}}`, params[k]));
+                                        return text;
+                                    };
+                                    throw new Error(`${i18n('search.deepSearch.failedWithStatus', { status: searchRes.status })}: ${searchRes.statusText}`);
                                 } else {
                                     throw parseError;
                                 }
@@ -497,16 +611,19 @@ async function showRainEventDetails(eventId) {
                                 }
                             }
                             
-                            alert('深度搜索完成！已生成影响评估报告和表2数据。');
+                            const i18n = typeof t === 'function' ? t : (key) => key;
+                            alert(i18n('search.deepSearch.completed'));
                         } else {
                             // 创建错误对象，包含完整的响应数据
-                            const error = new Error(searchData.error || '深度搜索失败');
+                            const i18n = typeof t === 'function' ? t : (key) => key;
+                            const error = new Error(searchData.error || i18n('search.deepSearch.failed'));
                             error.responseData = searchData; // 附加响应数据
                             throw error;
                         }
                     } catch (e) {
                         // 显示详细错误信息
-                        let errorMsg = '深度搜索失败: ' + e.message;
+                        const i18n = typeof t === 'function' ? t : (key) => key;
+                        let errorMsg = i18n('search.deepSearch.failed') + ': ' + e.message;
                         let errorData = null;
                         
                         // 尝试获取错误详情
@@ -553,7 +670,8 @@ async function showRainEventDetails(eventId) {
                                 }
                             }
                             if (errorData.key_errors && errorData.key_errors.length > 0) {
-                                errorMsg += '\n❌ 关键错误：\n';
+                                const i18n = typeof t === 'function' ? t : (key) => key;
+                                errorMsg += `\n❌ ${i18n('common.error')}：\n`;
                                 errorData.key_errors.forEach(log => {
                                     errorMsg += '  - ' + log + '\n';
                                 });
@@ -606,12 +724,13 @@ function initEvents() {
             const dateTo = document.getElementById('eventDateTo')?.value;
             const country = document.getElementById('eventCountry')?.value || '';
             
+            const i18n = typeof t === 'function' ? t : (key) => key;
             if (!dateFrom || !dateTo) {
-                alert('请选择开始日期和结束日期');
+                alert(i18n('form.selectDateRange'));
                 return;
             }
             if (dateFrom > dateTo) {
-                alert('开始日期不能晚于结束日期');
+                alert(i18n('form.startDateAfterEnd'));
                 return;
             }
             // 重置到第一页
@@ -628,12 +747,13 @@ function initEvents() {
             const dateTo = document.getElementById('eventDateTo')?.value;
             const country = document.getElementById('eventCountry')?.value || '';
             
+            const i18n = typeof t === 'function' ? t : (key) => key;
             if (!dateFrom || !dateTo) {
-                alert('请选择开始日期和结束日期');
+                alert(i18n('form.selectDateRange'));
                 return;
             }
             if (dateFrom > dateTo) {
-                alert('开始日期不能晚于结束日期');
+                alert(i18n('form.startDateAfterEnd'));
                 return;
             }
             // 重置到第一页
