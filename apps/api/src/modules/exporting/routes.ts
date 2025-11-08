@@ -2,6 +2,14 @@ import { Express, Request, Response } from 'express';
 import { db } from '../../db';
 
 export function registerExportingModule(app: Express) {
+  // TODO: 重构为使用 rain_event 和 rain_flood_impact 表
+  // 暂时禁用，等待重构
+  app.get('/export', (_req: Request, res: Response) => {
+    res.status(503).json({ error: 'Export functionality is being refactored. Please use rain_event table instead.' });
+    return;
+  });
+  
+  /* 注释掉：使用 flood_records 表的旧代码
   app.get('/export', (_req: Request, res: Response) => {
     const rows = db.prepare(`
       SELECT record_id, id, title, description, water_level, status, risk_score, created_at, processed_at,
@@ -27,6 +35,7 @@ export function registerExportingModule(app: Express) {
     }
     res.end();
   });
+  */
 }
 
 

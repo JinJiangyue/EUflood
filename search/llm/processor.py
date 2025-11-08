@@ -11,7 +11,6 @@ from ..orchestrator.workflow import EventContext
 from .client import LLMClient, create_llm_client
 from .prompts import (
     build_extraction_prompt,
-    build_media_filter_prompt,
     build_report_prompt,
     build_validation_prompt,
 )
@@ -76,9 +75,9 @@ class LLMProcessor:
                 context, event_info, validation_result
             )
 
-            # 步骤 3: 多媒体筛选
-            logger.info("步骤 3: 多媒体筛选...")
-            media_result = self._step3_media_filter(context, event_info)
+            # 步骤 3: 从验证结果中提取多媒体（不再单独调用LLM）
+            logger.info("步骤 3: 提取验证后的多媒体内容...")
+            media_result = self._extract_media_from_validation(validation_result)
 
             # 步骤 4: 报告生成
             logger.info("步骤 4: 报告生成...")
@@ -182,6 +181,47 @@ class LLMProcessor:
                 })
         
         return filtered, filter_details
+    
+    def _pre_filter_with_media_priority(
+        self,
+        all_items: List[Dict[str, Any]],
+        event_info: Dict[str, Any],
+    ) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """预过滤搜索结果，媒体优先进入15条（最多3条媒体）。
+        
+        Returns:
+            (filtered_items, filter_details): 过滤后的结果列表（最多15条，媒体优先）和过滤详情列表
+        """
+        # 1. 分离媒体和新闻
+        media_items = [item for item in all_items if item.get("channel") in {"media", "social"}]
+        news_items = [item for item in all_items if item.get("channel") not in {"media", "social"}]
+        
+        # 2. 分别筛选（时间+地点+关键词）
+        filtered_media, media_filter_details = self._pre_filter_results(media_items, event_info)
+        filtered_news, news_filter_details = self._pre_filter_results(news_items, event_info)
+        
+        # 3. 媒体优先：最多取3条（如果有）
+        selected_media = filtered_media[:3] if len(filtered_media) >= 3 else filtered_media
+        
+        # 4. 新闻补充：取剩余数量（15 - 媒体数量）
+        remaining_count = 15 - len(selected_media)
+        selected_news = filtered_news[:remaining_count] if len(filtered_news) >= remaining_count else filtered_news
+        
+        # 5. 合并（不排序，让LLM1排序）
+        filtered_items = selected_media + selected_news
+        
+        # 6. 合并过滤详情
+        all_filter_details = media_filter_details + news_filter_details
+        
+        logger.info(
+            "预过滤完成：媒体 %s 条（优先保留 %s 条），新闻 %s 条，总计 %s 条",
+            len(filtered_media),
+            len(selected_media),
+            len(selected_news),
+            len(filtered_items),
+        )
+        
+        return filtered_items, all_filter_details
     
     def _extract_date_from_url(self, url: str) -> Optional[datetime]:
         """从URL中提取日期（常见格式：/2025/10/27/ 或 /2025-10-27/）。"""
@@ -379,12 +419,22 @@ class LLMProcessor:
             from datetime import datetime
             import json
             
-            # 创建输出目录
-            output_dir = Path("search_outputs")
-            output_dir.mkdir(exist_ok=True)
-            
-            # 生成文件名（使用事件ID，清理特殊字符）
+            # 创建输出目录：search_outputs/YYYYMMDD/
+            # 从 event_id 提取日期部分（前8位：YYYYMMDD）
             event_id = context.rain_event.event_id
+            event_id_str = str(event_id)
+            date_dir = event_id_str[:8] if len(event_id_str) >= 8 and event_id_str[:8].isdigit() else ""
+            if not date_dir:
+                # 如果无法从 ID 提取，尝试从 event_time 获取
+                if context.rain_event.event_time:
+                    date_dir = context.rain_event.event_time.strftime("%Y%m%d")
+                else:
+                    date_dir = "unknown"
+            
+            output_dir = Path("search_outputs") / date_dir
+            output_dir.mkdir(parents=True, exist_ok=True)
+            
+            # 生成文件名（使用完整事件ID，清理特殊字符）
             safe_event_id = event_id.replace("/", "_").replace("\\", "_")
             filename = f"{safe_event_id}_raw_items_before_filter.md"
             filepath = output_dir / filename
@@ -469,12 +519,22 @@ class LLMProcessor:
             from datetime import datetime
             import json
             
-            # 创建输出目录
-            output_dir = Path("search_outputs")
-            output_dir.mkdir(exist_ok=True)
-            
-            # 生成文件名（使用事件ID，清理特殊字符）
+            # 创建输出目录：search_outputs/YYYYMMDD/
+            # 从 event_id 提取日期部分（前8位：YYYYMMDD）
             event_id = context.rain_event.event_id
+            event_id_str = str(event_id)
+            date_dir = event_id_str[:8] if len(event_id_str) >= 8 and event_id_str[:8].isdigit() else ""
+            if not date_dir:
+                # 如果无法从 ID 提取，尝试从 event_time 获取
+                if context.rain_event.event_time:
+                    date_dir = context.rain_event.event_time.strftime("%Y%m%d")
+                else:
+                    date_dir = "unknown"
+            
+            output_dir = Path("search_outputs") / date_dir
+            output_dir.mkdir(parents=True, exist_ok=True)
+            
+            # 生成文件名（使用完整事件ID，清理特殊字符）
             safe_event_id = event_id.replace("/", "_").replace("\\", "_")
             filename = f"{safe_event_id}_filtered_items_after_prefilter.md"
             filepath = output_dir / filename
@@ -615,12 +675,22 @@ This rainfall event in {event.location_name}, {event.country}, recorded {event.r
             from datetime import datetime
             import json
             
-            # 创建输出目录
-            output_dir = Path("search_outputs")
-            output_dir.mkdir(exist_ok=True)
-            
-            # 生成文件名（使用事件ID，清理特殊字符）
+            # 创建输出目录：search_outputs/YYYYMMDD/
+            # 从 event_id 提取日期部分（前8位：YYYYMMDD）
             event_id = context.rain_event.event_id
+            event_id_str = str(event_id)
+            date_dir = event_id_str[:8] if len(event_id_str) >= 8 and event_id_str[:8].isdigit() else ""
+            if not date_dir:
+                # 如果无法从 ID 提取，尝试从 event_time 获取
+                if context.rain_event.event_time:
+                    date_dir = context.rain_event.event_time.strftime("%Y%m%d")
+                else:
+                    date_dir = "unknown"
+            
+            output_dir = Path("search_outputs") / date_dir
+            output_dir.mkdir(parents=True, exist_ok=True)
+            
+            # 生成文件名（使用完整事件ID，清理特殊字符）
             safe_event_id = event_id.replace("/", "_").replace("\\", "_")
             filename = f"{safe_event_id}_llm_validation_results.md"
             filepath = output_dir / filename
@@ -730,33 +800,32 @@ This rainfall event in {event.location_name}, {event.country}, recorded {event.r
         self, context: EventContext, event_info: Dict[str, Any]
     ) -> Dict[str, Any]:
         """步骤 1: 事件验证和冲突解决。"""
-        # 收集所有原始搜索结果
+        # 收集所有原始搜索结果，并添加channel信息
         all_items: List[Dict[str, Any]] = []
         for channel, items in (context.raw_contents or {}).items():
             for item in items or []:
-                all_items.append(item)
+                # 确保每个item都有channel信息，方便后续识别多媒体
+                item_with_channel = {**item, "channel": channel}
+                all_items.append(item_with_channel)
 
         if not all_items:
             logger.warning("没有搜索结果需要验证")
             return {
                 "relevant_items": [],
                 "irrelevant_items": [],
-                "verified_facts": [],
-                "conflicts": [],
-                "unverified": [],
             }
 
         # 保存原始搜索结果到文件（预过滤前）
         self._save_raw_items_before_filter(all_items, context, event_info)
 
-        # 预过滤：在交给LLM前进行简单规则判断
+        # 预过滤：在交给LLM前进行简单规则判断，媒体优先进入15条
         if self.config.PRE_FILTER_ENABLED:
             original_count = len(all_items)
-            all_items, filter_details = self._pre_filter_results(all_items, event_info)
+            all_items, filter_details = self._pre_filter_with_media_priority(all_items, event_info)
             filtered_count = len(all_items)
             if original_count > filtered_count:
                 logger.info(
-                    "预过滤：从 %s 条结果中过滤出 %s 条相关结果（移除了 %s 条不相关结果）",
+                    "预过滤：从 %s 条结果中过滤出 %s 条相关结果（移除了 %s 条不相关结果，媒体优先）",
                     original_count,
                     filtered_count,
                     original_count - filtered_count,
@@ -773,21 +842,16 @@ This rainfall event in {event.location_name}, {event.country}, recorded {event.r
                 # 保存预过滤后的结果到文件
                 self._save_filtered_items_after_prefilter(all_items, context, event_info)
         
-        # 限制传递给LLM的数据量，避免token超限
-        # Gemini 2.5-flash 的上下文窗口约为32K tokens
-        # 如果输入太大，会导致输出被截断
-        # 使用配置项控制最大数量
-        max_items = self.config.MAX_ITEMS_FOR_LLM_VALIDATION
-        if len(all_items) > max_items:
+        # 预过滤后应该已经是15条了（媒体优先），不需要再次限制
+        # 但如果超过15条，限制为15条
+        if len(all_items) > 15:
             logger.warning(
-                "预过滤后结果过多（%s条），限制为前%s条以避免token超限（配置: MAX_ITEMS_FOR_LLM_VALIDATION=%s）",
+                "预过滤后结果过多（%s条），限制为15条",
                 len(all_items),
-                max_items,
-                max_items,
             )
-            all_items = all_items[:max_items]
+            all_items = all_items[:15]
 
-        # 构建 prompt
+        # 构建 prompt（只使用简短信息：标题+日期+摘要200字符）
         time_window_days = self.config.LLM_VALIDATION_TIME_WINDOW_DAYS
         messages = build_validation_prompt(event_info, all_items, time_window_days)
 
@@ -803,24 +867,45 @@ This rainfall event in {event.location_name}, {event.country}, recorded {event.r
         # 解析响应
         result = client.parse_json_response(response)
 
-        # 映射回原始数据
-        relevant_items = []
-        for item in result.get("relevant_items", []):
+        # 映射回原始数据，并实现媒体优先
+        relevant_items_raw = result.get("relevant_items", [])
+        
+        # 分离媒体和新闻
+        media_items = []
+        news_items = []
+        for item in relevant_items_raw:
             idx = item.get("index", -1)
             if 0 <= idx < len(all_items):
                 original = all_items[idx]
-                relevant_items.append(
-                    {
-                        **original,
-                        "relevance_score": item.get("relevance_score", 0.0),
-                        "reason": item.get("reason", ""),
-                    }
-                )
-
+                item_with_score = {
+                    **original,
+                    "relevance_score": item.get("relevance_score", 0.0),
+                    "reason": item.get("reason", ""),
+                }
+                # 判断是否是媒体
+                channel = original.get("channel", "")
+                if channel in {"media", "social"}:
+                    media_items.append(item_with_score)
+                else:
+                    news_items.append(item_with_score)
+        
+        # 媒体优先：即使评分低也优先保留（最多3条）
+        # 如果媒体在前10条中，优先保留；如果没有，就跳过
+        selected_media = media_items[:3] if len(media_items) >= 3 else media_items
+        
+        # 新闻补充：取剩余数量（10 - 媒体数量）
+        remaining_count = 10 - len(selected_media)
+        selected_news = news_items[:remaining_count] if len(news_items) >= remaining_count else news_items
+        
+        # 合并（媒体优先）
+        relevant_items = selected_media + selected_news
+        
         irrelevant_items = result.get("irrelevant_items", [])
         logger.info(
-            "验证完成: %s 条相关, %s 条不相关",
+            "验证完成: %s 条相关（媒体 %s 条，新闻 %s 条），%s 条不相关",
             len(relevant_items),
+            len(selected_media),
+            len(selected_news),
             len(irrelevant_items),
         )
 
@@ -835,9 +920,6 @@ This rainfall event in {event.location_name}, {event.country}, recorded {event.r
         return {
             "relevant_items": relevant_items,
             "irrelevant_items": irrelevant_items,
-            "verified_facts": result.get("verified_facts", []),
-            "conflicts": result.get("conflicts", []),
-            "unverified": result.get("unverified", []),
         }
 
     def _step2_extraction(
@@ -904,84 +986,35 @@ This rainfall event in {event.location_name}, {event.country}, recorded {event.r
             "impact": result.get("impact", {}),
         }
 
-    def _step3_media_filter(
-        self, context: EventContext, event_info: Dict[str, Any]
+    def _extract_media_from_validation(
+        self, validation_result: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """步骤 3: 多媒体筛选。"""
-        # 收集多媒体内容
-        media_items: List[Dict[str, Any]] = []
-        for channel, items in (context.raw_contents or {}).items():
-            if channel in {"media", "social"}:
-                media_items.extend(items or [])
-
-        if not media_items:
-            logger.warning("没有多媒体内容需要筛选")
-            return {"selected_items": [], "rejected_items": []}
-
-        # 构建 prompt
-        time_window_days = self.config.LLM_VALIDATION_TIME_WINDOW_DAYS
-        messages = build_media_filter_prompt(event_info, media_items, time_window_days)
+        """从步骤1的验证结果中提取多媒体内容（不再单独调用LLM）。"""
+        # 从验证后的相关项中筛选出多媒体内容
+        relevant_items = validation_result.get("relevant_items", [])
         
-        # 记录 LLM 请求
-        from ..utils.detailed_logger import get_detailed_logger
-        detailed_logger = get_detailed_logger()
-        detailed_logger.log_llm_request(
-            step="多媒体筛选",
-            step_number=3,
-            provider=self.config.LLM_PROVIDER,
-            model=self.config.OPENAI_MODEL if self.config.LLM_PROVIDER == "openai" else self.config.GEMINI_MODEL,
-            prompt_messages=messages,
-            config={
-                "temperature": self.config.LLM_TEMPERATURE,
-                "max_tokens": self.config.LLM_MAX_TOKENS,
-                "response_format": {"type": "json_object"} if self.config.LLM_PROVIDER == "openai" else None,
-            },
-        )
-
-        # 调用 LLM
-        client = self._get_client()
-        response = client.chat(
-            messages=messages,
-            temperature=self.config.LLM_TEMPERATURE,
-            max_tokens=self.config.LLM_MAX_TOKENS,
-            response_format={"type": "json_object"} if self.config.LLM_PROVIDER == "openai" else None,
-        )
-
-        # 解析响应
-        result = client.parse_json_response(response)
+        # 识别多媒体内容（通过channel或type字段）
+        media_items = []
+        for item in relevant_items:
+            # 检查是否是多媒体内容
+            channel = item.get("channel", "")
+            item_type = item.get("type", "")
+            # 多媒体渠道包括: media, social, 或者type为media的
+            if channel in {"media", "social"} or item_type == "media":
+                media_items.append(item)
         
-        # 记录 LLM 响应
-        detailed_logger.log_llm_response(
-            step="多媒体筛选",
-            step_number=3,
-            provider=self.config.LLM_PROVIDER,
-            raw_response=response,
-            parsed_response=result,
-        )
-
-        # 映射回原始数据
-        selected_items = []
-        for item in result.get("selected_items", []):
-            idx = item.get("index", -1)
-            if 0 <= idx < len(media_items):
-                original = media_items[idx]
-                selected_items.append(
-                    {
-                        **original,
-                        "relevance_score": item.get("relevance_score", 0.0),
-                        "reason": item.get("reason", ""),
-                    }
-                )
-
-        logger.info(
-            "筛选完成: %s 条选中, %s 条拒绝",
-            len(selected_items),
-            len(result.get("rejected_items", [])),
-        )
-
+        # 限制多媒体数量（最多10条，按相关性排序）
+        if len(media_items) > 10:
+            # 按relevance_score排序，取前10条
+            media_items.sort(key=lambda x: x.get("relevance_score", 0.0), reverse=True)
+            media_items = media_items[:10]
+            logger.info("多媒体内容过多，限制为前10条（按相关性排序）")
+        
+        logger.info("从验证结果中提取了 %s 条多媒体内容", len(media_items))
+        
         return {
-            "selected_items": selected_items,
-            "rejected_items": result.get("rejected_items", []),
+            "selected_items": media_items,
+            "rejected_items": [],  # 不相关的已经在步骤1中被排除了
         }
 
     def _step4_report_generation(
@@ -993,13 +1026,15 @@ This rainfall event in {event.location_name}, {event.country}, recorded {event.r
         media_result: Dict[str, Any],
     ) -> str:
         """步骤 4: 报告生成。"""
-        # 收集所有可用的新闻和多媒体来源（包括验证后的新闻）
+        # 收集所有可用的新闻和多媒体来源
         all_sources = []
         
-        # 添加验证后的新闻来源
+        # 添加验证后的新闻来源（排除媒体）
         relevant_items = validation_result.get("relevant_items", [])
         for item in relevant_items:
-            if item.get("url"):
+            # 只添加非媒体内容
+            channel = item.get("channel", "")
+            if channel not in {"media", "social"} and item.get("url"):
                 all_sources.append({
                     "title": item.get("title", ""),
                     "url": item.get("url", ""),
@@ -1009,7 +1044,7 @@ This rainfall event in {event.location_name}, {event.country}, recorded {event.r
                     "type": "news",
                 })
         
-        # 添加筛选后的多媒体来源
+        # 添加筛选后的多媒体来源（从步骤3提取的）
         selected_media = media_result.get("selected_items", [])
         for item in selected_media:
             if item.get("url"):
@@ -1028,8 +1063,8 @@ This rainfall event in {event.location_name}, {event.country}, recorded {event.r
             timeline=extraction_result.get("timeline", []),
             impact=extraction_result.get("impact", {}),
             media=all_sources,  # 传递所有可用的来源（新闻+多媒体）
-            verified_facts=validation_result.get("verified_facts", []),
-            conflicts=validation_result.get("conflicts", []),
+            verified_facts=[],  # 已移除，不再使用
+            conflicts=[],  # 已移除，不再使用
         )
         
         # 记录 LLM 请求
@@ -1055,8 +1090,6 @@ This rainfall event in {event.location_name}, {event.country}, recorded {event.r
             max_tokens=self.config.LLM_MAX_TOKENS,
         )
 
-        logger.info("报告生成完成: %s 字符", len(response))
-        
         # 记录 LLM 响应（报告是纯文本，不是JSON）
         detailed_logger.log_llm_response(
             step="报告生成",

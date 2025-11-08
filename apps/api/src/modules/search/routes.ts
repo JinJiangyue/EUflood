@@ -3,6 +3,11 @@ import { z } from 'zod';
 import { db } from '../../db';
 
 export function registerSearchModule(app: Express) {
+  // TODO: 重构为使用 rain_event 和 rain_flood_impact 表
+  // 暂时禁用，等待重构
+  return;
+  
+  /* 注释掉：使用 flood_records 表的旧代码
   const querySchema = z.object({
     q: z.string().optional(),
     country: z.string().optional(),
@@ -69,6 +74,7 @@ export function registerSearchModule(app: Express) {
     const info = insert.run(description, water_level ?? null);
     res.status(201).json({ id: info.lastInsertRowid });
   });
+  */
 }
 
 

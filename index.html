@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>欧盟洪水监测系统 - 真实数据搜索</title>
+    <title data-i18n="pageTitle">欧盟洪水监测系统 - 真实数据搜索</title>
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <!-- 项目样式 -->
@@ -13,8 +13,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🌊 欧盟洪水监测系统</h1>
-            <p>实时搜索真实洪水数据 - 来自官方气象API和社交媒体</p>
+            <h1 data-i18n="headerTitle">🌊 欧盟洪水监测系统</h1>
+            <p data-i18n="headerSubtitle">实时搜索真实洪水数据 - 来自官方气象API和社交媒体</p>
         </div>
         
         <div class="search-section">
@@ -22,19 +22,19 @@
                 <div class="stats-grid">
                     <div class="stat-item">
                         <div class="stat-number" id="totalRecords">-</div>
-                        <div class="stat-label">总记录数</div>
+                        <div class="stat-label" data-i18n="totalRecords">总记录数</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-number" id="processedRecords">-</div>
-                        <div class="stat-label">已处理记录</div>
+                        <div class="stat-label" data-i18n="processedRecords">已处理记录</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-number" id="averageRisk">-</div>
-                        <div class="stat-label">平均风险</div>
+                        <div class="stat-label" data-i18n="averageRisk">平均风险</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-number" id="maxWaterLevel">-</div>
-                        <div class="stat-label">最大水位(m)</div>
+                        <div class="stat-label" data-i18n="maxWaterLevel">最大水位(m)</div>
                     </div>
                 </div>
             </div>
@@ -43,27 +43,27 @@
             <div class="event-candidates-section" style="padding: 20px 40px; background: #f0f4f8; border-bottom: 2px solid #e0e7ef;">
                 <!-- 空间插值分析区域 -->
                 <div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 30px; border-left: 4px solid #e74c3c;">
-                    <h2 style="margin-bottom: 15px; color: #1e3c72;">🗺️ 空间插值分析</h2>
+                    <h2 style="margin-bottom: 15px; color: #1e3c72;" data-i18n="spatialInterpolation">🗺️ 空间插值分析</h2>
                     <div style="margin-bottom: 15px;">
-                        <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #2c3e50;">选择数据文件（CSV、Excel、TXT）</label>
+                        <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #2c3e50;" data-i18n="selectDataFile">选择数据文件（CSV、Excel、TXT）</label>
                         <input type="file" id="interpolationFileInput" accept=".csv,.xlsx,.xls,.txt" style="padding: 10px; border: 2px solid #e1e5e9; border-radius: 8px; width: 100%; font-size: 14px;">
                         <div id="interpolationFileInfo" style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 5px; font-size: 14px; color: #666; display: none;">
                             请先选择数据文件
                         </div>
                     </div>
                     <div style="margin-bottom: 15px;">
-                        <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #2c3e50;">确认日期（可手动修改，用于生成事件ID）</label>
+                        <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #2c3e50;" data-i18n="confirmDate">确认日期（可手动修改，用于生成事件ID）</label>
                         <input type="date" id="confirmedDateInput" style="padding: 10px; border: 2px solid #e1e5e9; border-radius: 8px; width: 220px; font-size: 14px; background: #ffffff;">
-                        <small style="display: block; margin-top: 5px; color: #666; font-size: 12px;">默认从文件名解析（如 20251106），可改</small>
+                        <small style="display: block; margin-top: 5px; color: #666; font-size: 12px;" data-i18n="dateHint">默认从文件名解析（如 20251106），可改</small>
                     </div>
                     <div style="margin-bottom: 15px;">
-                        <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #2c3e50;">阈值设置（默认 50.0，可修改；显示值大于该阈值的点）</label>
+                        <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #2c3e50;" data-i18n="thresholdSetting">阈值设置（默认 50.0，可修改；显示值大于该阈值的点）</label>
                         <input type="number" id="valueThreshold" value="50.0" min="0" step="0.1" style="padding: 10px; border: 2px solid #e1e5e9; border-radius: 8px; width: 200px; font-size: 14px; background: #ffffff;">
-                        <small style="display: block; margin-top: 5px; color: #666; font-size: 12px;">留空或非法时按 50.0 处理</small>
+                        <small style="display: block; margin-top: 5px; color: #666; font-size: 12px;" data-i18n="thresholdHint">留空或非法时按 50.0 处理</small>
                     </div>
                     <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
-                        <button id="btnUploadInterpolationFile" class="search-btn" type="button" style="flex: 1;">📤 上传文件</button>
-                        <button id="btnSaveRainEvents" class="search-btn" type="button" style="flex: 1; background: linear-gradient(135deg, #27ae60 0%, #229954 100%);" disabled>💾 筛选入库</button>
+                        <button id="btnUploadInterpolationFile" class="search-btn" type="button" style="flex: 1;" data-i18n="uploadFile">📤 上传文件</button>
+                        <button id="btnSaveRainEvents" class="search-btn" type="button" style="flex: 1; background: linear-gradient(135deg, #27ae60 0%, #229954 100%);" disabled data-i18n="filterAndSave">💾 筛选入库</button>
                     </div>
                     <div id="interpolationStatus" style="margin-top: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
                     <!-- 地图容器 -->
@@ -74,31 +74,31 @@
                     <div id="interpolationPlaces" style="margin-top: 16px; background: #ffffff; border: 1px solid #e1e5e9; border-radius: 8px; padding: 12px; display: none;"></div>
                 </div>
                 
-                <h2 style="margin-bottom: 15px; color: #1e3c72; margin-top: 40px;">📅 查询降雨事件（支持日期范围和国家筛选）</h2>
+                <h2 style="margin-bottom: 15px; color: #1e3c72; margin-top: 40px;" data-i18n="queryRainEvents">📅 查询降雨事件（支持日期范围和国家筛选）</h2>
                 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                    <label style="font-size: 14px; color: #666;">开始日期:</label>
+                    <label style="font-size: 14px; color: #666;" data-i18n="startDate">开始日期:</label>
                     <input type="date" id="eventDateFrom" style="padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px;" value="">
-                    <label style="font-size: 14px; color: #666;">结束日期:</label>
+                    <label style="font-size: 14px; color: #666;" data-i18n="endDate">结束日期:</label>
                     <input type="date" id="eventDateTo" style="padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px;" value="">
-                    <label style="font-size: 14px; color: #666;">国家（可选）:</label>
-                    <input type="text" id="eventCountry" placeholder="留空查询所有国家" style="padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px; width: 200px;">
-                    <button id="btnQueryEvents" class="search-btn" type="button" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">🔍 查询事件</button>
-                    <button id="btnRefreshEvents" class="search-btn" type="button" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">🔄 刷新查询</button>
+                    <label style="font-size: 14px; color: #666;" data-i18n="country">国家（可选）:</label>
+                    <input type="text" id="eventCountry" data-i18n-placeholder="countryPlaceholder" placeholder="留空查询所有国家" style="padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px; width: 200px;">
+                    <button id="btnQueryEvents" class="search-btn" type="button" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" data-i18n="queryEvents">🔍 查询事件</button>
+                    <button id="btnRefreshEvents" class="search-btn" type="button" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);" data-i18n="refreshQuery">🔄 刷新查询</button>
                     <span id="eventsStatus" style="color: #666; font-size: 14px;"></span>
                 </div>
                 <div id="candidatesList" style="margin-top: 20px; display: none;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <h3 style="color: #1e3c72;">降雨事件列表</h3>
+                        <h3 style="color: #1e3c72;" data-i18n="rainEventList">降雨事件列表</h3>
                     </div>
                     <div id="eventsContainer" style="display: grid; grid-template-columns: 1fr; gap: 20px; grid-template-rows: auto; transition: grid-template-columns 0.3s ease;">
                         <div id="candidatesTable" style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); min-width: 0; overflow-x: auto;"></div>
                         <div id="eventDetailsPanel" style="background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none; min-width: 0;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                <h3 style="color: #1e3c72; margin: 0;">📊 数据详情</h3>
-                                <button id="btnCloseDetails" style="background: #e74c3c; color: white; border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer;">✕ 关闭</button>
+                                <h3 style="color: #1e3c72; margin: 0;" data-i18n="dataDetails">📊 数据详情</h3>
+                                <button id="btnCloseDetails" style="background: #e74c3c; color: white; border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer;" data-i18n="close">✕ 关闭</button>
                             </div>
                             <div id="eventDetailsContent" style="max-height: 600px; overflow-y: auto;">
-                                <p style="color: #999; text-align: center; padding: 40px;">点击表格中的事件行查看详细信息</p>
+                                <p style="color: #999; text-align: center; padding: 40px;" data-i18n="clickToViewDetails">点击表格中的事件行查看详细信息</p>
                             </div>
                         </div>
                     </div>
@@ -106,43 +106,43 @@
             </div>
             
             <div class="control-bar" style="padding: 0 40px 10px 40px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <button id="btnTrigger" class="search-btn" type="button" style="background: linear-gradient(135deg, #27ae60 0%, #229954 100%);">🌧️ 触发器检查</button>
-                <button id="btnIngest" class="search-btn" type="button">📥 采集示例数据</button>
-                <button id="btnProcess" class="search-btn" type="button">⚙️ 处理数据</button>
-                <button id="btnRefresh" class="search-btn" type="button">🔄 刷新统计</button>
-                <a href="/export" target="_blank" class="search-btn">⬇️ 导出 CSV</a>
+                <button id="btnTrigger" class="search-btn" type="button" style="background: linear-gradient(135deg, #27ae60 0%, #229954 100%);" data-i18n="triggerCheck">🌧️ 触发器检查</button>
+                <button id="btnIngest" class="search-btn" type="button" data-i18n="ingestSample">📥 采集示例数据</button>
+                <button id="btnProcess" class="search-btn" type="button" data-i18n="processData">⚙️ 处理数据</button>
+                <button id="btnRefresh" class="search-btn" type="button" data-i18n="refreshStats">🔄 刷新统计</button>
+                <a href="/export" target="_blank" class="search-btn" data-i18n="exportCSV">⬇️ 导出 CSV</a>
             </div>
             
             <form class="search-form" id="searchForm">
                 <div class="form-group">
-                    <label for="country">国家/地区</label>
+                    <label for="country" data-i18n="countryRegion">国家/地区</label>
                     <select id="country" name="country">
-                        <option value="">所有国家</option>
-                        <option value="Spain">西班牙</option>
-                        <option value="Germany">德国</option>
-                        <option value="Italy">意大利</option>
-                        <option value="France">法国</option>
-                        <option value="Denmark">丹麦</option>
+                        <option value="" data-i18n="allCountries">所有国家</option>
+                        <option value="Spain" data-i18n="spain">西班牙</option>
+                        <option value="Germany" data-i18n="germany">德国</option>
+                        <option value="Italy" data-i18n="italy">意大利</option>
+                        <option value="France" data-i18n="france">法国</option>
+                        <option value="Denmark" data-i18n="denmark">丹麦</option>
                     </select>
                 </div>
                 
                 <div class="form-group">
-                    <label for="date">日期</label>
+                    <label for="date" data-i18n="dateLabel">日期</label>
                     <input type="date" id="date" name="date" value="2025-10-07">
                 </div>
                 
                 <div class="form-group">
-                    <label for="severity">严重程度</label>
+                    <label for="severity" data-i18n="severity">严重程度</label>
                     <select id="severity" name="severity">
-                        <option value="">所有级别</option>
-                        <option value="extreme">极高</option>
-                        <option value="high">高</option>
-                        <option value="medium">中等</option>
-                        <option value="low">低</option>
+                        <option value="" data-i18n="allLevels">所有级别</option>
+                        <option value="extreme" data-i18n="extreme">极高</option>
+                        <option value="high" data-i18n="high">高</option>
+                        <option value="medium" data-i18n="medium">中等</option>
+                        <option value="low" data-i18n="low">低</option>
                     </select>
                 </div>
                 
-                <button type="submit" class="search-btn" id="searchBtn">
+                <button type="submit" class="search-btn" id="searchBtn" data-i18n="searchData">
                     🔍 搜索数据
                 </button>
             </form>
@@ -151,16 +151,16 @@
         <!-- 搜索信息显示区域 -->
         <div class="search-info-section" id="searchInfo" style="display: none;">
             <div class="search-info">
-                <h4>🔍 智能搜索状态</h4>
+                <h4 data-i18n="smartSearchStatus">🔍 智能搜索状态</h4>
                 <div id="searchInfoContent"></div>
             </div>
         </div>
         
         <div class="results-section" id="resultsSection">
             <div class="no-results">
-                <h3>📊 系统已就绪</h3>
-                <p>使用上方搜索表单查找真实洪水数据</p>
-                <p style="margin-top: 10px; font-size: 0.9em;">
+                <h3 data-i18n="systemReady">📊 系统已就绪</h3>
+                <p data-i18n="useSearchForm">使用上方搜索表单查找真实洪水数据</p>
+                <p style="margin-top: 10px; font-size: 0.9em;" data-i18n="autoCollectTip">
                     💡 提示：系统每6小时自动收集最新数据
                 </p>
             </div>
@@ -169,6 +169,9 @@
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- 国际化模块（最先加载） -->
+    <script src="frontend/js/i18n.js"></script>
     
     <!-- 工具函数 -->
     <script src="frontend/js/utils.js"></script>
@@ -183,6 +186,15 @@
     
     <!-- 主入口 -->
     <script src="frontend/js/main.js"></script>
+    
+    <!-- 初始化国际化 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof initI18n === 'function') {
+                initI18n();
+            }
+        });
+    </script>
 </body>
 </html>
 

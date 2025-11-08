@@ -1,16 +1,18 @@
-# EUflood v1.0.2（本地开发版）
+# EUflood v1.0.5（本地开发版）
 
 洪水数据采集 → 处理 → 分析 → 搜索/导出 → **空间插值分析**，全流程本地可运行方案。
 
 ## 特性
 - Node.js + TypeScript + Express
-- 本地数据库：SQLite（better-sqlite3）
+- 本地数据库：SQLite（better-sqlite3），统一路径 `apps/database/dev.db`
 - 多源采集（官方API/社媒/新闻，模拟）：去重（record_id）、置信度、证据链
 - 数据处理：risk_score/status/processed_at
 - 搜索接口：支持参数 country/date/severity 与关键词 q（可为空）
 - 分析接口：总量/处理数/平均风险/最大水位
 - 导出：CSV（包含来源、置信度、证据数）
 - **Python 空间插值分析模块**：支持坐标转换、GeoJSON 筛选、阈值过滤、地图可视化
+- **深度搜索模块**：LLM 驱动的信息搜索与报告生成，支持表1/表2数据管理
+- **多语言支持**：中文、英文、西班牙语，独立语言包文件，实时切换
 - 前端：根目录 `index.html` 纯静态页，直连本地 API，集成 Leaflet 地图
 
 ## 快速开始（Windows）
@@ -22,7 +24,7 @@ npm install
 echo PORT=3000> .env & echo DB_FILE=./dev.db>> .env & echo LOG_LEVEL=info>> .env
 ```
 
-### 2. 配置 Python 环境（空间插值分析需要）
+### 2. 配置 Python 环境（空间插值分析和深度搜索需要）
 ```bash
 # 检查嵌入式 Python 是否已安装
 cd apps/api
@@ -30,7 +32,7 @@ python-embed\python.exe --version
 
 # 安装 Python 依赖
 cd python-embed\Scripts
-pip.exe install -r ..\..\src\modules\python\scripts\requirements.txt
+pip.exe install -r ..\..\..\search\requirements.txt
 ```
 
 ### 3. 启动服务
@@ -103,8 +105,8 @@ python-embed\python.exe test_interpolation.py
 - 见 `CODE_TREE.md`
 
 ## 数据库位置
-- 默认：`apps/api/dev.db`
-- 可配：`apps/api/.env` 中 `DB_FILE`
+- 默认：`apps/database/dev.db`（v1.0.5 统一）
+- 可配：项目根目录 `.env` 中 `DB_FILE`（支持相对路径，如 `apps/database/dev.db`）
 
 ## 技术栈
 
@@ -133,8 +135,10 @@ python-embed\python.exe test_interpolation.py
 - 生产建议：Postgres + Docker；当前仓库用于本地迭代与验证
 
 ## 版本历史
-- **v1.0.2** (最新): 空间插值分析增强，支持行政区解析（国家/省/市）、阈值可配置、地点列表显示
+- **v1.0.5** (最新): 多语言支持（中文/英文/西班牙语）、深度搜索功能完善、数据库路径统一、路径配置优化
+- **v1.0.4**: 搜索管线模块，LLM 驱动处理，多源采集，智能报告生成
+- **v1.0.2**: 空间插值分析增强，支持行政区解析（国家/省/市）、阈值可配置、地点列表显示
 - **v1.0.1**: 新增 Python 空间插值分析模块，支持坐标转换、GeoJSON 筛选、地图可视化
 - **v1.0.0**: 基础功能实现，数据采集、处理、分析、搜索、导出
 
-详见 `CHANGELOG.md`
+详见 `deploy/CHANGELOG.md`

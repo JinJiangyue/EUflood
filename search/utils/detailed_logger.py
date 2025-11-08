@@ -51,6 +51,7 @@ class DetailedLogger:
         language: str,
         keywords: List[str],
         payload: Dict[str, Any],
+        query_string: Optional[str] = None,
     ):
         """记录搜索请求。"""
         entry = {
@@ -59,6 +60,7 @@ class DetailedLogger:
             "channel": channel,
             "language": language,
             "keywords": keywords,
+            "query_string": query_string,
             "payload": payload,
             "timestamp": datetime.now().isoformat(),
         }
@@ -68,6 +70,8 @@ class DetailedLogger:
         logger.info("  渠道: %s", channel)
         logger.info("  语言: %s", language)
         logger.info("  关键词: %s", ", ".join(keywords))
+        if query_string:
+            logger.info("  搜索查询: %s", query_string)
         logger.info("  请求参数:")
         logger.info(json.dumps(payload, indent=4, ensure_ascii=False))
 
@@ -223,6 +227,24 @@ class DetailedLogger:
             logger.info("  描述: %s", description)
         logger.info("  输入数据类型: %s", type(input_data).__name__)
         logger.info("  输出数据类型: %s", type(output_data).__name__)
+        
+        # 如果是查询计划生成，显示详细的多语言关键词信息
+        if step_name == '查询计划生成' and isinstance(output_data, dict):
+            keywords_map = output_data.get('keywords', {})
+            query_strings_map = output_data.get('query_strings', {})
+            
+            if keywords_map or query_strings_map:
+                logger.info("  📋 多语言关键词详情:")
+                for lang, keywords in keywords_map.items():
+                    if isinstance(keywords, list):
+                        logger.info("    [%s] 关键词 (%d 个): %s", lang.upper(), len(keywords), ", ".join(keywords))
+                    elif isinstance(keywords, dict):
+                        expanded = keywords.get('expanded', keywords.get('base', []))
+                        if expanded:
+                            logger.info("    [%s] 关键词 (%d 个): %s", lang.upper(), len(expanded), ", ".join(expanded))
+                    query_string = query_strings_map.get(lang)
+                    if query_string:
+                        logger.info("    [%s] 搜索查询: %s", lang.upper(), query_string)
 
     def log_error(self, error_type: str, error_message: str, error_details: Any = None):
         """记录错误。"""
@@ -272,8 +294,10 @@ class DetailedLogger:
                         f.write(f"- **采集器**: {entry.get('collector', 'Unknown')}\n")
                         f.write(f"- **渠道**: {entry.get('channel', 'Unknown')}\n")
                         f.write(f"- **语言**: {entry.get('language', 'Unknown')}\n")
-                        f.write(f"- **关键词**: {', '.join(entry.get('keywords', []))}\n\n")
-                        f.write("**请求参数**:\n\n")
+                        f.write(f"- **关键词**: {', '.join(entry.get('keywords', []))}\n")
+                        if entry.get('query_string'):
+                            f.write(f"- **搜索查询**: `{entry.get('query_string')}`\n")
+                        f.write("\n**请求参数**:\n\n")
                         f.write("```json\n")
                         f.write(json.dumps(entry.get("payload", {}), indent=2, ensure_ascii=False))
                         f.write("\n```\n\n")
@@ -365,6 +389,43 @@ class DetailedLogger:
                             f.write(f"**描述**: {entry.get('description')}\n\n")
                         f.write(f"- **输入数据类型**: {type(entry.get('input_data')).__name__}\n")
                         f.write(f"- **输出数据类型**: {type(entry.get('output_data')).__name__}\n\n")
+                        
+                        # 如果是查询计划生成，显示详细的多语言关键词信息
+                        if entry.get('step_name') == '查询计划生成':
+                            output_data = entry.get('output_data', {})
+                            if isinstance(output_data, dict):
+                                keywords_map = output_data.get('keywords', {})
+                                query_strings_map = output_data.get('query_strings', {})
+                                
+                                if keywords_map or query_strings_map:
+                                    f.write("**多语言关键词详情**:\n\n")
+                                    for lang, keywords in keywords_map.items():
+                                        f.write(f"#### {lang.upper()} 语言\n\n")
+                                        # keywords 应该是列表（通过 expanded() 方法展开）
+                                        if isinstance(keywords, list):
+                                            f.write(f"- **关键词列表** ({len(keywords)} 个):\n")
+                                            f.write(f"  - {', '.join(keywords)}\n")
+                                        elif isinstance(keywords, dict):
+                                            # 如果是 KeywordBundle 的字典形式（未展开）
+                                            expanded = keywords.get('expanded', keywords.get('base', []))
+                                            if expanded:
+                                                f.write(f"- **关键词列表** ({len(expanded)} 个):\n")
+                                                f.write(f"  - {', '.join(expanded)}\n")
+                                            else:
+                                                # 尝试从各个部分组合
+                                                base = keywords.get('base_terms', [])
+                                                location = keywords.get('location_terms', [])
+                                                disaster = keywords.get('disaster_terms', [])
+                                                extra = keywords.get('extra_terms', [])
+                                                all_terms = base + location + disaster + extra
+                                                if all_terms:
+                                                    f.write(f"- **关键词列表** ({len(all_terms)} 个):\n")
+                                                    f.write(f"  - {', '.join(all_terms)}\n")
+                                        query_string = query_strings_map.get(lang)
+                                        if query_string:
+                                            f.write(f"- **搜索查询**: `{query_string}`\n")
+                                        f.write("\n")
+                        
                         f.write("---\n\n")
 
                     elif entry_type == "error":

@@ -5,6 +5,11 @@
 
 // 等待DOM加载完成
 document.addEventListener('DOMContentLoaded', function() {
+    // 初始化国际化（最先初始化）
+    if (typeof initI18n === 'function') {
+        initI18n();
+    }
+    
     // 初始化统计数据
     if (typeof loadStats === 'function') {
         loadStats();

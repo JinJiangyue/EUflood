@@ -167,10 +167,22 @@ class Settings(BaseSettings):
         "env_file_encoding": "utf-8",
         "case_sensitive": False,
         "extra": "ignore",  # 忽略 .env 中未定义的字段（如 Node.js API 的配置）
+        # 注意：pydantic-settings 默认优先读取系统环境变量，然后读取 .env 文件
+        # 如果系统环境变量中有占位符，会覆盖 .env 文件中的真实值
+        # 解决方案：在 Node.js 中传递环境变量时，不要传递占位符值
     }
 
 
 settings = Settings()
+
+# 调试：检查关键配置是否加载
+import logging
+_logger = logging.getLogger(__name__)
+if not settings.TAVILY_API_KEY or settings.TAVILY_API_KEY == "your_tavily_api_key_here":
+    _logger.warning("⚠️  TAVILY_API_KEY 未正确加载（值: %s）", 
+                   settings.TAVILY_API_KEY[:20] + "..." if settings.TAVILY_API_KEY and len(settings.TAVILY_API_KEY) > 20 else settings.TAVILY_API_KEY)
+    _logger.warning("  检查 .env 文件路径: %s", DEFAULT_ENV_PATH)
+    _logger.warning("  .env 文件存在: %s", DEFAULT_ENV_PATH.exists())
 
 
 def reload_settings() -> Settings:

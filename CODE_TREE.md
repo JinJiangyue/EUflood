@@ -1,4 +1,4 @@
-# 代码结构解析（v1.0.4）
+# 代码结构解析（v1.0.5）
 
 ## 根目录结构
 
@@ -14,6 +14,11 @@ europe/
 │   │   ├── main.css          主样式
 │   │   └── map.css           地图样式
 │   └── js/                   JavaScript 模块
+│       ├── i18n.js           国际化模块（多语言支持）⭐ v1.0.5
+│       ├── i18n/             语言包目录 ⭐ v1.0.5
+│       │   ├── zh.json       中文翻译
+│       │   ├── en.json       英文翻译
+│       │   └── es.json       西班牙语翻译
 │       ├── utils.js          工具函数
 │       ├── main.js           主入口
 │       └── modules/           功能模块
@@ -21,10 +26,19 @@ europe/
 │   └── api/                    本地 API（Node.js + TypeScript + SQLite）
 │       ├── package.json        脚本与依赖
 │       ├── tsconfig.json       TypeScript 配置
-│       ├── .env                开发环境变量（PORT/DB_FILE/LOG_LEVEL/PYTHON_PATH）
-│       ├── dev.db              本地 SQLite 数据库（git 忽略）
+│       ├── .env                开发环境变量（PORT/DB_FILE/LOG_LEVEL/PYTHON_PATH等）
+│       ├── database/            数据库目录（统一位置）⭐ v1.0.5
+│       │   └── dev.db           本地 SQLite 数据库（git 忽略）
 │       ├── python-embed/       嵌入式 Python 3.12 环境
 │       ├── uploads/            上传文件目录（git 忽略）
+│       │   ├── rain_file/      降雨数据文件 ⭐ v1.0.5
+│       │   └── geofile/        地理数据文件 ⭐ v1.0.5
+│       │       ├── nuts3/       NUTS3 GeoJSON 文件
+│       │       └── city/        City GPKG 文件
+│       ├── scripts/             Python 脚本目录（从 src/modules/python 移动）⭐ v1.0.5
+│       │   ├── deep_search.py  深度搜索主脚本
+│       │   ├── interpolation.py 空间插值分析脚本
+│       │   └── bat_python/    批处理脚本和缓存文件
 │       ├── src/
 │       │   ├── index.ts         应用入口，注册所有路由；/ 返回根 index.html
 │       │   ├── db.ts           SQLite 连接、初始化与列升级
@@ -80,21 +94,25 @@ europe/
 #### 5. 导出模块 (`exporting/`)
 - `routes.ts`: `GET /export`（CSV，包含来源/置信度/证据数）
 
-#### 6. Python 空间插值分析模块 (`python/`) ⭐ 新增
+#### 6. Python 脚本模块 (`scripts/`) ⭐ v1.0.5 重构
 
-**核心文件**：
-- `config.ts`: Python 路径配置、脚本目录、上传目录
+**位置变更**：从 `src/modules/python/scripts/` 移动到 `apps/api/scripts/`
+
+**核心文件**（位于 `apps/api/scripts/`）：
+- `config.ts`: Python 路径配置、脚本目录、上传目录、地理数据目录
 - `routes.ts`: Python 模块路由注册
   - `GET /python/runtime`: 获取运行环境信息
   - `GET /python/health`: 检查 Python 是否可用
   - `POST /python/upload`: 文件上传接口
-  - `POST /python/interpolation`: 空间插值分析接口 ⭐
+  - `POST /python/interpolation`: 空间插值分析接口
   - `GET /python/geojson/:filename`: 获取 GeoJSON 文件
-- `service.ts`: Python 脚本执行服务
-- `file-upload.ts`: 文件上传处理（multer）
-- `utils/executor.ts`: Python 脚本执行器，处理参数传递、输出捕获、错误处理
+  - `GET /python/debug/paths`: 调试路径信息 ⭐ v1.0.5
 
-**Python 脚本** (`scripts/`):
+**Python 脚本**：
+- `deep_search.py`: 深度搜索主脚本（从 `search/test_search.py` 重命名并移动）⭐ v1.0.5
+  - 支持 `--json` 参数：从 JSON 文件读取事件数据
+  - 支持 `--event-id` 参数：从数据库读取事件数据
+  - 调用搜索管线工作流，生成表2数据和报告
 - `interpolation.py`: 空间插值分析主脚本
   - 自动检测坐标列（支持无表头）
   - EPSG:3035 → WGS84 坐标转换
@@ -103,15 +121,12 @@ europe/
   - 从域 GeoJSON 解析国家/省（CNTR_CODE/NUTS_NAME/NAME）
   - 从 LAU_2019.gpkg 获取城市（LAU_NAME）
   - 每区域最大值点选择
-- `test_interpolation.py`: 测试脚本（可直接运行）
-- `run_test.bat`: Windows 批处理测试脚本
-- `requirements.txt`: Python 依赖列表
-- `data/domain_xinyu_20250729_093415.geojson`: 默认 GeoJSON 区域文件
-- `README_TESTING.md`: 测试说明文档
+- `bat_python/`: 批处理脚本和缓存文件（.bat, .sh, .ps1, .js, __pycache__）⭐ v1.0.5
 
-**数据目录**：
-- `scripts/data/`: GeoJSON 数据文件
-- `uploads/`: 用户上传的数据文件
+**数据目录**（统一位置）⭐ v1.0.5：
+- `apps/uploads/rain_file/`: 用户上传的降雨数据文件
+- `apps/uploads/geofile/nuts3/`: NUTS3 GeoJSON 文件
+- `apps/uploads/geofile/city/`: City GPKG 文件（LAU_2019.gpkg）
 
 #### 7. 触发模块 (`trigger/`)
 - `config.ts`: 配置管理
@@ -129,28 +144,36 @@ europe/
 - `matching.ts`: 事件匹配
 - `merger.ts`: 事件合并
 - `merger-routes.ts`: 合并路由
-- `routes.ts`: 事件路由
+- `rain-routes.ts`: 降雨事件路由 ⭐ v1.0.5 新增
+  - `GET /events/rain`: 查询降雨事件（支持日期范围和国家筛选）
+  - `GET /events/rain/:id`: 获取事件详情（根据搜索状态返回表1或表2数据）
+  - `POST /events/rain/:id/deep-search`: 触发深度搜索
 - `service.ts`: 事件服务
 
 ## 前端 (`index.html` 与 `frontend/` 目录)
 
-### 文件结构（v1.0.1 重构后）
+### 文件结构（v1.0.5 更新）
 ```
 frontend/
 ├── css/
 │   ├── main.css         主样式（约365行）
 │   └── map.css          地图相关样式（NUTS工具提示等）
 ├── js/
+│   ├── i18n.js          国际化模块（多语言支持）⭐ v1.0.5 新增
+│   ├── i18n/            语言包目录 ⭐ v1.0.5 新增
+│   │   ├── zh.json      中文翻译
+│   │   ├── en.json      英文翻译
+│   │   └── es.json      西班牙语翻译
 │   ├── utils.js         工具函数（escapeHtml, formatDate, displayResults等）
 │   ├── main.js          主入口文件（初始化所有模块）
 │   └── modules/
 │       ├── stats.js             统计数据加载
 │       ├── search.js            搜索功能
-│       ├── events.js            事件管理（查询、详情、整理）
+│       ├── events.js            事件管理（查询、详情、深度搜索）⭐ v1.0.5 增强
 │       ├── map.js               地图管理（初始化、GeoJSON、数据点）
 │       ├── interpolation.js     空间插值分析（文件上传、处理）
 │       └── data-management.js   数据管理（触发器、采集、处理）
-└── index.html           精简后的主HTML（约181行，仅保留结构）
+└── index.html           精简后的主HTML（约200行，包含data-i18n属性）⭐ v1.0.5 更新
 ```
 
 ### 主要功能
@@ -179,9 +202,20 @@ frontend/
 - NUTS 区域信息显示（鼠标悬停和点击）
 
 ### 模块说明
+- **i18n.js**：国际化模块 ⭐ v1.0.5 新增
+  - 从独立 JSON 文件加载翻译数据（zh.json, en.json, es.json）
+  - 提供 `t()` 函数获取翻译文本
+  - 提供 `setLanguage()` 函数切换语言
+  - 自动更新页面上的所有 `data-i18n` 元素
+  - 语言选择保存到 localStorage
+  - 语言切换器 UI（右上角按钮）
 - **stats.js**：统计数据加载和显示
 - **search.js**：搜索表单处理和结果展示
-- **events.js**：事件查询、候选列表、详情展示、整理功能
+- **events.js**：事件查询、候选列表、详情展示、深度搜索功能 ⭐ v1.0.5 增强
+  - 支持表1/表2数据条件显示
+  - 深度搜索按钮和确认对话框
+  - 深度搜索进度显示和错误处理
+  - 超时处理（4分钟）
 - **map.js**：地图初始化、GeoJSON 加载、数据点标记管理
 - **interpolation.js**：文件上传、API 调用、结果展示
 - **data-management.js**：触发器检查、数据采集、处理、刷新统计
@@ -189,10 +223,25 @@ frontend/
 
 ## 数据与模型
 
+### SQLite 数据库位置
+- **统一路径**：`apps/database/dev.db`（v1.0.5 统一）
+- **配置方式**：通过 `.env` 文件中的 `DB_FILE` 环境变量配置（支持相对路径）
+
 ### SQLite 表：`flood_records`
 - **关键字段**：`record_id`（去重）、`country`、`specific_location`、`event_time`、`coordinates`
 - **来源与质量**：`source_type/name/url`、`confidence`、`evidence_count`、`metadata`
 - **处理字段**：`status`、`risk_score`、`processed_at`
+
+### SQLite 表：`rain_event`（表1）⭐ v1.0.5
+- **主键**：`id`（格式：`YYYYMMDD_Province_seq`，如 `20251011_Valencia_1`）
+- **关键字段**：`date`、`country`、`province`（保留空格，不替换为下划线）、`city`、`longitude`、`latitude`、`value`、`threshold`、`file_name`、`seq`、`searched`（0=未搜索，1=已搜索）
+- **用途**：存储从空间插值分析导入的降雨事件数据
+
+### SQLite 表：`rain_flood_impact`（表2）⭐ v1.0.5
+- **主键**：`id`（自增）
+- **外键**：`rain_event_id`（直接复制自表1的 `id`，确保完全匹配）
+- **关键字段**：`time`（直接复制自表1的 `date`）、`level`、`country`、`province`、`city`、`transport_impact_level`、`economy_impact_level`、`safety_impact_level`、`timeline_data`（JSON）、`source_count`、`detail_file`（报告路径：`search_outputs/YYYYMMDD/完整ID_report.md`）
+- **用途**：存储深度搜索生成的影响评估数据
 
 ### Python 脚本输入输出
 

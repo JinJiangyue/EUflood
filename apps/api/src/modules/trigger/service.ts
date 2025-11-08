@@ -79,6 +79,12 @@ async function createTriggerRecord(
   country: string,
   triggerSource: string
 ): Promise<number> {
+  // TODO: 重构为使用 rain_event 表
+  // 暂时禁用，等待重构
+  console.log(`[Trigger] Rainfall detected but not saved (refactoring in progress): ${data.precipitation}mm/h at (${data.latitude}, ${data.longitude})`);
+  return 0;
+  
+  /* 注释掉：使用 flood_records 表的旧代码
   const recordId = generateRecordId({
     country,
     specific_location: `${data.latitude},${data.longitude}`,
@@ -113,6 +119,7 @@ async function createTriggerRecord(
   await triggerCountryDataSource(country, { lat: data.latitude, lon: data.longitude });
   
   return 1;
+  */
 }
 
 // 根据国家调用对应数据源

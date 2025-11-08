@@ -98,6 +98,11 @@ function generateNewsRecord(country: string, city: string, hoursAgo: number) {
 }
 
 export function ingestDemoFloodRecords(options: IngestOptions = {}): number {
+  // TODO: 重构为使用 rain_event 和 rain_flood_impact 表
+  // 暂时禁用，等待重构
+  return 0;
+  
+  /* 注释掉：使用 flood_records 表的旧代码
   const count = Math.max(1, Math.min(1000, options.count ?? 10));
   const sourceTypes = options.sourceTypes || ['official_api', 'social_media', 'news'];
   
@@ -169,6 +174,7 @@ export function ingestDemoFloodRecords(options: IngestOptions = {}): number {
   
   txn(count, sourceTypes);
   return count;
+  */
 }
 
 

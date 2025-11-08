@@ -134,14 +134,23 @@ class RainEventWatcher:
     # 内部实现
     # ------------------------------------------------------------------
     def _sqlite_connection(self) -> sqlite3.Connection:
-        # 优先使用 DB_FILE，如果没有则使用 DB_NAME（向后兼容）
-        db_file = self.config.DB_FILE or self.config.DB_NAME
+        # 优先使用 DB_FILE，如果没有则使用默认路径（统一使用一个路径：apps/database/dev.db）
+        db_file = self.config.DB_FILE
+        if not db_file:
+            # 默认使用 apps/database/dev.db（与Node.js API保持一致）
+            db_file = "apps/database/dev.db"
+        
         db_path = Path(db_file)
         if not db_path.is_absolute():
             # 相对于项目根目录
-            project_root = Path(__file__).resolve().parents[3]
+            # __file__ 是 search/watcher/rain_event_watcher.py
+            # parents[2] 是项目根目录（europe）
+            project_root = Path(__file__).resolve().parents[2]
             db_path = project_root / db_path
 
+        # 确保目录存在
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        
         connection = sqlite3.connect(str(db_path))
         connection.row_factory = sqlite3.Row
         return connection
@@ -169,9 +178,16 @@ class RainEventWatcher:
         data = dict(row)
         event_time = self._parse_datetime(data.get(self.config.EVENT_TIME_COLUMN))
         rainfall = self._parse_float(data.get(self.config.RAINFALL_COLUMN))
+        
+        # 获取 event_id，确保使用完整的 ID（包含 seq 部分）
+        event_id = data.get("id") or data.get("event_id")
+        if event_id:
+            logger.debug("从数据库读取 event_id: %s (类型: %s)", event_id, type(event_id).__name__)
+        else:
+            logger.warning("未找到 event_id 字段，数据: %s", list(data.keys()))
 
         return RainEvent(
-            event_id=data.get("id") or data.get("event_id"),
+            event_id=event_id,
             event_time=event_time,
             location_name=data.get(self.config.LOCATION_COLUMN),
             country=data.get(self.config.COUNTRY_COLUMN),

@@ -2,6 +2,7 @@
 .cursor/
 .vscode/
 BettaFish
+search_outputs/
 
 # 环境变量
 .env
@@ -14,31 +15,19 @@ dist/
 apps/api/dist/
 
 # 本地数据库与导出
-apps/api/uploads/
-apps/api/dev.db
-apps/api/dev.db-shm
-apps/api/dev.db-wal
-deploy/local/export.csv
+apps/database
 
 # 日志
 *.log
 logs/
 
-# Python打包文件
-apps/api/src/modules/python/scripts/*.exe
-apps/api/src/modules/python/scripts/dist/
-apps/api/src/modules/python/scripts/build/
-apps/api/src/modules/python/scripts/*.spec
-apps/api/src/modules/python/scripts/process_file
-apps/api/src/modules/python/scripts/example
-apps/api/src/modules/python/scripts/test_example
-
-# 嵌入式Python（可选：如果要提交到Git，可以删除这行）
-# apps/api/python-embed/
-
 # 嵌入式Python（可选，如果要版本控制可以删除这行）
-python-embed/
 apps/api/python-embed/
+
+# 忽略 Python 缓存文件
+__pycache__/
+*.py[cod]
+*$py.class
 
 # GeoJSON（体积大，全部忽略）
 *.geojson

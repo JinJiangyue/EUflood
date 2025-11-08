@@ -38,8 +38,34 @@ class OfficialTavilyCollector(BaseCollector):
         
         if self._client is None:
             api_key = self.config.TAVILY_API_KEY
+            
+            # 详细诊断日志
+            import os
+            env_key = os.getenv("TAVILY_API_KEY")
+            logger.info("Tavily API Key 诊断信息:")
+            logger.info("  从 config.TAVILY_API_KEY 读取: %s (类型: %s, 长度: %s)", 
+                       "已设置" if api_key else "None",
+                       type(api_key).__name__,
+                       len(api_key) if api_key else 0)
+            logger.info("  从环境变量 os.getenv 读取: %s (类型: %s, 长度: %s)",
+                       "已设置" if env_key else "None",
+                       type(env_key).__name__ if env_key else "NoneType",
+                       len(env_key) if env_key else 0)
+            if api_key:
+                logger.info("  API Key 前缀: %s...", api_key[:8] if len(api_key) > 8 else api_key[:len(api_key)])
+                logger.info("  API Key 后缀: ...%s", api_key[-4:] if len(api_key) > 4 else "")
+            
             if not api_key:
+                logger.error("Tavily API Key 未配置。请检查 .env 文件中的 TAVILY_API_KEY 设置。")
+                logger.error("  提示：如果从 Node.js 调用，确保环境变量已传递到 Python 进程")
                 raise RuntimeError("Tavily API Key 未配置")
+            
+            # 检查是否是占位符
+            if api_key == "your_tavily_api_key_here" or api_key.startswith("your_"):
+                logger.error("Tavily API Key 是占位符，请设置真实的 API Key")
+                logger.error("  当前值: %s...%s", api_key[:20], api_key[-10:] if len(api_key) > 30 else "")
+                raise RuntimeError("Tavily API Key 是占位符，请在 .env 文件中设置真实的 API Key")
+            
             self._client = self._TavilyClient(api_key)
         return self._client
 
@@ -53,7 +79,13 @@ class OfficialTavilyCollector(BaseCollector):
     ) -> Dict[str, Any]:
         api_key = context.metadata.get("tavily_api_key") or self.config.TAVILY_API_KEY
         if not api_key:
+            logger.error("Tavily API Key 未配置。请检查 .env 文件中的 TAVILY_API_KEY 设置。")
             raise RuntimeError("Tavily API Key 未配置")
+        
+        # 调试日志：检查API Key是否有效（不显示完整内容）
+        if api_key == "your_tavily_api_key_here" or api_key.startswith("your_"):
+            logger.error("Tavily API Key 是占位符，请设置真实的 API Key")
+            raise RuntimeError("Tavily API Key 是占位符，请在 .env 文件中设置真实的 API Key")
 
         # 优先使用自然语言查询字符串，如果没有则使用关键词列表
         query = query_string if query_string else " ".join(keywords)
@@ -153,6 +185,12 @@ class OfficialTavilyCollector(BaseCollector):
                         query = f"{query} {date_str}"
                     
                     try:
+                        # 获取API Key用于调试（不记录完整内容）
+                        api_key = self.config.TAVILY_API_KEY
+                        logger.debug("使用Tavily SDK搜索: query=%s, api_key_prefix=%s", 
+                                    query[:50] if len(query) > 50 else query,
+                                    api_key[:8] if api_key and len(api_key) > 8 else "N/A")
+                        
                         response = client.search(
                             query=query,
                             search_depth="advanced",
@@ -172,7 +210,16 @@ class OfficialTavilyCollector(BaseCollector):
                                 "source": item.get("site_name"),
                             })
                     except Exception as e:
+                        error_msg = str(e)
                         logger.exception("Tavily SDK 采集失败: %s", e)
+                        # 如果是认证错误，提供更详细的提示
+                        if "unauthorized" in error_msg.lower() or "invalid" in error_msg.lower() or "missing" in error_msg.lower():
+                            api_key = self.config.TAVILY_API_KEY
+                            logger.error("Tavily API Key 认证失败。可能原因：")
+                            logger.error("  1. API Key 无效或已过期")
+                            logger.error("  2. API Key 未正确传递到Python进程")
+                            logger.error("  3. 请检查 .env 文件中的 TAVILY_API_KEY 是否正确")
+                            logger.error("  当前API Key前缀: %s...", api_key[:8] if api_key and len(api_key) > 8 else "N/A")
             except Exception as e:
                 logger.warning("使用 Tavily SDK 失败，回退到 REST API: %s", e)
                 # 回退到 REST API

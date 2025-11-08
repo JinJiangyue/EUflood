@@ -7,7 +7,7 @@ import { registerExportingModule } from '../modules/exporting/routes';
 import { registerTriggerModule } from '../modules/trigger/routes';
 import { registerMergerModule } from '../modules/events/merger-routes';
 import { registerRainEventsModule } from '../modules/events/rain-routes';
-import { registerPythonModule } from '../modules/python/routes';
+import { registerPythonModule } from '../../scripts/routes';
 
 export function registerRoutes(app: Express) {
   app.get('/health', (_req: Request, res: Response) => res.json({ ok: true }));

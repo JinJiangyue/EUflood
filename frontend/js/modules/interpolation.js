@@ -151,9 +151,12 @@ function initInterpolation() {
                     body: formData
                 });
                 
-                if (!res.ok) throw new Error('上传失败');
-                
                 const data = await res.json();
+                if (!res.ok) {
+                    const errorMsg = data.error || data.details || '上传失败';
+                    throw new Error(`上传失败 (${res.status}): ${errorMsg}`);
+                }
+                
                 if (data.success) {
                     uploadedFileInfo = data.file;
                     if (status) {

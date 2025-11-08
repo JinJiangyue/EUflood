@@ -113,7 +113,7 @@ async function loadRainEvents(dateFrom, dateTo, country, page = 1, limit = null)
                     onmouseout="if(!this.classList.contains('selected')) { this.style.background='white'; this.style.borderLeft='2px solid transparent'; }">
                     <td style="padding: 12px; white-space: nowrap;">${event.date}</td>
                     <td style="padding: 12px; white-space: nowrap;">${event.country || '-'}</td>
-                    <td style="padding: 12px; white-space: nowrap; max-width: 200px; overflow: hidden; text-overflow: ellipsis;" title="${event.province || ''}">${event.province || '-'}</td>
+                    <td style="padding: 12px; white-space: nowrap; max-width: 200px; overflow: hidden; text-overflow: ellipsis;" title="${event.province || ''}">${(event.province || '-').split('/')[0].trim()}</td>
                     <td style="padding: 12px; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;" title="${event.city || ''}">${event.city || '-'}</td>
                     <td style="padding: 12px; white-space: nowrap;">${event.latitude ? `${event.latitude.toFixed(4)}, ${event.longitude.toFixed(4)}` : '-'}</td>
                     <td style="padding: 12px; white-space: nowrap;"><span style="color: ${valueColor}; font-weight: bold;">${event.value !== null && event.value !== undefined ? event.value.toFixed(2) : '-'}</span></td>
@@ -306,76 +306,285 @@ async function showRainEventDetails(eventId) {
         }
         
         const event = data.event;
+        const isSearched = data.searched === true; // 根据后端返回的 searched 字段判断
         
-        // 格式化显示
-        let html = `
-            <div style="margin-bottom: 20px;">
-                <h4 style="color: #1e3c72; margin-bottom: 10px; border-bottom: 2px solid #667eea; padding-bottom: 5px;">基本信息</h4>
-                <table style="width: 100%; border-collapse: collapse;">
-                    <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold; width: 150px;">事件ID</td><td style="padding: 8px;">${event.id}</td></tr>
-                    <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">日期</td><td style="padding: 8px;">${event.date}</td></tr>
-                    <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">国家</td><td style="padding: 8px;">${event.country || 'N/A'}</td></tr>
-                    <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">省份</td><td style="padding: 8px;">${event.province || 'N/A'}</td></tr>
-                    <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">城市</td><td style="padding: 8px;">${event.city || 'N/A'}</td></tr>
-                    <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">坐标</td><td style="padding: 8px;">${event.latitude && event.longitude ? `${event.latitude}, ${event.longitude}` : 'N/A'}</td></tr>
-                    <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">数值</td><td style="padding: 8px;"><span style="color: ${event.value && event.threshold && event.value > event.threshold ? '#e74c3c' : '#3498db'}; font-weight: bold;">${event.value !== null && event.value !== undefined ? event.value.toFixed(2) : 'N/A'}</span></td></tr>
-                    <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">阈值</td><td style="padding: 8px;">${event.threshold !== null && event.threshold !== undefined ? event.threshold.toFixed(2) : 'N/A'}</td></tr>
-                    <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">文件名</td><td style="padding: 8px;">${event.file_name || 'N/A'}</td></tr>
-                    <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">序号</td><td style="padding: 8px;">${event.seq !== null && event.seq !== undefined ? event.seq : 'N/A'}</td></tr>
-                    <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">搜索状态</td><td style="padding: 8px;"><span style="color: ${event.searched ? '#27ae60' : '#e74c3c'}; font-weight: bold;">${event.searchedText || (event.searched ? '已搜索' : '未搜索')}</span></td></tr>
-                </table>
-            </div>
-        `;
+        let html = '';
         
-        // 添加搜索状态切换按钮
-        html += `
-            <div style="margin-bottom: 20px;">
-                <button id="btnToggleSearch" style="background: ${event.searched ? '#e74c3c' : '#27ae60'}; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px;">
-                    ${event.searched ? '标记为未搜索' : '标记为已搜索'}
-                </button>
-            </div>
-        `;
+        if (isSearched) {
+            // 已搜索：显示表2（rain_flood_impact）的内容
+            // 计算级别颜色
+            const getLevelColor = (level) => {
+                if (!level) return '#666';
+                if (level >= 4) return '#e74c3c'; // 红色 - 严重
+                if (level >= 3) return '#f39c12'; // 橙色 - 中等
+                if (level >= 2) return '#f1c40f'; // 黄色 - 轻微
+                return '#27ae60'; // 绿色 - 低
+            };
+            
+            const getLevelText = (level) => {
+                if (!level) return 'N/A';
+                if (level >= 4) return '严重 (4级)';
+                if (level >= 3) return '中等 (3级)';
+                if (level >= 2) return '轻微 (2级)';
+                return '低 (1级)';
+            };
+            
+            html = `
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: #1e3c72; margin-bottom: 10px; border-bottom: 2px solid #667eea; padding-bottom: 5px;">影响评估信息（表2）</h4>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold; width: 150px;">事件ID</td><td style="padding: 8px;">${event.rain_event_id || 'N/A'}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">时间</td><td style="padding: 8px;">${event.time || 'N/A'}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">国家</td><td style="padding: 8px;">${event.country || 'N/A'}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">省份</td><td style="padding: 8px;">${(event.province || 'N/A').split('/')[0].trim()}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">城市</td><td style="padding: 8px;">${event.city || 'N/A'}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">整体影响级别</td><td style="padding: 8px;"><span style="color: ${getLevelColor(event.level)}; font-weight: bold;">${getLevelText(event.level)}</span></td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">交通影响级别</td><td style="padding: 8px;">${event.transport_impact_level !== null && event.transport_impact_level !== undefined ? event.transport_impact_level : 'N/A'}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">经济影响级别</td><td style="padding: 8px;">${event.economy_impact_level !== null && event.economy_impact_level !== undefined ? event.economy_impact_level : 'N/A'}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">安全影响级别</td><td style="padding: 8px;">${event.safety_impact_level !== null && event.safety_impact_level !== undefined ? event.safety_impact_level : 'N/A'}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">数据源数量</td><td style="padding: 8px;">${event.source_count !== null && event.source_count !== undefined ? event.source_count : 'N/A'}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">详情报告</td><td style="padding: 8px;">${event.detail_file || 'N/A'}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">创建时间</td><td style="padding: 8px;">${event.created_at || 'N/A'}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">更新时间</td><td style="padding: 8px;">${event.updated_at || 'N/A'}</td></tr>
+                    </table>
+                </div>
+            `;
+            
+            // 显示时间线数据
+            if (event.timeline_data && Array.isArray(event.timeline_data) && event.timeline_data.length > 0) {
+                html += `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="color: #1e3c72; margin-bottom: 10px; border-bottom: 2px solid #667eea; padding-bottom: 5px;">时间线数据</h4>
+                        <div style="max-height: 300px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 5px; padding: 10px;">
+                `;
+                event.timeline_data.forEach((item, index) => {
+                    html += `
+                        <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                            <div style="font-weight: bold; color: #667eea; margin-bottom: 5px;">${item.time_slot || 'N/A'}</div>
+                            <div style="margin-top: 5px; color: #333;">${item.highlights || 'N/A'}</div>
+                            ${item.events && Array.isArray(item.events) && item.events.length > 0 ? `
+                                <div style="margin-top: 5px; font-size: 12px; color: #666;">
+                                    事件: ${item.events.join(', ')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                html += `</div></div>`;
+            }
+        } else {
+            // 未搜索：显示表1（rain_event）的内容
+            html = `
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: #1e3c72; margin-bottom: 10px; border-bottom: 2px solid #667eea; padding-bottom: 5px;">基本信息（表1）</h4>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold; width: 150px;">事件ID</td><td style="padding: 8px;">${event.id}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">日期</td><td style="padding: 8px;">${event.date}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">国家</td><td style="padding: 8px;">${event.country || 'N/A'}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">省份</td><td style="padding: 8px;">${(event.province || 'N/A').split('/')[0].trim()}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">城市</td><td style="padding: 8px;">${event.city || 'N/A'}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">坐标</td><td style="padding: 8px;">${event.latitude && event.longitude ? `${event.latitude}, ${event.longitude}` : 'N/A'}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">数值</td><td style="padding: 8px;"><span style="color: ${event.value && event.threshold && event.value > event.threshold ? '#e74c3c' : '#3498db'}; font-weight: bold;">${event.value !== null && event.value !== undefined ? event.value.toFixed(2) : 'N/A'}</span></td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">阈值</td><td style="padding: 8px;">${event.threshold !== null && event.threshold !== undefined ? event.threshold.toFixed(2) : 'N/A'}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">文件名</td><td style="padding: 8px;">${event.file_name || 'N/A'}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">序号</td><td style="padding: 8px;">${event.seq !== null && event.seq !== undefined ? event.seq : 'N/A'}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">搜索状态</td><td style="padding: 8px;"><span style="color: #e74c3c; font-weight: bold;">未搜索</span></td></tr>
+                    </table>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <button id="btnStartDeepSearch" style="background: #667eea; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">
+                        🔍 开始深度搜索
+                    </button>
+                    <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                        点击按钮将进行深度搜索，生成影响评估报告和表2数据
+                    </div>
+                </div>
+            `;
+        }
         
         content.innerHTML = html;
         
-        // 绑定搜索状态切换按钮
-        const btnToggleSearch = document.getElementById('btnToggleSearch');
-        if (btnToggleSearch) {
-            btnToggleSearch.addEventListener('click', async function() {
-                const newSearched = !event.searched;
-                btnToggleSearch.disabled = true;
-                btnToggleSearch.textContent = '更新中...';
-                
-                try {
-                    const updateRes = await fetch(`/events/rain/${eventId}/search`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ searched: newSearched })
-                    });
+        // 绑定深度搜索按钮（仅未搜索时显示）
+        if (!isSearched) {
+            const btnStartDeepSearch = document.getElementById('btnStartDeepSearch');
+            if (btnStartDeepSearch) {
+                btnStartDeepSearch.addEventListener('click', async function() {
+                    // 弹出确认框
+                    const confirmed = confirm(`确定要对事件 "${event.id}" 进行深度搜索吗？\n\n这将执行以下操作：\n1. 搜索相关新闻和媒体内容\n2. 进行LLM分析和验证\n3. 生成影响评估报告\n4. 创建表2数据\n\n此操作可能需要几分钟时间。`);
                     
-                    if (!updateRes.ok) throw new Error('更新失败');
+                    if (!confirmed) {
+                        return;
+                    }
                     
-                    const updateData = await updateRes.json();
-                    if (updateData.success) {
-                        // 重新加载详情
-                        await showRainEventDetails(eventId);
-                        // 如果列表可见，刷新列表（保持当前页码和每页条数）
-                        const listEl = document.getElementById('candidatesList');
-                        if (listEl && listEl.style.display !== 'none') {
-                            const dateFrom = document.getElementById('eventDateFrom')?.value;
-                            const dateTo = document.getElementById('eventDateTo')?.value;
-                            const country = document.getElementById('eventCountry')?.value || '';
-                            if (dateFrom && dateTo) {
-                                await loadRainEvents(dateFrom, dateTo, country, currentPage, pageSize);
+                    // 禁用按钮，显示加载状态
+                    btnStartDeepSearch.disabled = true;
+                    btnStartDeepSearch.textContent = '搜索中...';
+                    btnStartDeepSearch.style.background = '#95a5a6';
+                    
+                    let searchRes = null; // 在外部声明，确保在catch中可用
+                    try {
+                        // 调用后端API触发深度搜索（设置4分钟超时，因为搜索需要30秒-1分钟）
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 4 * 60 * 1000); // 4分钟超时
+                        
+                        try {
+                            searchRes = await fetch(`/events/rain/${encodeURIComponent(eventId)}/deep-search`, {
+                                method: 'POST',
+                                headers: { 
+                                    'Content-Type': 'application/json; charset=utf-8',
+                                    'Accept': 'application/json; charset=utf-8'
+                                },
+                                signal: controller.signal
+                            });
+                            clearTimeout(timeoutId);
+                            console.log(`[前端] 深度搜索响应状态: ${searchRes.status} ${searchRes.statusText}`);
+                            console.log(`[前端] 响应Content-Type:`, searchRes.headers.get('Content-Type'));
+                        } catch (fetchError) {
+                            clearTimeout(timeoutId);
+                            if (fetchError.name === 'AbortError') {
+                                throw new Error('深度搜索超时（超过4分钟），请稍后重试');
+                            }
+                            throw fetchError;
+                        }
+                        
+                        let searchData;
+                        if (!searchRes || !searchRes.ok) {
+                            // 非200状态码，尝试解析错误响应
+                            console.error(`[前端] 深度搜索请求失败: status=${searchRes?.status}, statusText=${searchRes?.statusText}`);
+                            try {
+                                if (searchRes) {
+                                    const errorText = await searchRes.text();
+                                    console.error(`[前端] 错误响应内容:`, errorText);
+                                    try {
+                                        searchData = JSON.parse(errorText);
+                                        console.error(`[前端] 解析后的错误数据:`, searchData);
+                                        const error = new Error(searchData.error || '深度搜索失败');
+                                        error.responseData = searchData;
+                                        throw error;
+                                    } catch (jsonError) {
+                                        // 如果不是JSON，直接使用文本
+                                        const error = new Error(errorText || `深度搜索失败 (${searchRes.status})`);
+                                        error.responseData = { error: errorText, raw_response: errorText };
+                                        throw error;
+                                    }
+                                } else {
+                                    throw new Error('深度搜索请求失败：无法获取响应');
+                                }
+                            } catch (parseError) {
+                                console.error(`[前端] 解析错误响应失败:`, parseError);
+                                if (searchRes) {
+                                    throw new Error(`深度搜索失败 (${searchRes.status}): ${searchRes.statusText}`);
+                                } else {
+                                    throw parseError;
+                                }
                             }
                         }
+                        
+                        searchData = await searchRes.json();
+                        
+                        if (searchData.success) {
+                            // 搜索成功，刷新详情面板（会显示表2内容）
+                            await showRainEventDetails(eventId);
+                            
+                            // 刷新列表（保持当前页码和每页条数）
+                            const listEl = document.getElementById('candidatesList');
+                            if (listEl && listEl.style.display !== 'none') {
+                                const dateFrom = document.getElementById('eventDateFrom')?.value;
+                                const dateTo = document.getElementById('eventDateTo')?.value;
+                                const country = document.getElementById('eventCountry')?.value || '';
+                                if (dateFrom && dateTo) {
+                                    await loadRainEvents(dateFrom, dateTo, country, currentPage, pageSize);
+                                }
+                            }
+                            
+                            alert('深度搜索完成！已生成影响评估报告和表2数据。');
+                        } else {
+                            // 创建错误对象，包含完整的响应数据
+                            const error = new Error(searchData.error || '深度搜索失败');
+                            error.responseData = searchData; // 附加响应数据
+                            throw error;
+                        }
+                    } catch (e) {
+                        // 显示详细错误信息
+                        let errorMsg = '深度搜索失败: ' + e.message;
+                        let errorData = null;
+                        
+                        // 尝试获取错误详情
+                        if (e.responseData) {
+                            errorData = e.responseData;
+                        } else if (searchRes) {
+                            try {
+                                errorData = await searchRes.json();
+                            } catch (parseError) {
+                                // 忽略解析错误
+                            }
+                        }
+                        
+                        // 如果有详细错误数据，显示关键信息
+                        if (errorData) {
+                            // 显示错误类型和堆栈（如果有）
+                            if (errorData.error_type) {
+                                errorMsg += `\n错误类型: ${errorData.error_type}`;
+                            }
+                            if (errorData.error_stack) {
+                                errorMsg += '\n\n📋 错误堆栈：\n';
+                                errorMsg += errorData.error_stack.split('\n').slice(0, 10).join('\n');
+                            }
+                            
+                            if (errorData.key_logs) {
+                                errorMsg += '\n\n📋 详细日志：\n';
+                                if (errorData.key_logs.table2_fail && errorData.key_logs.table2_fail.length > 0) {
+                                    errorMsg += '\n❌ 表2填充失败日志：\n';
+                                    errorData.key_logs.table2_fail.forEach(log => {
+                                        errorMsg += '  - ' + log + '\n';
+                                    });
+                                }
+                                if (errorData.key_logs.errors && errorData.key_logs.errors.length > 0) {
+                                    errorMsg += '\n❌ 错误日志（最后10条）：\n';
+                                    errorData.key_logs.errors.forEach(log => {
+                                        errorMsg += '  - ' + log + '\n';
+                                    });
+                                }
+                                if (errorData.key_logs.warnings && errorData.key_logs.warnings.length > 0) {
+                                    errorMsg += '\n⚠️ 警告日志（最后10条）：\n';
+                                    errorData.key_logs.warnings.forEach(log => {
+                                        errorMsg += '  - ' + log + '\n';
+                                    });
+                                }
+                            }
+                            if (errorData.key_errors && errorData.key_errors.length > 0) {
+                                errorMsg += '\n❌ 关键错误：\n';
+                                errorData.key_errors.forEach(log => {
+                                    errorMsg += '  - ' + log + '\n';
+                                });
+                            }
+                            if (errorData.stderr) {
+                                errorMsg += '\n📄 完整错误输出（最后500字符）：\n';
+                                errorMsg += errorData.stderr.substring(Math.max(0, errorData.stderr.length - 500));
+                            }
+                        }
+                        
+                        // 在控制台输出完整错误信息（方便调试）
+                        console.error('深度搜索失败:', e);
+                        if (errorData) {
+                            console.error('错误详情:', errorData);
+                            if (errorData.stdout) {
+                                console.error('Python stdout:', errorData.stdout);
+                            }
+                            if (errorData.stderr) {
+                                console.error('Python stderr:', errorData.stderr);
+                            }
+                        }
+                        
+                        // 使用alert显示错误（可以复制文本）
+                        alert(errorMsg + '\n\n💡 提示：打开浏览器控制台（F12）可查看完整错误信息');
+                        
+                        btnStartDeepSearch.disabled = false;
+                        btnStartDeepSearch.textContent = '🔍 开始深度搜索';
+                        btnStartDeepSearch.style.background = '#667eea';
                     }
-                } catch (e) {
-                    alert('更新失败: ' + e.message);
-                    btnToggleSearch.disabled = false;
-                    btnToggleSearch.textContent = event.searched ? '标记为未搜索' : '标记为已搜索';
-                }
-            });
+                });
+            }
         }
     } catch (e) {
         content.innerHTML = `<div style="color: #e74c3c; padding: 20px; text-align: center;">加载失败: ${e.message}</div>`;

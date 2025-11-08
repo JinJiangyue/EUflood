@@ -8,7 +8,21 @@ import { scheduleTriggerJobs } from './modules/trigger/tasks';
 const app = express();
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
 
+// 配置JSON解析
 app.use(express.json());
+
+// 设置全局响应头，确保所有JSON响应使用UTF-8编码
+app.use((_req, res, next) => {
+  // 只在响应JSON时设置Content-Type（避免覆盖其他类型的响应）
+  const originalJson = res.json.bind(res);
+  res.json = function(body: any) {
+    if (!res.headersSent) {
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    }
+    return originalJson(body);
+  };
+  next();
+});
 
 // 配置静态文件服务 - 提供 frontend 目录下的文件
 const root = path.resolve(__dirname, '../../..');

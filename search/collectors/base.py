@@ -62,6 +62,7 @@ class BaseCollector:
                     language=language,
                     keywords=keywords,
                     payload=payload,
+                    query_string=query_string,
                 )
                 
                 response = self.dispatch(payload)

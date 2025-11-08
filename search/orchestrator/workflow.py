@@ -96,8 +96,16 @@ class SearchWorkflow:
             logger.warning("   1. API Key 未配置或无效（检查 .env 文件）")
             logger.warning("   2. 事件时间太早或太晚，找不到相关新闻")
             logger.warning("   3. 关键词搜索无结果")
-            # 没有数据时，跳过 LLM 处理，直接生成基础报告
-            context.processed_summary = {}
+            # 没有数据时，仍然需要填充表2（使用空数据）
+            # 创建一个空的LLM结果结构，确保表2能被填充
+            context.processed_summary = {
+                "validation": {"relevant_items": []},
+                "extraction": {"timeline": [], "impact": {}},
+                "media": {"selected_items": []},
+                "report": self._generate_minimal_report(context).get("english", "")
+            }
+            # 即使没有数据，也要填充表2
+            self._fill_table2_with_empty_data(context, context.processed_summary)
             context.reports = self._generate_minimal_report(context)
         else:
             logger.info("✓ 采集到 %s 条数据（来源：%s）", total_items, list(context.raw_contents.keys()))
@@ -177,6 +185,56 @@ class SearchWorkflow:
             processor = LLMProcessor(self.config)
             result = processor.process(context)
 
+            # 填充表2（rain_flood_impact）
+            # 无论是否有extraction结果，都要填充表2（即使没有相关内容，也要记录）
+            try:
+                from ..llm.db_writer import fill_rain_flood_impact_table
+                from pathlib import Path
+                
+                # 获取数据库路径（统一使用一个路径：apps/database/dev.db）
+                db_file = self.config.DB_FILE
+                if not db_file:
+                    # 如果未配置，使用默认路径（与Node.js API保持一致）
+                    project_root = Path(__file__).resolve().parents[2]
+                    db_file = str(project_root / "apps" / "database" / "dev.db")
+                elif not Path(db_file).is_absolute():
+                    # 如果是相对路径，转换为绝对路径（相对于项目根目录）
+                    project_root = Path(__file__).resolve().parents[2]
+                    db_file = str(project_root / db_file)
+                
+                # 从数据库表1（rain_event）获取完整的表1数据（包含 id 字段）
+                # 深度搜索只处理表1中已存在的事件，所以事件一定在表1中
+                event_id_from_context = context.rain_event.event_id
+                from ..llm.db_writer import get_rain_event_from_db
+                rain_event_data = get_rain_event_from_db(db_file, event_id_from_context)
+                
+                if not rain_event_data:
+                    logger.error("无法从数据库表1（rain_event）获取事件数据: %s。深度搜索只处理表1中已存在的事件。", event_id_from_context)
+                else:
+                    # 确保 result 中有 extraction 字段（如果没有，创建空结构）
+                    if not result.get("extraction"):
+                        logger.warning("LLM结果中没有extraction字段，使用空结构填充表2")
+                        result["extraction"] = {
+                            "timeline": [],
+                            "impact": {}
+                        }
+                    
+                    # 直接传入表1的完整数据，函数会使用其中的 id（直接复制，确保完全匹配）
+                    success = fill_rain_flood_impact_table(
+                        db_path=db_file,
+                        rain_event=rain_event_data,  # 传入表1的完整数据
+                        llm_result=result,
+                    )
+                    
+                    table1_id = rain_event_data.get("id")
+                    if success:
+                        logger.info("✅ 表2数据填充成功: rain_event_id=%s (直接复制自表1)", table1_id)
+                    else:
+                        logger.warning("⚠️  表2数据填充失败: %s", table1_id)
+            except Exception as e:
+                logger.exception("填充表2数据时出错: %s", e)
+                # 不中断主流程，继续返回LLM结果
+
             # 转换为兼容格式，并包含报告
             return {
                 "validation": result.get("validation", {}),
@@ -196,6 +254,53 @@ class SearchWorkflow:
         except Exception:
             logger.exception("LLM 处理内容失败: %s", context.rain_event.event_id)
         return {}
+    
+    def _fill_table2_with_empty_data(self, context: EventContext, llm_result: Dict[str, Any]) -> None:
+        """即使没有采集到数据，也要填充表2（使用空数据）。"""
+        try:
+            from ..llm.db_writer import fill_rain_flood_impact_table
+            from pathlib import Path
+            
+            # 获取数据库路径（统一使用一个路径：apps/database/dev.db）
+            db_file = self.config.DB_FILE
+            if not db_file:
+                # 如果未配置，使用默认路径（与Node.js API保持一致）
+                project_root = Path(__file__).resolve().parents[2]
+                db_file = str(project_root / "apps" / "database" / "dev.db")
+            elif not Path(db_file).is_absolute():
+                # 如果是相对路径，转换为绝对路径（相对于项目根目录）
+                project_root = Path(__file__).resolve().parents[2]
+                db_file = str(project_root / db_file)
+            
+            # 从数据库表1（rain_event）获取完整的表1数据（包含 id 字段）
+            event_id_from_context = context.rain_event.event_id
+            from ..llm.db_writer import get_rain_event_from_db
+            rain_event_data = get_rain_event_from_db(db_file, event_id_from_context)
+            
+            if not rain_event_data:
+                logger.error("无法从数据库表1（rain_event）获取事件数据: %s。深度搜索只处理表1中已存在的事件。", event_id_from_context)
+            else:
+                # 确保 result 中有 extraction 字段（如果没有，创建空结构）
+                if not llm_result.get("extraction"):
+                    llm_result["extraction"] = {
+                        "timeline": [],
+                        "impact": {}
+                    }
+                
+                # 直接传入表1的完整数据，函数会使用其中的 id（直接复制，确保完全匹配）
+                success = fill_rain_flood_impact_table(
+                    db_path=db_file,
+                    rain_event=rain_event_data,  # 传入表1的完整数据
+                    llm_result=llm_result,
+                )
+                
+                table1_id = rain_event_data.get("id")
+                if success:
+                    logger.info("✅ 表2数据填充成功（无数据情况）: rain_event_id=%s (直接复制自表1)", table1_id)
+                else:
+                    logger.warning("⚠️  表2数据填充失败（无数据情况）: %s", table1_id)
+        except Exception as e:
+            logger.exception("填充表2数据时出错（无数据情况）: %s", e)
 
     def _generate_reports(self, context: EventContext) -> Dict[str, str]:
         """生成报告（LLM 处理失败时的备选方案）。"""

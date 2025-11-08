@@ -1,8 +1,24 @@
 import 'dotenv/config';
 import Database from 'better-sqlite3';
 import fs from 'fs';
+import path from 'path';
 
-const dbFile = process.env.DB_FILE || './dev.db';
+// 数据库文件路径：优先使用环境变量，否则使用新位置 apps/database/dev.db
+// 如果环境变量是相对路径，从项目根目录解析
+let dbFile: string;
+if (process.env.DB_FILE) {
+  if (path.isAbsolute(process.env.DB_FILE)) {
+    dbFile = process.env.DB_FILE;
+  } else {
+    // 相对路径：从项目根目录解析
+    const projectRoot = path.resolve(__dirname, '../../..');
+    dbFile = path.resolve(projectRoot, process.env.DB_FILE);
+  }
+} else {
+  // 默认路径：apps/database/dev.db
+  const projectRoot = path.resolve(__dirname, '../../..');
+  dbFile = path.resolve(projectRoot, 'apps', 'database', 'dev.db');
+}
 const isNew = !fs.existsSync(dbFile);
 export const db = new Database(dbFile);
 
@@ -10,40 +26,6 @@ if (isNew) {
   db.exec(`
     PRAGMA journal_mode = WAL;
     PRAGMA foreign_keys = ON;
-
-    CREATE TABLE IF NOT EXISTS flood_records (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      record_id TEXT UNIQUE, -- 去重用的稳定ID（hash-based）
-      description TEXT NOT NULL,
-      title TEXT,
-      water_level REAL,
-      country TEXT,
-      specific_location TEXT,
-      event_time TEXT,
-      coordinates TEXT, -- JSON: {"type":"Point","coordinates":[-3.7,40.4]}
-      severity TEXT, -- low/medium/high/extreme
-      type TEXT, -- flood/warning/alert
-      status TEXT, -- new/processed/verified
-      risk_score REAL,
-      processed_at TEXT,
-      -- 来源与置信度
-      source_type TEXT, -- official_api/social_media/news/sensor
-      source_name TEXT,
-      source_url TEXT,
-      language_code TEXT,
-      confidence REAL, -- 0-1
-      evidence_count INTEGER DEFAULT 1, -- 多源证据数量
-      metadata TEXT, -- JSON: 存储原始数据/解析器版本/证据链等
-      collected_at TEXT DEFAULT (datetime('now')),
-      created_at TEXT DEFAULT (datetime('now'))
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_flood_records_created_at ON flood_records (created_at);
-    CREATE INDEX IF NOT EXISTS idx_flood_records_event_time ON flood_records (event_time);
-    CREATE INDEX IF NOT EXISTS idx_flood_records_country ON flood_records (country);
-    CREATE INDEX IF NOT EXISTS idx_flood_records_record_id ON flood_records (record_id);
-    CREATE INDEX IF NOT EXISTS idx_flood_records_source_type ON flood_records (source_type);
-    CREATE INDEX IF NOT EXISTS idx_flood_records_confidence ON flood_records (confidence);
 
     -- 降雨事件表（一行=一个地点的一次降雨），主键由触发器生成：YYYYMMDD_Province_seq
     CREATE TABLE IF NOT EXISTS rain_event (
@@ -69,31 +51,40 @@ if (isNew) {
 
     -- 说明：SQLite 触发器不支持为 NEW 赋值，这里不创建触发器。
     -- id 与 seq 改为在应用层（Node 路由）计算后写入。
+
+    -- 降雨洪水影响汇总表（一行=一场降雨的影响汇总）
+    CREATE TABLE IF NOT EXISTS rain_flood_impact (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      rain_event_id TEXT NOT NULL UNIQUE,
+      time TEXT,
+      level INTEGER,
+      country TEXT,
+      province TEXT,
+      city TEXT,
+      transport_impact_level INTEGER,
+      economy_impact_level INTEGER,
+      safety_impact_level INTEGER,
+      timeline_data TEXT,
+      source_count INTEGER,
+      detail_file TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_rain_flood_impact_rain_event_id ON rain_flood_impact(rain_event_id);
+    CREATE INDEX IF NOT EXISTS idx_rain_flood_impact_level ON rain_flood_impact(level);
+    CREATE INDEX IF NOT EXISTS idx_rain_flood_impact_country ON rain_flood_impact(country);
+    CREATE INDEX IF NOT EXISTS idx_rain_flood_impact_province ON rain_flood_impact(province);
   `);
 }
 
-// 升级旧库列（如果缺失则新增）
+// 升级旧库（如果缺失则新增）
 function columnExists(table: string, column: string): boolean {
   const rows = db.prepare(`PRAGMA table_info(${table})`).all() as any[];
   return rows.some(r => r.name === column);
 }
 
-const upgradeColumns = [
-  'country', 'specific_location', 'event_time',
-  'record_id', 'title', 'coordinates', 'severity', 'type',
-  'source_type', 'source_name', 'source_url', 'language_code',
-  'confidence', 'evidence_count', 'metadata', 'collected_at'
-];
-
 try {
-  for (const col of upgradeColumns) {
-    if (!columnExists('flood_records', col)) {
-      const type = col === 'confidence' || col === 'risk_score' ? 'REAL' :
-                   col === 'evidence_count' ? 'INTEGER' : 'TEXT';
-      db.exec(`ALTER TABLE flood_records ADD COLUMN ${col} ${type}`);
-    }
-  }
-
   // 确保存在 rain_event 表与索引/触发器（老库升级）
   if (!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='rain_event'`).get()) {
     db.exec(`
@@ -127,6 +118,33 @@ try {
       db.exec(`ALTER TABLE rain_event ADD COLUMN searched INTEGER DEFAULT 0`);
     }
   } catch {}
+
+  // 确保存在 rain_flood_impact 表（老库升级）
+  if (!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='rain_flood_impact'`).get()) {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS rain_flood_impact (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        rain_event_id TEXT NOT NULL UNIQUE,
+        time TEXT,
+        level INTEGER,
+        country TEXT,
+        province TEXT,
+        city TEXT,
+        transport_impact_level INTEGER,
+        economy_impact_level INTEGER,
+        safety_impact_level INTEGER,
+        timeline_data TEXT,
+        source_count INTEGER,
+        detail_file TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_rain_flood_impact_rain_event_id ON rain_flood_impact(rain_event_id);
+      CREATE INDEX IF NOT EXISTS idx_rain_flood_impact_level ON rain_flood_impact(level);
+      CREATE INDEX IF NOT EXISTS idx_rain_flood_impact_country ON rain_flood_impact(country);
+      CREATE INDEX IF NOT EXISTS idx_rain_flood_impact_province ON rain_flood_impact(province);
+    `);
+  }
 } catch {}
 
 

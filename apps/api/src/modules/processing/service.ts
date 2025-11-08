@@ -1,5 +1,7 @@
 import { db } from '../../db';
 
+// 注释掉：不再使用 flood_records 表
+/*
 function columnExists(table: string, column: string): boolean {
   const rows = db.prepare(`PRAGMA table_info(${table})`).all() as any[];
   return rows.some(r => r.name === column);
@@ -17,8 +19,14 @@ function ensureSchema() {
     db.exec(`ALTER TABLE flood_records ADD COLUMN processed_at TEXT`);
   }
 }
+*/
 
 export function processNewRecords(): { processed: number } {
+  // TODO: 重构为使用 rain_event 和 rain_flood_impact 表
+  // 暂时禁用，等待重构
+  return { processed: 0 };
+  
+  /* 注释掉：使用 flood_records 表的旧代码
   ensureSchema();
   const select = db.prepare(`SELECT id, water_level FROM flood_records WHERE status IS NULL OR status = 'new'`);
   const update = db.prepare(`UPDATE flood_records SET status = 'processed', risk_score = ?, processed_at = datetime('now') WHERE id = ?`);
@@ -33,6 +41,7 @@ export function processNewRecords(): { processed: number } {
   });
   txn(rows);
   return { processed: rows.length };
+  */
 }
 
 
