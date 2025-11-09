@@ -2,6 +2,8 @@
   "common": {
     "pageTitle": "Sistema de Monitoreo de Inundaciones de la UE - Búsqueda de Datos Reales",
     "headerTitle": "🌊 Monitoreo de Inundaciones UE",
+    "headerTitleLine1": "Sistema de Monitoreo",
+    "headerTitleLine2": "de Inundaciones de la UE",
     "headerSubtitle": "Búsqueda en tiempo real de datos de inundaciones",
     "close": "✕ Cerrar",
     "na": "N/A",
@@ -73,14 +75,14 @@
   },
   "button": {
     "queryEvents": "🔍 Consultar Eventos",
-    "refreshQuery": "🔄 Actualizar Consulta",
     "startDeepSearch": "🔍 Iniciar Búsqueda Profunda",
     "triggerCheck": "🌧️ Verificación de Disparador",
     "ingestSample": "📥 Ingestionar Datos de Ejemplo",
     "processData": "⚙️ Procesar Datos",
     "refreshStats": "🔄 Actualizar Estadísticas",
     "exportCSV": "⬇️ Exportar CSV",
-    "searchData": "🔍 Buscar Datos"
+    "searchData": "🔍 Buscar Datos",
+    "refresh": "🔄 Actualizar"
   },
   "detail": {
     "title": {
@@ -208,6 +210,43 @@
     "chinese": "中文",
     "english": "English",
     "spanish": "Español"
+  },
+  "nav": {
+    "dashboard": "Panel de Resumen",
+    "events": "Consulta de Eventos",
+    "interpolation": "Interpolación Espacial",
+    "analysis": "Análisis de Datos",
+    "management": "Gestión de Datos"
+  },
+  "query": {
+    "globalQuery": "🌍 Consulta Global",
+    "quickDate": {
+      "label": "Selección Rápida:",
+      "latest": "Último",
+      "today": "Hoy",
+      "week": "Esta Semana",
+      "month": "Este Mes"
+    }
+  },
+  "dashboard": {
+    "welcome": "Bienvenido al Sistema de Monitoreo de Inundaciones de la UE",
+    "description": "Use la función de consulta global a la izquierda para consultar eventos de lluvia, luego vea y analice datos en varias páginas.",
+    "currentQuery": "Resultados de Consulta Actuales:"
+  },
+  "events": {
+    "hint": {
+      "useGlobalQuery": "💡 Consejo: Use la función de consulta global a la izquierda para consultar eventos, los resultados se mostrarán en esta página.",
+      "noData": "📭 No se encontraron datos de eventos que coincidan con los criterios",
+      "querySuccess": "✅ Consulta exitosa: Se encontraron {count} eventos"
+    }
+  },
+  "analysis": {
+    "comingSoon": "Función de Análisis de Datos en Desarrollo",
+    "description": "Esta página proporcionará estadísticas de datos, análisis de tendencias, comparación regional y otras funciones."
+  },
+  "management": {
+    "comingSoon": "Función de Gestión de Datos en Desarrollo",
+    "description": "Esta página proporcionará gestión de fuentes de datos, estado de sincronización de datos, monitoreo de calidad de datos y otras funciones."
   },
   "country": {
     "countryRegion": "País/Región",

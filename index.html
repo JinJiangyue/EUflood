@@ -11,166 +11,224 @@
     <link rel="stylesheet" href="frontend/css/map.css" />
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1 data-i18n="common.headerTitle">🌊 欧盟洪水监测系统</h1>
-            <p data-i18n="common.headerSubtitle">实时搜索真实洪水数据 - 来自官方气象API和社交媒体</p>
-        </div>
+    <div class="app-container">
+        <!-- 侧边栏 -->
+        <aside class="sidebar">
+            <!-- 系统标题 -->
+            <div class="sidebar-header">
+                <h1 class="sidebar-title">
+                    <span class="title-icon">🌊</span>
+                    <span class="title-text">
+                        <span class="title-line1" data-i18n="common.headerTitleLine1">欧盟洪水监测系统</span>
+                        <span class="title-line2" data-i18n="common.headerTitleLine2">EU Flood Monitoring System</span>
+                    </span>
+                </h1>
+            </div>
+            
+            <!-- 全局查询区域 -->
+            <div class="global-query-section">
+                <h3 data-i18n="query.globalQuery">🌍 全局查询</h3>
+                <div class="query-form">
+                    <div class="form-group">
+                        <label data-i18n="form.startDate">开始日期</label>
+                        <input type="date" id="globalDateFrom" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="form.endDate">结束日期</label>
+                        <input type="date" id="globalDateTo" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="form.country">国家（可选）</label>
+                        <input type="text" id="globalCountry" class="form-input" data-i18n-placeholder="form.countryPlaceholder" placeholder="留空查询所有国家">
+                    </div>
+                    <button id="btnGlobalQuery" class="query-btn" data-i18n="button.queryEvents">
+                        🔍 查询事件
+                    </button>
+                    <div id="globalQueryStatus" class="query-status"></div>
+                </div>
+            </div>
+            
+            <!-- 导航菜单 -->
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-route="dashboard">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-text" data-i18n="nav.dashboard">总览仪表盘</span>
+                </a>
+                <a href="#" class="nav-item" data-route="events">
+                    <span class="nav-icon">📅</span>
+                    <span class="nav-text" data-i18n="nav.events">事件查询</span>
+                </a>
+                <a href="#" class="nav-item" data-route="interpolation">
+                    <span class="nav-icon">🗺️</span>
+                    <span class="nav-text" data-i18n="nav.interpolation">空间插值分析</span>
+                </a>
+                <a href="#" class="nav-item" data-route="analysis">
+                    <span class="nav-icon">📈</span>
+                    <span class="nav-text" data-i18n="nav.analysis">数据分析</span>
+                </a>
+                <a href="#" class="nav-item" data-route="management">
+                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-text" data-i18n="nav.management">数据管理</span>
+                </a>
+            </nav>
+        </aside>
         
-        <div class="search-section">
-            <div class="stats" id="stats">
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <div class="stat-number" id="totalRecords">-</div>
-                        <div class="stat-label" data-i18n="stats.totalRecords">总记录数</div>
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 语言切换器（右上角） -->
+            <div id="languageSwitcher" class="top-language-switcher"></div>
+            
+            <!-- 页面：总览仪表盘 -->
+            <div id="page-dashboard" class="page-container">
+                <div class="page-header">
+                    <h2 data-i18n="nav.dashboard">📊 总览仪表盘</h2>
+                </div>
+                <div class="page-body">
+                    <div class="stats" id="stats">
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-number" id="totalRecords">-</div>
+                                <div class="stat-label" data-i18n="stats.totalRecords">总记录数</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="processedRecords">-</div>
+                                <div class="stat-label" data-i18n="stats.processedRecords">已处理记录</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="averageRisk">-</div>
+                                <div class="stat-label" data-i18n="stats.averageRisk">平均风险</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="maxWaterLevel">-</div>
+                                <div class="stat-label" data-i18n="stats.maxWaterLevel">最大水位(m)</div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-number" id="processedRecords">-</div>
-                        <div class="stat-label" data-i18n="stats.processedRecords">已处理记录</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-number" id="averageRisk">-</div>
-                        <div class="stat-label" data-i18n="stats.averageRisk">平均风险</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-number" id="maxWaterLevel">-</div>
-                        <div class="stat-label" data-i18n="stats.maxWaterLevel">最大水位(m)</div>
+                    <div class="dashboard-content">
+                        <div class="info-card">
+                            <h3 data-i18n="dashboard.welcome">欢迎使用欧盟洪水监测系统</h3>
+                            <p data-i18n="dashboard.description">使用左侧全局查询功能查询降雨事件，然后在各个页面中查看和分析数据。</p>
+                            <div id="dashboardQueryInfo" class="query-info" style="display: none;">
+                                <p><strong data-i18n="dashboard.currentQuery">当前查询结果：</strong></p>
+                                <p id="dashboardQueryDetails"></p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
             
-            <!-- 事件候选查询区域 -->
-            <div class="event-candidates-section" style="padding: 20px 40px; background: #f0f4f8; border-bottom: 2px solid #e0e7ef;">
-                <!-- 空间插值分析区域 -->
-                <div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 30px; border-left: 4px solid #e74c3c;">
-                    <h2 style="margin-bottom: 15px; color: #1e3c72;" data-i18n="interpolation.title.spatialInterpolation">🗺️ 空间插值分析</h2>
-                    <div style="margin-bottom: 15px;">
-                        <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #2c3e50;" data-i18n="file.select.dataFile">选择数据文件（CSV、Excel、TXT）</label>
-                        <div style="position: relative; display: inline-block; width: 100%;">
-                            <input type="file" id="interpolationFileInput" accept=".csv,.xlsx,.xls,.txt" style="position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; z-index: 2;">
-                            <div id="customFileButton" style="padding: 10px; border: 2px solid #e1e5e9; border-radius: 8px; background: white; cursor: pointer; display: flex; align-items: center; justify-content: space-between; min-height: 42px;">
-                                <span id="fileButtonText" data-i18n="file.select.chooseFile">选择文件</span>
-                                <span style="color: #666; font-size: 12px;" id="fileStatusText" data-i18n="file.select.noFileChosen">未选择任何文件</span>
-                            </div>
-                        </div>
-                        <div id="interpolationFileInfo" data-i18n="file.select.pleaseSelectFile" style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 5px; font-size: 14px; color: #666; display: none;">
-                            请先选择数据文件
-                        </div>
+            <!-- 页面：事件查询 -->
+            <div id="page-events" class="page-container" style="display: none;">
+                <div class="page-header">
+                    <h2 data-i18n="nav.events">📅 事件查询</h2>
+                    <div class="page-actions">
+                        <button id="btnRefreshEvents" class="action-btn" data-i18n="button.refresh">🔄 刷新</button>
                     </div>
-                    <div style="margin-bottom: 15px;">
-                        <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #2c3e50;" data-i18n="interpolation.form.confirmDate">确认日期（可手动修改，用于生成事件ID）</label>
-                        <input type="date" id="confirmedDateInput" lang="" style="padding: 10px; border: 2px solid #e1e5e9; border-radius: 8px; width: 220px; font-size: 14px; background: #ffffff;">
-                        <small style="display: block; margin-top: 5px; color: #666; font-size: 12px;" data-i18n="interpolation.form.dateHint">默认从文件名解析（如 20251106），可改</small>
-                    </div>
-                    <div style="margin-bottom: 15px;">
-                        <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #2c3e50;" data-i18n="interpolation.form.thresholdSetting">阈值设置（默认 50.0，可修改；显示值大于该阈值的点）</label>
-                        <input type="number" id="valueThreshold" value="50.0" min="0" step="0.1" style="padding: 10px; border: 2px solid #e1e5e9; border-radius: 8px; width: 200px; font-size: 14px; background: #ffffff;">
-                        <small style="display: block; margin-top: 5px; color: #666; font-size: 12px;" data-i18n="interpolation.form.thresholdHint">留空或非法时按 50.0 处理</small>
-                    </div>
-                    <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
-                        <button id="btnUploadInterpolationFile" class="search-btn" type="button" style="flex: 1;" data-i18n="file.upload.file">📤 上传文件</button>
-                        <button id="btnSaveRainEvents" class="search-btn" type="button" style="flex: 1; background: linear-gradient(135deg, #27ae60 0%, #229954 100%);" disabled data-i18n="interpolation.action.filterAndSave">💾 筛选入库</button>
-                    </div>
-                    <div id="interpolationStatus" style="margin-top: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
-                    <!-- 地图容器 -->
-                    <div id="mapContainer" style="margin-top: 20px; height: 600px; border-radius: 8px; overflow: hidden; display: block; border: 2px solid #e1e5e9;">
-                        <div id="map" style="width: 100%; height: 100%;"></div>
-                    </div>
-                    <!-- 地点列表（省/市）显示区域 -->
-                    <div id="interpolationPlaces" style="margin-top: 16px; background: #ffffff; border: 1px solid #e1e5e9; border-radius: 8px; padding: 12px; display: none;"></div>
                 </div>
-                
-                <h2 style="margin-bottom: 15px; color: #1e3c72; margin-top: 40px;" data-i18n="search.title.queryRainEvents">📅 查询降雨事件（支持日期范围和国家筛选）</h2>
-                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                    <label style="font-size: 14px; color: #666;" data-i18n="form.startDate">开始日期:</label>
-                    <input type="date" id="eventDateFrom" lang="" style="padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px;" value="">
-                    <label style="font-size: 14px; color: #666;" data-i18n="form.endDate">结束日期:</label>
-                    <input type="date" id="eventDateTo" lang="" style="padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px;" value="">
-                    <label style="font-size: 14px; color: #666;" data-i18n="form.country">国家（可选）:</label>
-                    <input type="text" id="eventCountry" data-i18n-placeholder="form.countryPlaceholder" placeholder="留空查询所有国家" style="padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px; width: 200px;">
-                    <button id="btnQueryEvents" class="search-btn" type="button" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" data-i18n="button.queryEvents">🔍 查询事件</button>
-                    <button id="btnRefreshEvents" class="search-btn" type="button" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);" data-i18n="button.refreshQuery">🔄 刷新查询</button>
-                    <span id="eventsStatus" style="color: #666; font-size: 14px;"></span>
-                </div>
-                <div id="candidatesList" style="margin-top: 20px; display: none;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <h3 style="color: #1e3c72;" data-i18n="table.title.rainEventList">降雨事件列表</h3>
+                <div class="page-body">
+                    <!-- 快速日期选择 -->
+                    <div class="quick-date-selector-page">
+                        <span class="quick-date-label" data-i18n="query.quickDate.label">快速选择：</span>
+                        <button class="quick-date-btn-page" data-range="latest" data-i18n="query.quickDate.latest">最新</button>
+                        <button class="quick-date-btn-page" data-range="today" data-i18n="query.quickDate.today">今天</button>
+                        <button class="quick-date-btn-page" data-range="week" data-i18n="query.quickDate.week">本周</button>
+                        <button class="quick-date-btn-page" data-range="month" data-i18n="query.quickDate.month">本月</button>
                     </div>
-                    <div id="eventsContainer" style="display: grid; grid-template-columns: 1fr; gap: 20px; grid-template-rows: auto; transition: grid-template-columns 0.3s ease;">
-                        <div id="candidatesTable" style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); min-width: 0; overflow-x: auto;"></div>
-                        <div id="eventDetailsPanel" style="background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none; min-width: 0;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                <h3 style="color: #1e3c72; margin: 0;" data-i18n="detail.title.dataDetails">📊 数据详情</h3>
-                                <button id="btnCloseDetails" style="background: #e74c3c; color: white; border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer;" data-i18n="common.close">✕ 关闭</button>
-                            </div>
-                            <div id="eventDetailsContent" style="max-height: 600px; overflow-y: auto;">
-                                <p style="color: #999; text-align: center; padding: 40px;" data-i18n="detail.title.clickToViewDetails">点击表格中的事件行查看详细信息</p>
+                    <div class="query-hint" id="eventsQueryHint">
+                        <p data-i18n="events.hint.useGlobalQuery">💡 提示：使用左侧全局查询功能查询事件，结果将显示在此页面。</p>
+                    </div>
+                    <div id="candidatesList" style="margin-top: 20px; display: none;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h3 style="color: #1e3c72;" data-i18n="table.title.rainEventList">降雨事件列表</h3>
+                        </div>
+                        <div id="eventsContainer" style="display: grid; grid-template-columns: 1fr; gap: 20px; grid-template-rows: auto; transition: grid-template-columns 0.3s ease;">
+                            <div id="candidatesTable" style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); min-width: 0; overflow-x: auto;"></div>
+                            <div id="eventDetailsPanel" style="background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none; min-width: 0;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                    <h3 style="color: #1e3c72; margin: 0;" data-i18n="detail.title.dataDetails">📊 数据详情</h3>
+                                    <button id="btnCloseDetails" style="background: #e74c3c; color: white; border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer;" data-i18n="common.close">✕ 关闭</button>
+                                </div>
+                                <div id="eventDetailsContent" style="max-height: 600px; overflow-y: auto;">
+                                    <p style="color: #999; text-align: center; padding: 40px;" data-i18n="detail.title.clickToViewDetails">点击表格中的事件行查看详细信息</p>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
             
-            <div class="control-bar" style="padding: 0 40px 10px 40px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <button id="btnTrigger" class="search-btn" type="button" style="background: linear-gradient(135deg, #27ae60 0%, #229954 100%);" data-i18n="button.triggerCheck">🌧️ 触发器检查</button>
-                <button id="btnIngest" class="search-btn" type="button" data-i18n="button.ingestSample">📥 采集示例数据</button>
-                <button id="btnProcess" class="search-btn" type="button" data-i18n="button.processData">⚙️ 处理数据</button>
-                <button id="btnRefresh" class="search-btn" type="button" data-i18n="button.refreshStats">🔄 刷新统计</button>
-                <a href="/export" target="_blank" class="search-btn" data-i18n="button.exportCSV">⬇️ 导出 CSV</a>
+            <!-- 页面：空间插值分析 -->
+            <div id="page-interpolation" class="page-container" style="display: none;">
+                <div class="page-header">
+                    <h2 data-i18n="nav.interpolation">🗺️ 空间插值分析</h2>
+                </div>
+                <div class="page-body">
+                    <div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
+                        <h2 style="margin-bottom: 15px; color: #1e3c72;" data-i18n="interpolation.title.spatialInterpolation">🗺️ 空间插值分析</h2>
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #2c3e50;" data-i18n="file.select.dataFile">选择数据文件（CSV、Excel、TXT）</label>
+                            <div style="position: relative; display: inline-block; width: 100%;">
+                                <input type="file" id="interpolationFileInput" accept=".csv,.xlsx,.xls,.txt" style="position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; z-index: 2;">
+                                <div id="customFileButton" style="padding: 10px; border: 2px solid #e1e5e9; border-radius: 8px; background: white; cursor: pointer; display: flex; align-items: center; justify-content: space-between; min-height: 42px;">
+                                    <span id="fileButtonText" data-i18n="file.select.chooseFile">选择文件</span>
+                                    <span style="color: #666; font-size: 12px;" id="fileStatusText" data-i18n="file.select.noFileChosen">未选择任何文件</span>
+                                </div>
+                            </div>
+                            <div id="interpolationFileInfo" data-i18n="file.select.pleaseSelectFile" style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 5px; font-size: 14px; color: #666; display: none;">
+                                请先选择数据文件
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #2c3e50;" data-i18n="interpolation.form.confirmDate">确认日期（可手动修改，用于生成事件ID）</label>
+                            <input type="date" id="confirmedDateInput" lang="" style="padding: 10px; border: 2px solid #e1e5e9; border-radius: 8px; width: 220px; font-size: 14px; background: #ffffff;">
+                            <small style="display: block; margin-top: 5px; color: #666; font-size: 12px;" data-i18n="interpolation.form.dateHint">默认从文件名解析（如 20251106），可改</small>
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #2c3e50;" data-i18n="interpolation.form.thresholdSetting">阈值设置（默认 50.0，可修改；显示值大于该阈值的点）</label>
+                            <input type="number" id="valueThreshold" value="50.0" min="0" step="0.1" style="padding: 10px; border: 2px solid #e1e5e9; border-radius: 8px; width: 200px; font-size: 14px; background: #ffffff;">
+                            <small style="display: block; margin-top: 5px; color: #666; font-size: 12px;" data-i18n="interpolation.form.thresholdHint">留空或非法时按 50.0 处理</small>
+                        </div>
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                            <button id="btnUploadInterpolationFile" class="search-btn" type="button" style="flex: 1;" data-i18n="file.upload.file">📤 上传文件</button>
+                            <button id="btnSaveRainEvents" class="search-btn" type="button" style="flex: 1; background: linear-gradient(135deg, #27ae60 0%, #229954 100%);" disabled data-i18n="interpolation.action.filterAndSave">💾 筛选入库</button>
+                        </div>
+                        <div id="interpolationStatus" style="margin-top: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
+                        <!-- 地图容器 -->
+                        <div id="mapContainer" style="margin-top: 20px; height: 600px; border-radius: 8px; overflow: hidden; display: block; border: 2px solid #e1e5e9;">
+                            <div id="map" style="width: 100%; height: 100%;"></div>
+                        </div>
+                        <!-- 地点列表（省/市）显示区域 -->
+                        <div id="interpolationPlaces" style="margin-top: 16px; background: #ffffff; border: 1px solid #e1e5e9; border-radius: 8px; padding: 12px; display: none;"></div>
+                    </div>
+                </div>
             </div>
             
-            <form class="search-form" id="searchForm">
-                <div class="form-group">
-                    <label for="country" data-i18n="country.countryRegion">国家/地区</label>
-                    <select id="country" name="country">
-                        <option value="" data-i18n="country.allCountries">所有国家</option>
-                        <option value="Spain" data-i18n="country.spain">西班牙</option>
-                        <option value="Germany" data-i18n="country.germany">德国</option>
-                        <option value="Italy" data-i18n="country.italy">意大利</option>
-                        <option value="France" data-i18n="country.france">法国</option>
-                        <option value="Denmark" data-i18n="country.denmark">丹麦</option>
-                    </select>
+            <!-- 页面：数据分析 -->
+            <div id="page-analysis" class="page-container" style="display: none;">
+                <div class="page-header">
+                    <h2 data-i18n="nav.analysis">📈 数据分析</h2>
                 </div>
-                
-                <div class="form-group">
-                    <label for="date" data-i18n="detail.field.date">日期</label>
-                    <input type="date" id="date" name="date" value="2025-10-07">
+                <div class="page-body">
+                    <div class="info-card">
+                        <h3 data-i18n="analysis.comingSoon">数据分析功能开发中</h3>
+                        <p data-i18n="analysis.description">此页面将提供数据统计、趋势分析、区域对比等功能。</p>
+                    </div>
                 </div>
-                
-                <div class="form-group">
-                    <label for="severity" data-i18n="severity.severity">严重程度</label>
-                    <select id="severity" name="severity">
-                        <option value="" data-i18n="severity.allLevels">所有级别</option>
-                        <option value="extreme" data-i18n="severity.extreme">极高</option>
-                        <option value="high" data-i18n="severity.high">高</option>
-                        <option value="medium" data-i18n="severity.medium">中等</option>
-                        <option value="low" data-i18n="severity.low">低</option>
-                    </select>
-                </div>
-                
-                <button type="submit" class="search-btn" id="searchBtn" data-i18n="button.searchData">
-                    🔍 搜索数据
-                </button>
-            </form>
-        </div>
-        
-        <!-- 搜索信息显示区域 -->
-        <div class="search-info-section" id="searchInfo" style="display: none;">
-            <div class="search-info">
-                <h4 data-i18n="search.status.smartSearchStatus">🔍 智能搜索状态</h4>
-                <div id="searchInfoContent"></div>
             </div>
-        </div>
-        
-        <div class="results-section" id="resultsSection">
-            <div class="no-results">
-                <h3 data-i18n="search.status.systemReady">📊 系统已就绪</h3>
-                <p data-i18n="search.status.useSearchForm">使用上方搜索表单查找真实洪水数据</p>
-                <p style="margin-top: 10px; font-size: 0.9em;" data-i18n="search.status.autoCollectTip">
-                    💡 提示：系统每6小时自动收集最新数据
-                </p>
+            
+            <!-- 页面：数据管理 -->
+            <div id="page-management" class="page-container" style="display: none;">
+                <div class="page-header">
+                    <h2 data-i18n="nav.management">⚙️ 数据管理</h2>
+                </div>
+                <div class="page-body">
+                    <div class="info-card">
+                        <h3 data-i18n="management.comingSoon">数据管理功能开发中</h3>
+                        <p data-i18n="management.description">此页面将提供数据源管理、数据同步状态、数据质量监控等功能。</p>
+                    </div>
+                </div>
             </div>
-        </div>
+        </main>
     </div>
 
     <!-- Leaflet JS -->
@@ -182,13 +240,18 @@
     <!-- 工具函数 -->
     <script src="frontend/js/utils.js"></script>
     
+    <!-- 核心模块 -->
+    <script src="frontend/js/core/state-manager.js"></script>
+    <script src="frontend/js/core/router.js"></script>
+    
+    <!-- 全局查询模块 -->
+    <script src="frontend/js/modules/global-query.js"></script>
+    
     <!-- 功能模块（按依赖顺序加载） -->
     <script src="frontend/js/modules/stats.js"></script>
-    <script src="frontend/js/modules/search.js"></script>
     <script src="frontend/js/modules/events.js"></script>
     <script src="frontend/js/modules/map.js"></script>
     <script src="frontend/js/modules/interpolation.js"></script>
-    <script src="frontend/js/modules/data-management.js"></script>
     
     <!-- 主入口 -->
     <script src="frontend/js/main.js"></script>
@@ -203,4 +266,3 @@
     </script>
 </body>
 </html>
-

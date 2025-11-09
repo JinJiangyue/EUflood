@@ -2,6 +2,28 @@
  * 事件管理模块 - 基于 rain_event 表
  */
 
+/**
+ * 获取 i18n 翻译函数（支持参数替换）
+ */
+function getI18n() {
+    if (typeof t === 'function') {
+        return (key, params) => {
+            const text = t(key);
+            if (params) {
+                return Object.keys(params).reduce((str, k) => str.replace(`{${k}}`, params[k]), text);
+            }
+            return text;
+        };
+    }
+    return (key, params) => {
+        let text = key;
+        if (params) {
+            Object.keys(params).forEach(k => text = text.replace(`{${k}}`, params[k]));
+        }
+        return text;
+    };
+}
+
 // 设置默认日期范围（今天）
 function initEventDates() {
     const today = new Date().toISOString().substring(0, 10);
@@ -42,7 +64,7 @@ async function loadRainEvents(dateFrom, dateTo, country, page = 1, limit = null)
         const res = await fetch(url);
         if (!res.ok) {
             const errorData = await res.json();
-            const i18n = typeof t === 'function' ? t : (key) => key;
+            const i18n = getI18n();
             throw new Error(errorData.error || i18n('search.error.loadFailed'));
         }
         
@@ -52,11 +74,7 @@ async function loadRainEvents(dateFrom, dateTo, country, page = 1, limit = null)
             throw new Error(data.error || '查询失败');
         }
         
-        const i18n = typeof t === 'function' ? t : (key, params) => {
-            let text = key;
-            if (params) Object.keys(params).forEach(k => text = text.replace(`{${k}}`, params[k]));
-            return text;
-        };
+        const i18n = getI18n();
         
         if (!data.details || data.details.length === 0) {
             const dateRangeText = dateFrom === dateTo ? dateFrom : `${dateFrom} ${i18n('common.to')} ${dateTo}`;
@@ -469,7 +487,7 @@ async function showRainEventDetails(eventId) {
             }
         } else {
             // 未搜索：显示表1（rain_event）的内容
-            const i18n = typeof t === 'function' ? t : (key) => key;
+            const i18n = getI18n();
             html = `
                 <div style="margin-bottom: 20px;">
                     <h4 style="color: #1e3c72; margin-bottom: 10px; border-bottom: 2px solid #667eea; padding-bottom: 5px;">${i18n('detail.section.basicInfo')}</h4>
@@ -542,7 +560,7 @@ async function showRainEventDetails(eventId) {
                             console.log(`[前端] 响应Content-Type:`, searchRes.headers.get('Content-Type'));
                         } catch (fetchError) {
                             clearTimeout(timeoutId);
-                            const i18n = typeof t === 'function' ? t : (key) => key;
+                            const i18n = getI18n();
                             if (fetchError.name === 'AbortError') {
                                 throw new Error(i18n('search.deepSearch.timeout'));
                             }
@@ -560,7 +578,7 @@ async function showRainEventDetails(eventId) {
                                     try {
                                         searchData = JSON.parse(errorText);
                                         console.error(`[前端] 解析后的错误数据:`, searchData);
-                                        const i18n = typeof t === 'function' ? t : (key) => key;
+                                        const i18n = getI18n();
                                         const error = new Error(searchData.error || i18n('search.deepSearch.failed'));
                                         error.responseData = searchData;
                                         throw error;
@@ -576,7 +594,7 @@ async function showRainEventDetails(eventId) {
                                         throw error;
                                     }
                                 } else {
-                                    const i18n = typeof t === 'function' ? t : (key) => key;
+                                    const i18n = getI18n();
                                     throw new Error(i18n('search.deepSearch.requestFailed'));
                                 }
                             } catch (parseError) {
@@ -611,18 +629,18 @@ async function showRainEventDetails(eventId) {
                                 }
                             }
                             
-                            const i18n = typeof t === 'function' ? t : (key) => key;
+                            const i18n = getI18n();
                             alert(i18n('search.deepSearch.completed'));
                         } else {
                             // 创建错误对象，包含完整的响应数据
-                            const i18n = typeof t === 'function' ? t : (key) => key;
+                            const i18n = getI18n();
                             const error = new Error(searchData.error || i18n('search.deepSearch.failed'));
                             error.responseData = searchData; // 附加响应数据
                             throw error;
                         }
                     } catch (e) {
                         // 显示详细错误信息
-                        const i18n = typeof t === 'function' ? t : (key) => key;
+                        const i18n = getI18n();
                         let errorMsg = i18n('search.deepSearch.failed') + ': ' + e.message;
                         let errorData = null;
                         
@@ -670,7 +688,7 @@ async function showRainEventDetails(eventId) {
                                 }
                             }
                             if (errorData.key_errors && errorData.key_errors.length > 0) {
-                                const i18n = typeof t === 'function' ? t : (key) => key;
+                                const i18n = getI18n();
                                 errorMsg += `\n❌ ${i18n('common.error')}：\n`;
                                 errorData.key_errors.forEach(log => {
                                     errorMsg += '  - ' + log + '\n';
@@ -710,57 +728,334 @@ async function showRainEventDetails(eventId) {
 }
 
 /**
+ * 加载最新事件（默认显示最新10条）
+ */
+async function loadLatestEvents() {
+    const today = new Date();
+    const dateFrom = new Date();
+    dateFrom.setDate(dateFrom.getDate() - 30); // 最近30天
+    
+    const dateFromStr = dateFrom.toISOString().substring(0, 10);
+    const dateToStr = today.toISOString().substring(0, 10);
+    
+    try {
+        // API默认按日期降序排序，获取第一页的10条数据
+        const url = `/events/rain?date_from=${dateFromStr}&date_to=${dateToStr}&details=true&page=1&limit=10`;
+        const res = await fetch(url);
+        if (!res.ok) {
+            throw new Error('加载失败');
+        }
+        
+        const data = await res.json();
+        if (!data.success) {
+            throw new Error(data.error || '加载失败');
+        }
+        
+        const results = data.details || [];
+        
+        // 更新全局状态
+        if (window.appState) {
+            window.appState.updateQueryResults(results, results.length, {
+                dateFrom: dateFromStr,
+                dateTo: dateToStr,
+                country: ''
+            });
+        }
+        
+        // 渲染列表
+        renderEventsList(results, {
+            dateFrom: dateFromStr,
+            dateTo: dateToStr,
+            country: ''
+        });
+        
+        // 隐藏提示，显示列表
+        const hintEl = document.getElementById('eventsQueryHint');
+        const listEl = document.getElementById('candidatesList');
+        if (hintEl) {
+            hintEl.style.display = 'none';
+        }
+        if (listEl) {
+            listEl.style.display = 'block';
+        }
+        
+    } catch (error) {
+        console.error('加载最新事件失败:', error);
+        // 显示提示
+        const hintEl = document.getElementById('eventsQueryHint');
+        const listEl = document.getElementById('candidatesList');
+        if (hintEl) {
+            hintEl.style.display = 'block';
+        }
+        if (listEl) {
+            listEl.style.display = 'none';
+        }
+    }
+}
+
+/**
+ * 从全局状态渲染事件列表
+ */
+function renderEventsListFromGlobalState() {
+    if (!window.appState) {
+        // 如果没有全局状态，加载最新数据
+        loadLatestEvents();
+        return;
+    }
+    
+    const query = window.appState.getState('query');
+    const hintEl = document.getElementById('eventsQueryHint');
+    const listEl = document.getElementById('candidatesList');
+    
+    // 检查是否已经查询过（通过检查 queryParams 是否存在且有 dateFrom 或 dateTo 属性）
+    // 即使值为空字符串，只要属性存在就说明查询过
+    const hasQueried = query.queryParams && ('dateFrom' in query.queryParams || 'dateTo' in query.queryParams);
+    
+    if (!query.results || query.results.length === 0) {
+        // 如果已经查询过但没有结果，显示"没有数据"
+        if (hasQueried) {
+            if (hintEl) {
+                const i18n = getI18n();
+                hintEl.innerHTML = `<p>${i18n('events.hint.noData')}</p>`;
+                hintEl.style.display = 'block';
+            }
+            if (listEl) {
+                listEl.style.display = 'none';
+            }
+            // 清空表格
+            const tableEl = document.getElementById('candidatesTable');
+            if (tableEl) {
+                tableEl.innerHTML = '';
+            }
+        } else {
+            // 如果没有查询过，加载最新数据
+            loadLatestEvents();
+        }
+        return;
+    }
+    
+    // 如果有数据，显示列表（提示信息由 executeQueryForPage 处理，这里不隐藏）
+    // 如果提示已经显示了查询成功信息，就保留；如果没有，就隐藏
+    if (listEl) {
+        listEl.style.display = 'block';
+    }
+    
+    // 使用全局查询结果渲染列表（分页处理）
+    renderEventsList(query.results, query.queryParams);
+}
+
+/**
+ * 渲染事件列表（支持分页）
+ */
+function renderEventsList(results, queryParams) {
+    const hintEl = document.getElementById('eventsQueryHint');
+    const listEl = document.getElementById('candidatesList');
+    
+    if (!results || results.length === 0) {
+        // 显示"没有数据"提示
+        if (hintEl) {
+            const i18n = getI18n();
+            hintEl.innerHTML = `<p>${i18n('events.hint.noData')}</p>`;
+            hintEl.style.display = 'block';
+        }
+        if (listEl) {
+            listEl.style.display = 'none';
+        }
+        // 清空表格
+        const tableEl = document.getElementById('candidatesTable');
+        if (tableEl) {
+            tableEl.innerHTML = '';
+        }
+        return;
+    }
+    
+    const tableEl = document.getElementById('candidatesTable');
+    if (!tableEl) return;
+    
+    // 分页处理
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const paginatedResults = results.slice(startIndex, endIndex);
+    const totalPages = Math.ceil(results.length / pageSize);
+    
+    const i18n = typeof t === 'function' ? t : (key, params) => {
+        let text = key;
+        if (params) Object.keys(params).forEach(k => text = text.replace(`{${k}}`, params[k]));
+        return text;
+    };
+    
+    // 渲染表格
+    let html = `
+        <div style="overflow-x: auto; width: 100%;">
+            <table style="width: 100%; min-width: 100%; border-collapse: collapse; table-layout: auto;">
+                <thead style="background: #f8f9fa; position: sticky; top: 0;">
+                    <tr>
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">${i18n('table.header.date')}</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">${i18n('table.header.country')}</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">${i18n('table.header.province')}</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">${i18n('table.header.city')}</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">${i18n('table.header.coordinates')}</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">${i18n('table.header.value')}</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">${i18n('table.header.threshold')}</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">${i18n('table.header.searchStatus')}</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    paginatedResults.forEach((event, index) => {
+        let searchedStatus;
+        if (event.searched === 1) {
+            searchedStatus = `<span style="color: #27ae60; font-weight: bold;">✅ ${i18n('table.status.searched')}</span>`;
+        } else if (event.searched === 2) {
+            searchedStatus = `<span style="color: #f39c12; font-weight: bold;">⚠️ ${i18n('table.status.needResearch')}</span>`;
+        } else {
+            searchedStatus = `<span style="color: #e74c3c; font-weight: bold;">⏳ ${i18n('table.status.unsearched')}</span>`;
+        }
+        const valueColor = event.value && event.threshold && event.value > event.threshold ? '#e74c3c' : '#3498db';
+        
+        html += `
+            <tr class="rain-event-row" data-id="${event.id}" data-index="${startIndex + index}" 
+                style="border-bottom: 1px solid #dee2e6; cursor: pointer; transition: all 0.2s; background: white; border-left: 2px solid transparent;" 
+                onmouseover="if(!this.classList.contains('selected')) this.style.background='#e8f4f8'" 
+                onmouseout="if(!this.classList.contains('selected')) { this.style.background='white'; this.style.borderLeft='2px solid transparent'; }">
+                <td style="padding: 12px; white-space: nowrap;">${event.date}</td>
+                <td style="padding: 12px; white-space: nowrap;">${event.country || '-'}</td>
+                <td style="padding: 12px; white-space: nowrap; max-width: 200px; overflow: hidden; text-overflow: ellipsis;" title="${event.province || ''}">${(event.province || '-').split('/')[0].trim()}</td>
+                <td style="padding: 12px; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;" title="${event.city || ''}">${event.city || '-'}</td>
+                <td style="padding: 12px; white-space: nowrap;">${event.latitude ? `${event.latitude.toFixed(4)}, ${event.longitude.toFixed(4)}` : '-'}</td>
+                <td style="padding: 12px; white-space: nowrap;"><span style="color: ${valueColor}; font-weight: bold;">${event.value !== null && event.value !== undefined ? event.value.toFixed(2) : '-'}</span></td>
+                <td style="padding: 12px; white-space: nowrap;">${event.threshold !== null && event.threshold !== undefined ? event.threshold.toFixed(2) : '-'}</td>
+                <td style="padding: 12px; white-space: nowrap;">${searchedStatus}</td>
+            </tr>
+        `;
+    });
+    
+    html += '</tbody></table></div>';
+    
+    // 添加分页控件（始终显示，即使只有一页也显示每页条数选择器）
+    html += `
+        <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <label style="font-size: 14px; color: #666;">${i18n('pagination.itemsPerPage')}</label>
+                <select id="pageSizeSelect" style="padding: 8px 12px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px; cursor: pointer;">
+                    <option value="10" ${pageSize === 10 ? 'selected' : ''}>10</option>
+                    <option value="20" ${pageSize === 20 ? 'selected' : ''}>20</option>
+                    <option value="50" ${pageSize === 50 ? 'selected' : ''}>50</option>
+                    <option value="100" ${pageSize === 100 ? 'selected' : ''}>100</option>
+                </select>
+                <span style="font-size: 14px; color: #666;">${i18n('pagination.items')}</span>
+            </div>
+            ${results.length > pageSize ? `
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 14px; color: #666;">
+                    ${i18n('pagination.pageInfoWithTotal', { page: currentPage, totalPages: totalPages, total: results.length })}
+                </span>
+                <button id="btnPrevPage" ${currentPage === 1 ? 'disabled' : ''} 
+                    style="padding: 8px 15px; border: 1px solid #ddd; border-radius: 5px; background: white; cursor: pointer; font-size: 14px; ${currentPage === 1 ? 'opacity: 0.5; cursor: not-allowed;' : ''}"
+                    ${currentPage === 1 ? 'disabled' : ''}>${i18n('pagination.prevPage')}</button>
+                <button id="btnNextPage" ${currentPage >= totalPages ? 'disabled' : ''} 
+                    style="padding: 8px 15px; border: 1px solid #ddd; border-radius: 5px; background: white; cursor: pointer; font-size: 14px; ${currentPage >= totalPages ? 'opacity: 0.5; cursor: not-allowed;' : ''}"
+                    ${currentPage >= totalPages ? 'disabled' : ''}>${i18n('pagination.nextPage')}</button>
+            </div>
+            ` : `
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 14px; color: #666;">
+                    ${i18n('pagination.totalItems', { count: results.length })} ${i18n('pagination.allDisplayed')}
+                </span>
+            </div>
+            `}
+        </div>
+    `;
+    
+    tableEl.innerHTML = html;
+    
+    // 绑定每页条数选择器
+    const pageSizeSelect = document.getElementById('pageSizeSelect');
+    if (pageSizeSelect) {
+        pageSizeSelect.addEventListener('change', function() {
+            const newPageSize = parseInt(this.value);
+            pageSize = newPageSize;
+            currentPage = 1; // 重置到第一页
+            renderEventsListFromGlobalState();
+        });
+    }
+    
+    // 绑定分页按钮
+    if (results.length > pageSize) {
+        const btnPrev = document.getElementById('btnPrevPage');
+        const btnNext = document.getElementById('btnNextPage');
+        
+        if (btnPrev && !btnPrev.disabled) {
+            btnPrev.addEventListener('click', function() {
+                currentPage--;
+                renderEventsListFromGlobalState();
+            });
+        }
+        
+        if (btnNext && !btnNext.disabled) {
+            btnNext.addEventListener('click', function() {
+                currentPage++;
+                renderEventsListFromGlobalState();
+            });
+        }
+    }
+    
+    // 绑定行点击事件
+    let selectedRow = null;
+    document.querySelectorAll('.rain-event-row').forEach(row => {
+        row.addEventListener('click', function() {
+            // 移除之前的选中状态
+            if (selectedRow) {
+                selectedRow.classList.remove('selected');
+                selectedRow.style.background = 'white';
+                selectedRow.style.borderLeft = '2px solid transparent';
+            }
+            
+            // 添加新的选中状态
+            this.classList.add('selected');
+            this.style.background = '#d4edda';
+            this.style.borderLeft = '4px solid #28a745';
+            selectedRow = this;
+            
+            const eventId = this.getAttribute('data-id');
+            showRainEventDetails(encodeURIComponent(eventId));
+        });
+    });
+}
+
+/**
  * 初始化事件管理模块
  */
 function initEvents() {
-    // 设置默认日期
+    // 设置默认日期（如果存在旧的事件日期输入框）
     initEventDates();
     
-    // 事件查询按钮
-    const btnQueryEvents = document.getElementById('btnQueryEvents');
-    if (btnQueryEvents) {
-        btnQueryEvents.addEventListener('click', async function() {
-            const dateFrom = document.getElementById('eventDateFrom')?.value;
-            const dateTo = document.getElementById('eventDateTo')?.value;
-            const country = document.getElementById('eventCountry')?.value || '';
-            
-            const i18n = typeof t === 'function' ? t : (key) => key;
-            if (!dateFrom || !dateTo) {
-                alert(i18n('form.selectDateRange'));
-                return;
-            }
-            if (dateFrom > dateTo) {
-                alert(i18n('form.startDateAfterEnd'));
-                return;
-            }
-            // 重置到第一页
-            currentPage = 1;
-            await loadRainEvents(dateFrom, dateTo, country, 1, pageSize);
+    // 刷新按钮（使用全局查询结果）
+    const btnRefresh = document.getElementById('btnRefreshEvents');
+    if (btnRefresh) {
+        btnRefresh.addEventListener('click', function() {
+            renderEventsListFromGlobalState();
         });
     }
     
-    // 刷新按钮（重新查询）
-    const btnRefreshEvents = document.getElementById('btnRefreshEvents');
-    if (btnRefreshEvents) {
-        btnRefreshEvents.addEventListener('click', async function() {
-            const dateFrom = document.getElementById('eventDateFrom')?.value;
-            const dateTo = document.getElementById('eventDateTo')?.value;
-            const country = document.getElementById('eventCountry')?.value || '';
-            
-            const i18n = typeof t === 'function' ? t : (key) => key;
-            if (!dateFrom || !dateTo) {
-                alert(i18n('form.selectDateRange'));
-                return;
-            }
-            if (dateFrom > dateTo) {
-                alert(i18n('form.startDateAfterEnd'));
-                return;
-            }
-            // 重置到第一页
-            currentPage = 1;
-            await loadRainEvents(dateFrom, dateTo, country, 1, pageSize);
-        });
-    }
+    // 监听全局查询更新事件
+    document.addEventListener('globalQuery:updated', function() {
+        // 如果当前在事件查询页面，自动刷新列表
+        if (window.router && window.router.getCurrentRoute()?.path === 'events') {
+            renderEventsListFromGlobalState();
+        }
+    });
+    
+    // 监听页面显示事件
+    document.addEventListener('page:show', function(e) {
+        if (e.detail.pageId === 'page-events') {
+            // 页面显示时，检查全局状态并渲染
+            setTimeout(() => {
+                renderEventsListFromGlobalState();
+            }, 100);
+        }
+    });
     
     // 关闭详情面板
     const btnClose = document.getElementById('btnCloseDetails');
@@ -788,3 +1083,7 @@ function initEvents() {
         });
     }
 }
+
+// 将函数暴露到全局作用域，以便其他模块可以直接调用
+window.renderEventsListFromGlobalState = renderEventsListFromGlobalState;
+window.renderEventsList = renderEventsList;

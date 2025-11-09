@@ -226,45 +226,82 @@ async function initI18n() {
  */
 function createLanguageSwitcher() {
     // 检查是否已存在语言切换器
-    if (document.getElementById('languageSwitcher')) {
-        return;
+    let langSwitcher = document.getElementById('languageSwitcher');
+    if (langSwitcher && langSwitcher.children.length > 0) {
+        return; // 已经初始化过了
     }
     
-    // 创建语言切换按钮
-    const header = document.querySelector('.header');
-    if (header) {
-        const langSwitcher = document.createElement('div');
+    // 如果不存在，创建新的
+    if (!langSwitcher) {
+        langSwitcher = document.createElement('div');
         langSwitcher.id = 'languageSwitcher';
-        langSwitcher.style.cssText = 'position: absolute; top: 20px; right: 20px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;';
-        
-        // 支持的语言配置
-        const languages = [
-            { code: 'zh', label: '中文' },
-            { code: 'en', label: 'English' },
-            { code: 'es', label: 'Español' }
-        ];
-        
-        const buttons = {};
-        
-        languages.forEach(lang => {
-            const btn = document.createElement('button');
-            btn.textContent = lang.label;
-            btn.style.cssText = 'padding: 8px 16px; border: 2px solid white; background: ' + (currentLang === lang.code ? 'rgba(255,255,255,0.3)' : 'transparent') + '; color: white; border-radius: 5px; cursor: pointer; font-size: 14px; transition: background 0.2s;';
-            btn.onclick = () => {
-                setLanguage(lang.code);
-                // 更新所有按钮的样式
-                Object.keys(buttons).forEach(code => {
-                    buttons[code].style.background = code === lang.code ? 'rgba(255,255,255,0.3)' : 'transparent';
-                });
-            };
-            buttons[lang.code] = btn;
-            langSwitcher.appendChild(btn);
-        });
-        
-        // 设置header为相对定位
-        header.style.position = 'relative';
-        header.appendChild(langSwitcher);
+        langSwitcher.className = 'top-language-switcher';
+        // 插入到主内容区域
+        const mainContent = document.querySelector('.main-content');
+        if (mainContent) {
+            mainContent.insertBefore(langSwitcher, mainContent.firstChild);
+        }
     }
+    
+    // 清空现有内容
+    langSwitcher.innerHTML = '';
+    langSwitcher.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 1001; display: flex; gap: 8px; align-items: center;';
+    
+    // 添加标签
+    const label = document.createElement('span');
+    label.textContent = '🌐';
+    label.style.cssText = 'font-size: 1.1em; margin-right: 5px;';
+    langSwitcher.appendChild(label);
+    
+    // 支持的语言配置
+    const languages = [
+        { code: 'zh', label: '中文' },
+        { code: 'en', label: 'EN' },
+        { code: 'es', label: 'ES' }
+    ];
+    
+    const buttons = {};
+    
+    languages.forEach(lang => {
+        const btn = document.createElement('button');
+        btn.textContent = lang.label;
+        btn.className = 'lang-btn';
+        btn.style.cssText = `
+            padding: 8px 16px;
+            border: 2px solid #3498db;
+            background: ${currentLang === lang.code ? '#3498db' : 'white'};
+            color: ${currentLang === lang.code ? 'white' : '#3498db'};
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: ${currentLang === lang.code ? '600' : '400'};
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        `;
+        btn.onmouseover = function() {
+            if (currentLang !== lang.code) {
+                this.style.background = '#e8f4fd';
+                this.style.borderColor = '#2980b9';
+            }
+        };
+        btn.onmouseout = function() {
+            if (currentLang !== lang.code) {
+                this.style.background = 'white';
+                this.style.borderColor = '#3498db';
+            }
+        };
+        btn.onclick = () => {
+            setLanguage(lang.code);
+            // 更新所有按钮的样式
+            Object.keys(buttons).forEach(code => {
+                buttons[code].style.background = code === lang.code ? '#3498db' : 'white';
+                buttons[code].style.color = code === lang.code ? 'white' : '#3498db';
+                buttons[code].style.fontWeight = code === lang.code ? '600' : '400';
+            });
+        };
+        buttons[lang.code] = btn;
+        langSwitcher.appendChild(btn);
+    });
 }
 
 // 导出函数供其他模块使用

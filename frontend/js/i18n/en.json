@@ -2,6 +2,8 @@
   "common": {
     "pageTitle": "EU Flood Monitoring System - Real Data Search",
     "headerTitle": "🌊 EU Flood Monitoring System",
+    "headerTitleLine1": "European Union Flood",
+    "headerTitleLine2": "Monitoring System",
     "headerSubtitle": "Real-time search for real flood data - from official weather APIs and social media",
     "close": "✕ Close",
     "na": "N/A",
@@ -73,14 +75,14 @@
   },
   "button": {
     "queryEvents": "🔍 Query Events",
-    "refreshQuery": "🔄 Refresh Query",
     "startDeepSearch": "🔍 Start Deep Search",
     "triggerCheck": "🌧️ Trigger Check",
     "ingestSample": "📥 Ingest Sample Data",
     "processData": "⚙️ Process Data",
     "refreshStats": "🔄 Refresh Statistics",
     "exportCSV": "⬇️ Export CSV",
-    "searchData": "🔍 Search Data"
+    "searchData": "🔍 Search Data",
+    "refresh": "🔄 Refresh"
   },
   "detail": {
     "title": {
@@ -208,6 +210,43 @@
     "chinese": "中文",
     "english": "English",
     "spanish": "Español"
+  },
+  "nav": {
+    "dashboard": "Overview Dashboard",
+    "events": "Event Query",
+    "interpolation": "Spatial Interpolation",
+    "analysis": "Data Analysis",
+    "management": "Data Management"
+  },
+  "query": {
+    "globalQuery": "🌍 Global Query",
+    "quickDate": {
+      "label": "Quick Select:",
+      "latest": "Latest",
+      "today": "Today",
+      "week": "This Week",
+      "month": "This Month"
+    }
+  },
+  "dashboard": {
+    "welcome": "Welcome to EU Flood Monitoring System",
+    "description": "Use the global query function on the left to query rainfall events, then view and analyze data on various pages.",
+    "currentQuery": "Current Query Results:"
+  },
+  "events": {
+    "hint": {
+      "useGlobalQuery": "💡 Tip: Use the global query function on the left to query events, results will be displayed on this page.",
+      "noData": "📭 No event data found matching the criteria",
+      "querySuccess": "✅ Query successful: Found {count} events"
+    }
+  },
+  "analysis": {
+    "comingSoon": "Data Analysis Feature Under Development",
+    "description": "This page will provide data statistics, trend analysis, regional comparison and other functions."
+  },
+  "management": {
+    "comingSoon": "Data Management Feature Under Development",
+    "description": "This page will provide data source management, data synchronization status, data quality monitoring and other functions."
   },
   "country": {
     "countryRegion": "Country/Region",
