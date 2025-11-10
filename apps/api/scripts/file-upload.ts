@@ -10,6 +10,8 @@ import crypto from 'crypto';
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadDir = getUploadDir();
+    console.log('[File Upload] Upload directory:', uploadDir);
+    console.log('[File Upload] File originalname:', file.originalname);
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {

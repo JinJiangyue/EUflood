@@ -236,16 +236,42 @@ function createLanguageSwitcher() {
         langSwitcher = document.createElement('div');
         langSwitcher.id = 'languageSwitcher';
         langSwitcher.className = 'top-language-switcher';
-        // 插入到主内容区域
-        const mainContent = document.querySelector('.main-content');
-        if (mainContent) {
-            mainContent.insertBefore(langSwitcher, mainContent.firstChild);
-        }
+        // 直接插入到body，避免受父元素影响
+        document.body.appendChild(langSwitcher);
     }
     
     // 清空现有内容
     langSwitcher.innerHTML = '';
-    langSwitcher.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 1001; display: flex; gap: 8px; align-items: center;';
+    langSwitcher.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 1001; display: flex; gap: 8px; align-items: center; transition: opacity 0.3s, transform 0.3s;';
+    
+    // 添加滚动监听，向下滚动时隐藏语言选择器
+    let lastScrollTop = 0;
+    let isScrolling = false;
+    
+    window.addEventListener('scroll', function() {
+        if (isScrolling) return;
+        isScrolling = true;
+        
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        
+        if (scrollTop > lastScrollTop && scrollTop > 50) {
+            // 向下滚动，隐藏
+            langSwitcher.style.opacity = '0';
+            langSwitcher.style.transform = 'translateY(-10px)';
+            langSwitcher.style.pointerEvents = 'none';
+        } else if (scrollTop < lastScrollTop || scrollTop <= 50) {
+            // 向上滚动或接近顶部，显示
+            langSwitcher.style.opacity = '1';
+            langSwitcher.style.transform = 'translateY(0)';
+            langSwitcher.style.pointerEvents = 'auto';
+        }
+        
+        lastScrollTop = scrollTop;
+        
+        setTimeout(() => {
+            isScrolling = false;
+        }, 100);
+    }, { passive: true });
     
     // 添加标签
     const label = document.createElement('span');

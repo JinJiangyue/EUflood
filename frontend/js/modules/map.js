@@ -19,7 +19,7 @@ let mapInitializing = window.mapInitializing;
 /**
  * 初始化地图
  */
-function initMap(center = [50, 10], zoom = 6) {
+function initMap(center = [55, 10], zoom = 4) {
     // 如果正在初始化，等待完成
     if (window.mapInitializing) {
         console.log('地图正在初始化中，跳过重复调用');
@@ -345,11 +345,6 @@ function addGeoJSONLayer(geojsonData) {
         }
     }).addTo(map);
     window.geojsonLayer = geojsonLayer; // 更新全局变量
-    
-    // 调整地图视图以适应GeoJSON
-    if (geojsonLayer && geojsonLayer.getBounds) {
-        map.fitBounds(geojsonLayer.getBounds(), { padding: [20, 20] });
-    }
 }
 
 /**
@@ -380,15 +375,6 @@ async function loadDefaultGeoJSON() {
             // 确保地图已初始化（等待而不是重新初始化）
             const waitForMap = (maxAttempts = 10, attempt = 0) => {
                 if (window.map && window.map._leaflet_id) {
-                    // 地图已初始化，计算GeoJSON的边界框并更新视图
-                    try {
-                        const tempGeoJSON = L.geoJSON(data.data);
-                        const bounds = tempGeoJSON.getBounds();
-                        const center = bounds.getCenter();
-                        window.map.setView([center.lat, center.lng], 8);
-                    } catch (e) {
-                        console.warn('更新地图视图时出错:', e);
-                    }
                     return;
                 }
                 
@@ -496,56 +482,6 @@ function addMarkersToMap(points, threshold = 50.0) {
         // 创建图层组
         dataPointsLayer = L.layerGroup(markers);
         window.dataPointsLayer = dataPointsLayer; // 更新全局变量
-        
-        // 调整地图视图以适应所有数据点
-        if (markers.length > 0 && window.map) {
-            map = window.map; // 同步局部变量
-            setTimeout(() => {
-                try {
-                    if (window.geojsonLayer && window.geojsonLayer.getBounds) {
-                        geojsonLayer = window.geojsonLayer;
-                        // 获取GeoJSON边界
-                        const geoBounds = geojsonLayer.getBounds();
-                        const sw = geoBounds.getSouthWest(); // LatLng对象
-                        const ne = geoBounds.getNorthEast(); // LatLng对象
-                        
-                        // 获取所有标记的位置
-                        const markerPositions = markers.map(m => {
-                            const latlng = m.getLatLng();
-                            return [latlng.lat, latlng.lng];
-                        });
-                        
-                        // 创建包含所有点的边界框
-                        const allBounds = L.latLngBounds([
-                            [sw.lat, sw.lng],  // 西南角
-                            [ne.lat, ne.lng],  // 东北角
-                            ...markerPositions // 所有标记点
-                        ]);
-                        
-                        map.fitBounds(allBounds, { padding: [20, 20] });
-                    } else {
-                        // 如果没有GeoJSON图层，只适应标记点
-                        const group = new L.featureGroup(markers);
-                        if (group.getBounds) {
-                            map.fitBounds(group.getBounds(), { padding: [20, 20] });
-                        }
-                    }
-                } catch (boundsError) {
-                    console.warn('调整地图视图时出错:', boundsError);
-                    // 如果出错，至少适应标记点
-                    if (markers.length > 0) {
-                        try {
-                            const group = new L.featureGroup(markers);
-                            if (group.getBounds) {
-                                map.fitBounds(group.getBounds(), { padding: [20, 20] });
-                            }
-                        } catch (e) {
-                            console.warn('适应标记点视图时出错:', e);
-                        }
-                    }
-                }
-            }, 300);
-        }
         
         return markers.length;
     }

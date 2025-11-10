@@ -48,6 +48,7 @@ export function registerPythonModule(app: Express) {
   
   // 文件上传接口
   app.post('/python/upload', (req: Request, res: Response) => {
+    console.log('[Upload] Received upload request');
     uploadSingle(req, res, (err: any) => {
       if (err) {
         console.error('[Upload] Error:', err);
@@ -59,6 +60,7 @@ export function registerPythonModule(app: Express) {
       }
       
       if (!req.file) {
+        console.error('[Upload] No file in request');
         return res.status(400).json({
           success: false,
           error: 'No file uploaded',
@@ -67,7 +69,15 @@ export function registerPythonModule(app: Express) {
       }
       
       try {
+        console.log('[Upload] File uploaded successfully:', {
+          originalname: req.file.originalname,
+          filename: req.file.filename,
+          size: req.file.size,
+          mimetype: req.file.mimetype,
+          path: req.file.path
+        });
         const fileInfo = getFileInfo(req.file, process.cwd());
+        console.log('[Upload] File saved to:', fileInfo.path);
         res.json({
           success: true,
           file: fileInfo
@@ -433,7 +443,7 @@ export function registerPythonModule(app: Express) {
     }
   });
   
-  // 空间插值分析接口
+  // 降雨导入接口
   app.post('/python/interpolation', async (req: Request, res: Response) => {
     try {
       const schema = z.object({
@@ -760,9 +770,11 @@ export function registerPythonModule(app: Express) {
   // 调试：检查路径解析
   app.get('/python/debug/paths', async (_req: Request, res: Response) => {
     try {
-      const { getPythonScriptDir, getGeoFileDir } = await import('./config');
+      const { getPythonScriptDir, getGeoFileDir, getUploadDir, getOutputDir } = await import('./config');
       const scriptDir = getPythonScriptDir();
       const geoFileDir = getGeoFileDir();
+      const uploadDir = getUploadDir();
+      const outputDir = getOutputDir();
       const fs = await import('fs');
       const dataDir = path.join(scriptDir, 'data');
       const nuts3Dir = path.join(geoFileDir, 'nuts3');
@@ -772,6 +784,7 @@ export function registerPythonModule(app: Express) {
       let dataFiles: string[] = [];
       let nuts3Files: string[] = [];
       let cityFiles: string[] = [];
+      let uploadFiles: string[] = [];
       
       if (fs.existsSync(dataDir)) {
         dataFiles = fs.readdirSync(dataDir);
@@ -781,6 +794,9 @@ export function registerPythonModule(app: Express) {
       }
       if (fs.existsSync(cityDir)) {
         cityFiles = fs.readdirSync(cityDir);
+      }
+      if (fs.existsSync(uploadDir)) {
+        uploadFiles = fs.readdirSync(uploadDir);
       }
       
       res.json({
@@ -800,7 +816,18 @@ export function registerPythonModule(app: Express) {
           nuts3Files: nuts3Files.slice(0, 10),
           cityDir,
           cityDirExists: fs.existsSync(cityDir),
-          cityFiles: cityFiles.slice(0, 10)
+          cityFiles: cityFiles.slice(0, 10),
+          uploadDir,
+          uploadDirExists: fs.existsSync(uploadDir),
+          uploadFiles: uploadFiles.slice(0, 20),
+          outputDir,
+          outputDirExists: fs.existsSync(outputDir),
+          env: {
+            UPLOAD_DIR: process.env.UPLOAD_DIR || '(not set)',
+            PYTHON_SCRIPT_DIR: process.env.PYTHON_SCRIPT_DIR || '(not set)',
+            GEO_FILE_DIR: process.env.GEO_FILE_DIR || '(not set)',
+            OUTPUT_DIR: process.env.OUTPUT_DIR || '(not set)'
+          }
         }
       });
     } catch (error: any) {

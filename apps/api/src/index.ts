@@ -1,9 +1,40 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import express from 'express';
 import pino from 'pino';
 import path from 'path';
+import fs from 'fs';
 import { registerRoutes } from './routes';
 import { scheduleTriggerJobs } from './modules/trigger/tasks';
+
+// 确保从项目根目录加载 .env 文件
+// 从当前文件位置向上查找项目根目录（包含 apps 目录的目录）
+let projectRoot: string | null = null;
+let currentDir = __dirname;
+
+for (let i = 0; i < 10; i++) {
+  const appsPath = path.join(currentDir, 'apps');
+  if (fs.existsSync(appsPath) && fs.statSync(appsPath).isDirectory()) {
+    projectRoot = currentDir;
+    break;
+  }
+  const parent = path.dirname(currentDir);
+  if (parent === currentDir) break;
+  currentDir = parent;
+}
+
+// 如果找到了项目根目录，从那里加载 .env 文件
+if (projectRoot) {
+  const envPath = path.join(projectRoot, '.env');
+  if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath });
+  } else {
+    // 回退到默认行为
+    dotenv.config();
+  }
+} else {
+  // 回退到默认行为
+  dotenv.config();
+}
 
 const app = express();
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });

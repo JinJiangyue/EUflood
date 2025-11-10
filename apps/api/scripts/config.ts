@@ -1,4 +1,5 @@
 // Python模块配置
+// 注意：dotenv 已在 src/index.ts 中加载，这里不需要重复加载
 import path from 'path';
 import fs from 'fs';
 
@@ -167,7 +168,9 @@ export function getUploadDir(): string {
   // 如果环境变量指定了路径，使用环境变量
   if (process.env.UPLOAD_DIR) {
     const uploadDir = process.env.UPLOAD_DIR;
+    console.log(`[Config] UPLOAD_DIR environment variable found: ${uploadDir}`);
     if (path.isAbsolute(uploadDir)) {
+      console.log(`[Config] Using absolute path from UPLOAD_DIR: ${uploadDir}`);
       // 确保目录存在
       if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });
@@ -175,23 +178,60 @@ export function getUploadDir(): string {
       return uploadDir;
     }
     // 相对路径：从项目根目录解析
-    const projectRoot = path.resolve(__dirname, '../../../../..');
+    // 先找到项目根目录（包含 apps 目录的目录）
+    let projectRoot: string | null = null;
+    let currentDir = __dirname;
+    
+    // 从 __dirname 向上查找包含 apps 目录的目录
+    for (let i = 0; i < 10; i++) {
+      const appsPath = path.join(currentDir, 'apps');
+      if (fs.existsSync(appsPath) && fs.statSync(appsPath).isDirectory()) {
+        projectRoot = currentDir;
+        break;
+      }
+      const parent = path.dirname(currentDir);
+      if (parent === currentDir) break;
+      currentDir = parent;
+    }
+    
+    // 如果找不到，尝试从 process.cwd() 查找
+    if (!projectRoot) {
+      currentDir = process.cwd();
+      for (let i = 0; i < 10; i++) {
+        const appsPath = path.join(currentDir, 'apps');
+        if (fs.existsSync(appsPath) && fs.statSync(appsPath).isDirectory()) {
+          projectRoot = currentDir;
+          break;
+        }
+        const parent = path.dirname(currentDir);
+        if (parent === currentDir) break;
+        currentDir = parent;
+      }
+    }
+    
+    if (!projectRoot) {
+      // 回退方案：使用 __dirname 向上查找（但不超过文件系统根目录）
+      projectRoot = path.resolve(__dirname, '../../..');
+      console.warn(`[Config] Could not find project root, using fallback: ${projectRoot}`);
+    }
+    
     const resolvedDir = path.resolve(projectRoot, uploadDir);
+    console.log(`[Config] Resolving relative UPLOAD_DIR: ${uploadDir} -> ${resolvedDir} (project root: ${projectRoot})`);
     if (!fs.existsSync(resolvedDir)) {
       fs.mkdirSync(resolvedDir, { recursive: true });
     }
     return resolvedDir;
   }
   
-  // 默认路径：从 process.cwd() 或 __dirname 找到 apps 目录
-  let appsDir: string | null = null;
+  // 默认路径：从 process.cwd() 或 __dirname 找到项目根目录（包含 apps 目录的目录）
+  let projectRoot: string | null = null;
   
-  // 方法1：从 process.cwd() 查找
+  // 方法1：从 process.cwd() 向上查找包含 apps 目录的目录
   let currentDir = process.cwd();
-  for (let i = 0; i < 6; i++) {
-    const dirName = path.basename(currentDir);
-    if (dirName === 'apps') {
-      appsDir = currentDir;
+  for (let i = 0; i < 10; i++) {
+    const appsPath = path.join(currentDir, 'apps');
+    if (fs.existsSync(appsPath) && fs.statSync(appsPath).isDirectory()) {
+      projectRoot = currentDir;
       break;
     }
     const parent = path.dirname(currentDir);
@@ -199,13 +239,13 @@ export function getUploadDir(): string {
     currentDir = parent;
   }
   
-  // 方法2：从 __dirname 向上查找
-  if (!appsDir) {
+  // 方法2：从 __dirname 向上查找包含 apps 目录的目录
+  if (!projectRoot) {
     currentDir = __dirname;
-    for (let i = 0; i < 6; i++) {
-      const dirName = path.basename(currentDir);
-      if (dirName === 'apps') {
-        appsDir = currentDir;
+    for (let i = 0; i < 10; i++) {
+      const appsPath = path.join(currentDir, 'apps');
+      if (fs.existsSync(appsPath) && fs.statSync(appsPath).isDirectory()) {
+        projectRoot = currentDir;
         break;
       }
       const parent = path.dirname(currentDir);
@@ -215,16 +255,19 @@ export function getUploadDir(): string {
   }
   
   let uploadDir: string;
-  if (appsDir) {
-    uploadDir = path.join(appsDir, 'uploads', 'rain_file');
-  } else {
-    // 回退方案：从项目根目录计算
-    const projectRoot = path.resolve(__dirname, '../../../../..');
+  if (projectRoot) {
     uploadDir = path.join(projectRoot, 'apps', 'uploads', 'rain_file');
+  } else {
+    // 回退方案：从 __dirname 向上查找（假设结构为 .../apps/api/dist/scripts）
+    // 向上5级应该能到达项目根目录
+    const fallbackRoot = path.resolve(__dirname, '../../../../..');
+    uploadDir = path.join(fallbackRoot, 'apps', 'uploads', 'rain_file');
+    console.warn(`[Config] Could not find project root, using fallback: ${fallbackRoot}`);
   }
   
   // 确保目录存在
   if (!fs.existsSync(uploadDir)) {
+    console.log(`[Config] Creating upload directory: ${uploadDir}`);
     fs.mkdirSync(uploadDir, { recursive: true });
   }
   

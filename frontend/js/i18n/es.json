@@ -12,7 +12,9 @@
     "success": "Éxito",
     "confirm": "Confirmar",
     "cancel": "Cancelar",
-    "to": "a"
+    "to": "a",
+    "unknownDate": "Fecha Desconocida",
+    "unknownRegion": "Región Desconocida"
   },
   "stats": {
     "totalRecords": "Total de Registros",
@@ -180,7 +182,7 @@
   },
   "interpolation": {
     "title": {
-      "spatialInterpolation": "🗺️ Análisis de Interpolación Espacial"
+      "spatialInterpolation": "📥 Importación de Lluvia"
     },
     "form": {
       "confirmDate": "Confirmar Fecha (se puede modificar manualmente, se usa para generar el ID del evento)",
@@ -214,7 +216,7 @@
   "nav": {
     "dashboard": "Panel de Resumen",
     "events": "Consulta de Eventos",
-    "interpolation": "Interpolación Espacial",
+    "interpolation": "Importación de Lluvia",
     "analysis": "Análisis de Datos",
     "management": "Gestión de Datos"
   },
@@ -231,7 +233,15 @@
   "dashboard": {
     "welcome": "Bienvenido al Sistema de Monitoreo de Inundaciones de la UE",
     "description": "Use la función de consulta global a la izquierda para consultar eventos de lluvia, luego vea y analice datos en varias páginas.",
-    "currentQuery": "Resultados de Consulta Actuales:"
+    "currentQuery": "Resultados de Consulta Actuales:",
+    "map": {
+      "title": "Mapa de Distribución de Eventos"
+    },
+    "recentEvents": "Eventos Recientes",
+    "chart": {
+      "trend": "Tendencia de Eventos",
+      "distribution": "Distribución de Riesgo"
+    }
   },
   "events": {
     "hint": {
@@ -275,6 +285,11 @@
       "fullName": "Nombre Completo",
       "countryNuts3": "País-NUTS3"
     },
-    "geojsonLoaded": "Región GeoJSON cargada (pase el mouse para ver información NUTS)"
+    "geojsonLoaded": "Región GeoJSON cargada (pase el mouse para ver información NUTS)",
+    "popup": {
+      "country": "País",
+      "date": "Fecha",
+      "rainfall": "Precipitación"
+    }
   }
 }

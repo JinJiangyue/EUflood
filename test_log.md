@@ -1,6 +1,6 @@
 # 详细流程日志
 
-生成时间: 2025-11-08 23:06:21
+生成时间: 2025-11-09 12:13:04
 
 ---
 
@@ -9,26 +9,26 @@
 
 **描述**: 记录从输入到输出的完整流程
 
-**时间**: 2025-11-08T23:04:59.468271
+**时间**: 2025-11-09T12:11:50.630854
 
 ---
 
 ### 📥 输入事件数据
 
-**时间**: 2025-11-08T23:04:59.469341
+**时间**: 2025-11-09T12:11:50.630854
 
 ```json
 {
-  "event_id": "20251011_Castellón_1",
+  "event_id": "20251011_Mallorca_1",
   "event_time": "2025-10-11T00:00:00",
-  "location_name": "Torreblanca",
+  "location_name": "Manacor",
   "country": "Spain",
-  "latitude": 40.21129999326259,
-  "longitude": 0.1834999999999463,
-  "rainfall_mm": 96.8,
+  "latitude": 39.556823992947635,
+  "longitude": 3.217780000000038,
+  "rainfall_mm": 58.8,
   "severity": null,
   "data_source": "pr20251011_20251013021010_ext.txt",
-  "province": "Castellón",
+  "province": "Mallorca",
   "threshold": 50,
   "seq": 1
 }
@@ -38,7 +38,7 @@
 
 ### ⚙️ 处理步骤: 地理信息解析
 
-**时间**: 2025-11-08T23:04:59.470332
+**时间**: 2025-11-09T12:11:50.633854
 
 **描述**: 解析事件的地理位置和语言信息
 
@@ -49,7 +49,7 @@
 
 ### ⚙️ 处理步骤: 查询计划生成
 
-**时间**: 2025-11-08T23:04:59.473331
+**时间**: 2025-11-09T12:11:50.636854
 
 **描述**: 生成多语言关键词和搜索渠道配置
 
@@ -61,31 +61,31 @@
 #### EN 语言
 
 - **关键词列表** (6 个):
-  - Castellón, Castellón Spain, Spain, rain, flood, October 11, 2025
-- **搜索查询**: `Castellón Spain rain flood October 11, 2025`
+  - Mallorca, Mallorca Spain, Spain, rain, flood, October 11, 2025
+- **搜索查询**: `Mallorca Spain rain flood October 11, 2025`
 
 #### ES 语言
 
 - **关键词列表** (6 个):
-  - Castellón, Castellón España, España, lluvia, inundación, 11 octubre 2025
-- **搜索查询**: `Castellón España lluvia inundación 11 octubre 2025`
+  - Mallorca, Mallorca España, España, lluvia, inundación, 11 octubre 2025
+- **搜索查询**: `Mallorca España lluvia inundación 11 octubre 2025`
 
 ---
 
 ### 🔍 预过滤结果
 
-**时间**: 2025-11-08T23:05:04.263795
+**时间**: 2025-11-09T12:11:56.872358
 
 - **原始结果**: 16 条
-- **过滤后**: 7 条
-- **移除**: 9 条
+- **过滤后**: 6 条
+- **移除**: 10 条
 
 **被过滤的项（前10条）**:
 
 #### 项 0
 
-- **标题**: Weather alert - Saturday 11 October 2025 Although we have had ...
-- **URL**: https://www.facebook.com/groups/204825200051673/posts/2116990538835120/
+- **标题**: Storm Alice Hits in Spain's Majorca and the Balearic Islands ...
+- **URL**: https://www.travelandtourworld.com/news/article/storm-alice-hits-in-spains-majorca-and-the-balearic-islands-causing-heavy-rain-and-flash-floods-tourists-have-been-urged-to-stay-indoors/
 - **原因**: 关键词不匹配
 - **检查结果**:
   - 时间匹配: ✓
@@ -95,8 +95,8 @@
 
 #### 项 1
 
-- **标题**: Valencia on high alert as torrential rains threaten weekend chaos
-- **URL**: https://euroweeklynews.com/2025/10/11/valencia-on-high-alert-as-torrential-rains-threaten-weekend-chaos/
+- **标题**: Mallorca October 2025 Historical Weather Data (Spain)
+- **URL**: https://weatherspark.com/h/m/150424/2025/10/Historical-Weather-in-October-2025-in-Mallorca-Spain
 - **原因**: 关键词不匹配
 - **检查结果**:
   - 时间匹配: ✓
@@ -106,8 +106,8 @@
 
 #### 项 2
 
-- **标题**: Spain - Oct. 11, 2025 Severe floods in Murcia last night - Facebook
-- **URL**: https://www.facebook.com/cycloneofrhodes/posts/spain-oct-11-2025severe-floods-in-murcia-last-night/1129705479310211/
+- **标题**: Storm Benjamin Strikes Mallorca, Spain | October 2025 - YouTube
+- **URL**: https://www.youtube.com/watch?v=svCghOElZME
 - **原因**: 关键词不匹配
 - **检查结果**:
   - 时间匹配: ✓
@@ -117,8 +117,8 @@
 
 #### 项 3
 
-- **标题**: Spain flooding map: Weather alerts remain in place after homes ...
-- **URL**: https://www.the-independent.com/news/world/europe/spain-flooding-valencia-majorca-rain-storm-alice-b2844841.html
+- **标题**: Mallorca Storms: IS THE WORST OVER? [October 2025] - YouTube
+- **URL**: https://www.youtube.com/watch?v=oES8ovW4yw8
 - **原因**: 关键词不匹配
 - **检查结果**:
   - 时间匹配: ✓
@@ -128,8 +128,8 @@
 
 #### 项 4
 
-- **标题**: New orange weather alert extended across eastern Spain
-- **URL**: https://euroweeklynews.com/2025/10/13/new-orange-weather-alert-extended-across-eastern-spain/
+- **标题**: Mallorca in October: Expert Guide to Weather and Attractions
+- **URL**: https://yes-mallorca-property.com/blog/mallorca/mallorca-in-october-weather-and-events/
 - **原因**: 关键词不匹配
 - **检查结果**:
   - 时间匹配: ✓
@@ -139,8 +139,8 @@
 
 #### 项 5
 
-- **标题**: Eastern Spain Struggles with Severe Flooding from Storm Alice as ...
-- **URL**: https://www.travelandtourworld.com/news/article/eastern-spain-struggles-with-severe-flooding-from-storm-alice-as-valencia-alicante-and-the-balearic-islands-face-major-travel-disruptions/
+- **标题**: Spain hit by MORE floods as streets submerged & storm sparks flight ...
+- **URL**: https://www.the-sun.com/news/15450496/spain-horror-floods-streets-submerged-flight-chaos/
 - **原因**: 关键词不匹配
 - **检查结果**:
   - 时间匹配: ✓
@@ -149,6 +149,17 @@
 - **模式**: strict
 
 #### 项 6
+
+- **标题**: Palma, Balearic Islands, Spain Monthly Weather - AccuWeather
+- **URL**: https://www.accuweather.com/en/es/palma/308014/october-weather/308014
+- **原因**: 关键词不匹配
+- **检查结果**:
+  - 时间匹配: ✓
+  - 地点匹配: ✓
+  - 关键词匹配: ✗
+- **模式**: strict
+
+#### 项 7
 
 - **标题**: Spain battered by heavy rain and floods due to Storm Alice - BBC
 - **URL**: https://www.bbc.com/weather/articles/c8ex0grwxw0o
@@ -159,25 +170,25 @@
   - 关键词匹配: ✗
 - **模式**: strict
 
-#### 项 7
+#### 项 9
 
-- **标题**: Valencia, Castellón and Tarragona at risk from extreme rain
-- **URL**: https://www.euronews.com/green/2025/09/29/valencia-castellon-and-tarragona-at-risk-from-extreme-rain-what-to-do-if-you-receive-a-red
-- **原因**: 时间不匹配, 关键词不匹配
+- **标题**: DANA Alice, el temporal abandona Murcia y golpea notablemente ...
+- **URL**: https://es.euronews.com/green/2025/10/11/la-dana-alice-mantiene-en-alerta-naranja-a-la-comunidad-valenciana-baleares-y-murcia
+- **原因**: 地点不匹配
 - **检查结果**:
-  - 时间匹配: ✗
-  - 地点匹配: ✓
-  - 关键词匹配: ✗
+  - 时间匹配: ✓
+  - 地点匹配: ✗
+  - 关键词匹配: ✓
 - **模式**: strict
 
-#### 项 10
+#### 项 13
 
-- **标题**: La dana 'Alice' del 10 de octubre de 2025| La Aemet rebaja de rojo ...
-- **URL**: https://elpais.com/el-tiempo/2025-10-10/ultima-hora-de-la-dana-alice-el-temporal-en-directo.html
-- **原因**: 时间不匹配
+- **标题**: Vídeo. La tormenta Alice azota el este de España y Baleares con ...
+- **URL**: https://es.euronews.com/video/2025/10/13/la-tormenta-alice-azota-el-este-de-espana-y-baleares-con-inundaciones-y-caos-en-los-viajes
+- **原因**: 地点不匹配
 - **检查结果**:
-  - 时间匹配: ✗
-  - 地点匹配: ✓
+  - 时间匹配: ✓
+  - 地点匹配: ✗
   - 关键词匹配: ✓
 - **模式**: strict
 
@@ -185,7 +196,7 @@
 
 ### 🤖 LLM 请求: 步骤 2 - 时间线和影响提取
 
-**时间**: 2025-11-08T23:05:19.007852
+**时间**: 2025-11-09T12:12:12.702673
 
 - **提供商**: gemini
 - **模型**: gemini-2.5-flash
@@ -211,134 +222,67 @@ You are a professional disaster information extraction expert. You excel at extr
 
 #### 消息 2: user
 
-**内容长度**: 15506 字符
+**内容长度**: 10394 字符
 
 ```
 You are a disaster information extraction expert. Extract timeline and impact assessment from the following verified information sources.
 
 Event Information:
 - Time: 2025-10-11 00:00:00
-- Location: Torreblanca
-- Rainfall: 96.8mm
+- Location: Manacor
+- Rainfall: 58.8mm
 
 Verified Information Sources:
 
-[0] Dana Alice, en directo: última hora de las lluvias en España
+[0] Los efectos de la dana Alice en el este peninsular y Baleares
     Published: None
-    Summary: Asimismo, permanece cortada por la inundación de la vía la carretera CV-1486 en el municipio castellonense de Cabanes
+    Summary: También se ha cortado una carretera por las lluvias en el levante de Mallorca, la carretera de Manacor a Cales de Mallorca, inundada a la altura del punto kilométrico 3, ha informado el Consell de Mallorca. [...] En Pilar de la Horadada han sido evacuados de forma preventiva unos 60 vecinos de sus viviendas por riesgo de inundaciones. A esa localidad ha acudido el presidente de la Generalitat, Carlos Mazón, donde ha asegurado que "sorprendentemente" el momento "más duro de lluvia" fue cuando la Aemet "ya había eliminado la alerta roja".
+    URL: https://www.rtve.es/noticias/20251011/dana-alice-region-murcia/16766363.shtml
 
-Compartir en X
-
-10:30
-
-## Los Bomberos de Cataluña trabajan para reabrir carreteras y caminos anegados mientras la dana remite [...] El temporal de lluvias que aún afecta a zonas de la Comunitat Valenciana por el paso de la dana Alice ha dejado en las últimas horas acumulados de 64,8 litros por metro cuadrado en Nules (Castellón) o 50,2 l/m2 en Borriana (Castellón), según datos de la Asociación Valenciana de Meteorología (Avamet), informa Efe. [...] Compartir en X
-
-11:01
-
-## Cortada al tráfico la CV-603 de Cullera a Tavernes de la Valldigna por inundación
-
-La carretera CV-603 permanece cortada totalmente al tráfico en el tramo entre Cullera y Tavernes de la Valldigna por la inundación de la vía a consecuencia de las intensas precipitaciones registradas en esa zona. Según fuentes de la Dirección General de Tráfico, la carretera está cortada entre el punto kilómetro 0, en Masía del Raco, hasta el kilómetro 9.92 en Tavernes de la Valldigna.
-    URL: https://www.elmundo.es/espana/2025/10/14/68edd9701ee97cbdb6dfadb3-directo.html
-
-[1] Una nueva tormenta descarga sobre La Ribera: 110 litros en una ...
+[1] Un fuerte aguacero provoca graves inundaciones en Porto Cristo
     Published: None
-    Summary: > Rayos de las últimas dos horas. Los blancos son de la última hora. Vemos como hay tormenta en el litoral de Castellón. Esas tormentas litorales son muy peligrosas, porque provocan mucha lluvia en poco tiempo y la zona litoral de Castellón tiene muy cerca sierras litorales. pic.twitter.com/YM1pks04Dm
->
-> — AEMET Comunitat Valenciana (@AEMET\_CValencia) October 11, 2025 [...] # Una nueva tormenta descarga sobre La Ribera: 110 litros en una hora en Carcaixent
-
-## Aemet mantiene activo el aviso naranja por fuertes precipitaciones en el litoral sur de Alicante, el litoral de Castellón y tanto en el litoral como en el interior sur de Valencia
-
-Sara Bonillo
-
-Valencia
-
-Sábado, 11 de octubre 2025, 09:43
-
-Comenta [...] > A esta hora hay tres focos de tormenta con intensidad muy fuerte.  
-> ⚡️Entre Pego y Gandia.  
-> ⚡️Otro que penetra desde el mar por El Saler y El Perelló y se extiende hasta Catadau, en la zona de la Ribera.  
-> ⚡️En el Camp de Morvedre.  
-> (Puntos magenta son rayos de la última hora) pic.twitter.com/bpHMwpiEVh
->
-> — AEMET Comunitat Valenciana (@AEMET\_CValencia) October 11, 2025
-    URL: https://www.lasprovincias.es/comunitat/el-tiempo/tormentas-golpean-fuerza-valencia-aemet-advierte-peor-20251011094337-nt.html
-
-[2] Castellón aún mira al cielo tras dejar las lluvias más de 120l/m² en ...
-    Published: None
-    Summary: ¿Ya estás suscrito? inicia sesión  
+    Summary: Una decena de plantas bajas y varios locales comerciales de Porto Cristo, en la salida hacia Son Servera, sufrieron inundaciones ayer por la tarde a consecuencia de un fuerte aguacero. En algunas calles se acumuló hasta cuarenta centímetros de agua. Los Bombers de Mallorca estuvieron realizando achiques en la zona. Uno de los afectados, José Díaz, propietario del bar Manhattan, se quejó de que «cada vez que llueve un poco fuerte tenemos el mismo problema, este barrio está muy mal». También se [...] registraron inundaciones en otros puntos del Llevant de Mallorca, como Cala Romántica. La Dirección General de Emergencias del Govern difundió ayer por primera vez una alerta a los móviles de los residentes de las comarcas del Llevant y del norte de Mallorca alertando de las fuertes lluvias y recomendando que se eviten las zonas inundables. [...] ¿Ya estás suscrito? inicia sesión  
 Click aquí) para configurar preferencias
 
 Saltar al contenido principal
 Saltar al pie de página
 
-El Periódico Mediterráneo
+Diario de Mallorca
 
-# Castellón aún mira al cielo tras dejar las lluvias más de 120l/m² en tres días
+DANA ALICE MALLORCA | Un fuerte aguacero provoca graves inundaciones en Porto Cristo
 
-## El temporal trae intensas precipitaciones que provocan caídas de árboles, desprendimientos de cornisas e inundaciones
+Oferta
 
-## Aemet mantiene alertas este domingo, aunque prevé que las tormentas se desplacen hacia el norte [...] Desde el inicio del episodio, transcurridas 72 horas, se registran acumulados de precipitaciones destacables, como los 137,4 milímetros de Almenara, los 136,4 de Burriana o los 134,8 de Castelló. Igualmente por encima de los 120 litros queda la Pobla Tornesa, Almassora, Vila-real, les Alqueries, la Llosa o Borriol, según las estaciones de la Associació Valenciana de Meteorologia (Avamet). Sobresale todavía más el observatorio de les Illes Columbretes, que acumula 258,8 litros. [...] El Consorcio Provincial de Bomberos contabiliza hasta esta tarde una quincena de servicios, como la retirada de un árbol de grandes dimensiones caído en el camí la Mar de Almassora o de cascotes en Nules y un auxilio en Moncofa. También en Castelló han actuado los bomberos municipales en más de una treintena de servicios ante la caída de cornisas o árboles y se ha procedido al corte de viales. No faltó el cierre de caminos o carreteras por inundaciones en puntos como Vila-real, Benicàssim,
-    URL: https://www.elperiodicomediterraneo.com/castello-provincia/2025/10/11/castellon-dana-alice-alerta-tiempo-mira-cielo-lluvias-122523350.html
+Seis razones para suscribirte a Diario de Mallorca
 
-[3] La dana Alice provoca lluvias torrenciales y cortes de carreteras en ...
+# Las fuertes lluvias causan inundaciones en locales y bajos de Porto Cristo
+
+## El Govern difunde un mensaje masivo de alerta a los residentes del Llevant y norte de la isla pidiendo precaución
+    URL: https://www.diariodemallorca.es/sucesos/sucesos-mallorca/2025/10/11/fuerte-aguacero-provoca-graves-inundaciones-122519981.html
+
+[2] La DANA inunda Baleares: Alice causa estragos en las islas con ...
     Published: None
-    Summary: En la provincia de Valencia, también se ha cortado por inundaciones la carretera CV-525, de los kilómetros 0 a 5, entre las localidades de Alginet y Algemesí, en ambos sentidos. Asimismo, en Castellón, se ha cortado por inundación la CV-1486 en Cabanes, del kilómetro 0 al 6. Previamente, se habían cerrado al tráfico, también por inundación, la vía secundaria CV-598, a la altura de Montesa, y la V-30 a la altura de Paterna, entre los kilómetros 14 y 14,5, pero ambas ya se han reabierto. [...] Entre las vías afectadas, se encuentra la autopista AP-7 en Pilar de la Horadada, la CV-525 entre Alginet y Algemesí (Valencia) o la CV-1486 en Cabanes (Castellón) por inundaciones en la calzada.
+    Summary: Ushuaia. En Mallorca, las inundaciones han desbordado alcantarillas y cortado carreteras. En Murcia y Valencia, los vecinos evalúan los daños, mientras Cataluña mantiene activo el INUNCAT ante las intensas lluvias previstas. [...] Y varias carreteras, también cortadas. Es el caso de la que va de Manacor a Cales de Mallorca, cerrada por inundación. Previamente, se había informado del cierre de la carretera vieja de Sant Llorenç de Manacor por la cantidad de agua. No obstante, ya está abierta al tráfico. [...] \ Resumen supervisado por periodistas.
 
-En concreto, se cerró a la circulación el túnel de la AP-7 en Pilar de la Horadada, en dirección Murcia, por inundación, del kilómetro 770 a 773. Asimismo, en la misma vía en esta localidad alicantina, en sentido Valencia, se cortó el carril derecho, mientras que se ha reabierto el izquierdo. [...] Las lluvias han sido persistentes de madrugada en Valencia, en el sur de Castellón y en el norte de Alicante, aunque han caído de forma fuerte y casi torrencial en las comarcas valenciana de La Safor y alicantina de la Marina Alta, donde los acumulados en las últimas 72 horas y han rozado los 268 litros por metro cuadrado en Miramar (Valencia), 262 en Gandía, mientras que en las Islas Columbretes (Castellón) ha habido también un acumulado de 254 litros metro cuadrado.
+Escucha esta noticia
 
-### Cortes de carreteras
-    URL: https://elpais.com/espana/comunidad-valenciana/2025-10-11/la-dana-alice-provoca-lluvias-torrenciales-y-cortes-de-carreteras-en-la-comunidad-valenciana.html
+0:00/0:00
 
-[4] Las lluvias se aferran a Castellón tras el paso de 'Alice': nuevas ...
+Alice sigue inundando España. Sigue anegando el este del país. Dejando calles cubiertas de agua. Afectando a cientos y cientos de personas. En esta jornada, han sido las Islas Baleares las más afectadas por una DANA que se ha dejado notar en especial en Formentera e Ibiza.
+    URL: https://www.lasexta.com/noticias/el-tiempo/alice-inunda-baleares-provoca-cortes-luz-carreteras-mallorca-ibiza-formentera_2025101168eaa10de81f417969441088.html
+
+[3] Última hora de la dana, en directo: La influencia de la dana Alice se ...
     Published: None
-    Summary: Desde el organismo han incidido en que serán "tormentas litorales que, aunque sean generales, pueden focalizarse en zonas reducidas del territorio, quedándose estáticas o con movimiento lento, provocando inundaciones por las lluvias in situ y con gran diferencia entre los acumulados entre zonas próximas". [...] Las lluvias se aferran a la provincia de Castellón después de que la dana Aliceafectara este domingo (sigue el minuto a minuto aquí), en lo que han sido sus últimos coletazos, al norte del territorio. Municipios como Vinaròs, Benicarló o Torreblanca han acumulado en apenas unas horas, durante la mañana, más de 50 litros por metro cuadrado, según los datos de la Associació Valenciana de Meteorologia. [...] Las intensas precipitaciones han vuelto a ocasionar incidencias aunque, una vez más, sin daños personales. Ayuntamientos como el de Nules han suspendido de nuevo actos previstos. Y el Consorcio Provincial de Bomberos ha contabilizado 26 servicios durante la mañana, entre ellos el rescate de dos personas del interior de un vehículo atascado por el agua en un camino rural de Benicarló, ambas en buen estado. También han actuado en una decena de saneamientos, en achiques por inundaciones o en la
-    URL: https://www.elperiodicomediterraneo.com/castello-provincia/2025/10/12/tiempo-castellon-lluvias-dana-alice-alertas-lunes-122550016.html
+    Summary: Por tipología, los incidentes que siguen abiertos son 48 inundaciones de edificios y establecimientos -38 en Ibiza, ocho en Mallorca y dos en Formentera-; 15 obstáculos líquidos en la calzada, de los cuales 10 Mallorca, tres en Ibiza, y dos en Formentera; y 14 inundaciones de la vía pública -11 en Ibiza y tres en Mallorca-.
 
-[5] Última hora de la DANA Alice en España, en directo: alerta por ...
-    Published: None
-    Summary: De acuerdo al pronóstico de la Agencia Estatal de Meteorología (Aemet), las lluvias en la Comunidad Valenciana, Cataluña y Baleares pueden ser localmente fuertes y/o persistentes, incluso muy fuertes en Tarragona y Castellón.
+### Marga Prohens: "El problema de Ibiza es que llueve sobre mojado" [...] Emergencias de las Islas Baleares ha activado el Plan METEOBAL en todo el archipiélago debido a las fuertes lluvias y tormentas. Asimismo, se encuentra activo el Plan INUNBAL frente al riesgo de inundaciones:
 
-\Información de EFE
+- Ibiza y Formentera. Ambas islas en Situación Operativa 2.
 
-23:43 hs11/10/2025
+- Mallorca. La isla se encuentra en Situación Operativa 1.
 
-## Inundaciones en Carcalxent por las lluvias de hoy [...] \Información de EFE
-
-21:59 hs11/10/2025
-
-## Imágenes del Barranco de la Saleta en Aldaia (Valencia)
-
-21:54 hs11/10/2025
-
-## La fuerte tormenta deja así las poblaciones de Vinaròs y Benicarló (Castellón)
-
-21:44 hs11/10/2025
-
-## Los bomberos de Ibiza ha atendido 30 incidentes en la isla esta tarde
-
-Los bomberos de Ibiza han atendido 30 incidentes esta tarde (@Consell\_Eivissa) [...] 7 Nov, 2025
-
-España
-
-# Última hora de la DANA Alice en España, en directo: alerta por lluvias “muy intensas” en la Comunidad Valenciana y Baleares
-
-## La situación de inestabilidad provocada por la dana Alice continuará este domingo con lluvias que se irán desplazando hacia el área mediterránea norte, aunque se prevé que irá disminuyendo gradualmente su intensidad
-
-Por  Marta Sierra,Marcos MontalbányPaula Bastante Hernáiz
-
-Seguir en
-
-11 Oct, 2025 03:57 p.m. EST
-
-Guardar
-    URL: https://www.infobae.com/espana/2025/10/11/ultima-hora-de-la-dana-alice-en-espana-en-directo-las-lluvias-dejan-inundaciones-y-desbordamientos-en-el-area-mediterranea/
-
-[6] Las lluvias obligan a cientos de personas a pasar la ... - RTVE.es
-    Published: None
-    Summary: Debido a la inundación de las vías se ha tenido que interrumpir también la circulación de trenes, la línea R-16 de Rodalies entre Ulldecona y Tortosa, por lo que Renfe ha establecido un servicio alternativo por carretera para conectar con la estación de Vinarós, ya en la provincia de Castellón.
-
-El paso del temporal Alice mantiene suspendidos los trenes que conectan Castellón y Barcelona
-    URL: https://www.rtve.es/noticias/20251013/intensas-lluvias-tarragona-inundaciones-incidencias/16767720.shtml
+- Menorca. La isla se encuentra en Situación Operativa 0.
+    URL: https://www.ondacero.es/noticias/eltiempo/dana-alice-agrava-este-fin-semana-aemet-mantiene-nivel-alerta-naranja-fuertes-lluvias_2025101168e9d6639c028a4cad2f463b.html
 
 
 Your Tasks:
@@ -479,10 +423,10 @@ Important Notes:
 
 ### 🤖 LLM 响应: 步骤 2 - 时间线和影响提取
 
-**时间**: 2025-11-08T23:06:03.152538
+**时间**: 2025-11-09T12:12:47.849896
 
 - **提供商**: gemini
-- **原始响应长度**: 7127 字符
+- **原始响应长度**: 4677 字符
 
 **原始响应预览**:
 
@@ -490,12 +434,12 @@ Important Notes:
 {
   "timeline": [
     {
-      "time_slot": "2025-10-09",
+      "time_slot": "2025-10-10 12:00-18:00",
       "events": [
-        "Accumulated rainfall over 72 hours reached 137.4 mm in Almenara, 136.4 mm in Burriana, and 134.8 mm in Castelló. Other areas like Pobla Tornesa, Almassora, Vila-real, les Alqueries, la Llosa, and Borriol also recorded over 120 mm. Les Illes Columbretes accumulated 258.8 mm.",
-        "In Valencia province, Miramar recorded 268 l/m² and Gandía 262 l/m² over the same 72-hour period."
-      ],
-      "highlights": "E
+        "A strong downpour caused severe floods in Porto Cristo.",
+        "A dozen ground floors and several commercial premises in Porto Cristo were flooded, with water accumulating up to 40 centimeters in some streets.",
+        "Mallorca Firefighters were performing water pumping operations in the affected area.",
+        "The General Directorate of Emergencies of the Govern diffused an alert to mobile pho
 ```
 
 **解析后的响应**:
@@ -504,134 +448,89 @@ Important Notes:
 {
   "timeline": [
     {
-      "time_slot": "2025-10-09",
+      "time_slot": "2025-10-10 12:00-18:00",
       "events": [
-        "Accumulated rainfall over 72 hours reached 137.4 mm in Almenara, 136.4 mm in Burriana, and 134.8 mm in Castelló. Other areas like Pobla Tornesa, Almassora, Vila-real, les Alqueries, la Llosa, and Borriol also recorded over 120 mm. Les Illes Columbretes accumulated 258.8 mm.",
-        "In Valencia province, Miramar recorded 268 l/m² and Gandía 262 l/m² over the same 72-hour period."
+        "A strong downpour caused severe floods in Porto Cristo.",
+        "A dozen ground floors and several commercial premises in Porto Cristo were flooded, with water accumulating up to 40 centimeters in some streets.",
+        "Mallorca Firefighters were performing water pumping operations in the affected area.",
+        "The General Directorate of Emergencies of the Govern diffused an alert to mobile phones of residents in the Llevant and northern Mallorca regions, warning of heavy rains and recommending avoiding flood-prone areas."
       ],
-      "highlights": "Extensive rainfall accumulations across Valencia and Castellón provinces over a 72-hour period leading up to Oct 11, with some areas exceeding 250 l/m².",
+      "highlights": "Severe floods in Porto Cristo, multiple premises affected, emergency alert issued.",
       "references": [
+        "index1"
+      ]
+    },
+    {
+      "time_slot": "2025-10-11",
+      "events": [
+        "The road from Manacor to Cales de Mallorca was cut/closed due to flooding at kilometer 3.",
+        "The old road of Sant Llorenç de Manacor was previously closed due to water but is now open to traffic.",
+        "Inundations caused sewers to overflow in Mallorca.",
+        "As of reporting, 8 building and establishment floods were still open incidents in Mallorca.",
+        "10 incidents of liquid obstacles on roads were still open in Mallorca.",
+        "3 incidents of public road floods were still open in Mallorca.",
+        "The Balearic Islands Emergency services activated the METEOBAL Plan across the archipelago and the INUNBAL Plan for flood risk, with Mallorca in Operational Situation 1.",
+        "Approximately 60 residents were preventively evacuated from their homes in Pilar de la Horadada (mainland Spain, related to DANA Alice)."
+      ],
+      "highlights": "Road closures, ongoing floods, overflowing sewers, emergency plans activated, evacuations.",
+      "references": [
+        "index0",
         "index2",
         "index3"
-      ]
-    },
-    {
-      "time_slot": "2025-10-11 00:00-09:00",
-      "events": [
-        "Initial rainfall of 96.8mm recorded in Torreblanca.",
-        "Aemet maintained an orange alert for strong rainfall in the south Alicante coast, Castellón coast, and both coastal and interior south Valencia.",
-        "A new storm discharged 110 liters in one hour in Carcaixent.",
-        "Three very strong storm foci were identified: between Pego and Gandia, penetrating from the sea by El Saler and El Perelló to Catadau, and in Camp de Morvedre.",
-        "Persistent rainfall occurred during the early morning in Valencia, south of Castellón, and north of Alicante."
-      ],
-      "highlights": "Heavy rainfall and strong storms began, leading to high accumulations and orange alerts across the region.",
-      "references": [
-        "Event Information",
-        "index1",
-        "index3"
-      ]
-    },
-    {
-      "time_slot": "2025-10-11 18:00-24:00",
-      "events": [
-        "Ibiza firefighters responded to 30 incidents.",
-        "A strong storm impacted Vinaròs and Benicarló (Castellón).",
-        "Flooding was reported in Carcaixent.",
-        "The Provincial Fire Consortium in Castellón recorded about 15 services, and municipal firefighters in Castelló performed over 30 services, including removing fallen trees and cornices, and cutting off roads."
-      ],
-      "highlights": "Increased emergency service activity and reported flooding in multiple towns, particularly in Castellón and Ibiza.",
-      "references": [
-        "index2",
-        "index5"
-      ]
-    },
-    {
-      "time_slot": "2025-10-12",
-      "events": [
-        "Aemet maintained alerts, predicting storms to shift north.",
-        "Dana Alice's 'last throes' affected the north of Castellón province.",
-        "Over 50 l/m² accumulated in Vinaròs, Benicarló, and Torreblanca during the morning.",
-        "Incidents occurred without personal injuries.",
-        "Nules suspended planned events.",
-        "The Provincial Fire Consortium in Castellón recorded 26 services during the morning, including rescuing two people from a vehicle stuck in water in a rural road of Benicarló, both in good condition.",
-        "The instability was expected to continue, with rains shifting north and intensity gradually decreasing."
-      ],
-      "highlights": "Continued heavy rainfall and emergency responses, particularly in northern Castellón, with no personal injuries reported.",
-      "references": [
-        "index2",
-        "index4",
-        "index5"
-      ]
-    },
-    {
-      "time_slot": "2025-10-13",
-      "events": [
-        "Train service (R-16 Rodalies) was interrupted between Ulldecona and Tortosa due to track flooding; an alternative road service to Vinarós (Castellón) was established.",
-        "Train connections between Castellón and Barcelona were suspended."
-      ],
-      "highlights": "Major disruption to train services due to flooding, affecting routes between Castellón and Barcelona.",
-      "references": [
-        "index6"
-      ]
-    },
-    {
-      "time_slot": "2025-10-14 10:00-12:00",
-      "events": [
-        "Catalonia firefighters worked to reopen flooded roads and paths as the Dana receded.",
-        "Recent rainfall accumulations included 64.8 l/m² in Nules and 50.2 l/m² in Borriana (Castellón).",
-        "The CV-603 from Cullera to Tavernes de la Valldigna (km 0 to 9.92) remained completely cut off due to flooding.",
-        "The CV-1486 in Cabanes (Castellón) also remained cut off due to flooding."
-      ],
-      "highlights": "Ongoing efforts to clear roads, with significant road closures still in effect in Valencia and Castellón provinces.",
-      "references": [
-        "index0"
       ]
     }
   ],
   "impact": {
     "transport": {
-      "summary": "Multiple roads and highways closed or affected by flooding, leading to significant traffic disruptions and suspension of train services.",
+      "summary": "One major road closed, multiple other road disruptions and liquid obstacles reported in Mallorca.",
       "details": [
-        "The CV-1486 in Cabanes (Castellón) was cut off due to flooding.",
-        "The CV-603 from Cullera to Tavernes de la Valldigna was completely cut off for 9.92 km due to flooding.",
-        "The CV-525 between Alginet and Algemesí (Valencia) was cut off for 5 km.",
-        "The AP-7 tunnel in Pilar de la Horadada (Alicante) was closed for 3 km, and one lane of the AP-7 was also cut.",
-        "Roads and paths in Vila-real, Benicàssim, and other points were cut off by inundations, and viales were cut in Castelló.",
-        "Train line R-16 between Ulldecona and Tortosa was interrupted, and train connections between Castellón and Barcelona were suspended.",
-        "Previously closed roads CV-598 (Montesa) and V-30 (Paterna) were reopened."
+        "The road from Manacor to Cales de Mallorca was closed due to flooding.",
+        "The old road of Sant Llorenç de Manacor was temporarily closed but has since reopened.",
+        "10 incidents of liquid obstacles on roads were reported in Mallorca.",
+        "3 public road floods were reported in Mallorca.",
+        "Streets in Porto Cristo accumulated up to 40 centimeters of water."
       ],
       "quantitative_data": {
-        "closed_roads": null,
+        "closed_roads": 1,
         "bridges_damaged": null,
-        "description": "Multiple roads and highways, including CV-1486, CV-603, CV-525, and sections of the AP-7, were closed or affected by flooding. Train services between Castellón and Barcelona were suspended, and the R-16 Rodalies line was interrupted. Firefighters worked to reopen flooded roads and paths.",
+        "description": "One main road closed (Manacor to Cales de Mallorca), another was temporarily closed. 10 liquid obstacles and 3 public road floods reported in Mallorca, with streets in Porto Cristo accumulating up to 40cm of water.",
         "severity_inference": "high",
-        "source": "index0, index2, index3, index6",
+        "source": "index0, index1, index2, index3",
         "confidence": "high"
       }
     },
     "economy": {
-      "summary": "Local events were suspended, indicating some disruption to community activities and potentially local businesses.",
+      "summary": "Multiple commercial premises and ground-floor establishments flooded in Mallorca.",
       "quantitative_data": {
         "estimated_loss": null,
-        "description": "Local councils, such as Nules, suspended planned events, indicating disruption to community activities.",
-        "severity_inference": "low",
-        "source": "index4",
+        "description": "A dozen ground floors and several commercial premises in Porto Cristo were flooded. 8 building and establishment floods were reported as still open incidents in Mallorca.",
+        "severity_inference": "moderate",
+        "source": "index1, index3",
         "confidence": "medium"
       }
     },
     "safety": {
-      "summary": "No personal injuries or deaths reported despite numerous incidents and emergency service interventions. Incidents included fallen trees, cornices, and vehicle rescues.",
+      "summary": "60 residents preventively evacuated; multiple ground-floor homes and establishments flooded. No casualties reported.",
       "quantitative_data": {
-        "injured": 0,
-        "deaths": 0,
-        "evacuated": null,
-        "houses_damaged": null,
+        "injured": null,
+        "deaths": null,
+        "evacuated": 60,
+        "houses_damaged": 10,
         "houses_destroyed": null,
-        "description": "No personal injuries or deaths were reported. Emergency services responded to numerous incidents, including 30 in Ibiza, 15 by Castellón Provincial Fire Consortium on Oct 11, 26 on Oct 12, and over 30 by Castelló municipal firefighters. Incidents involved fallen trees, cornices, and rescuing two people from a vehicle.",
-        "severity_inference": "very_low",
-        "source": "index2, index4, index5",
+        "description": "60 residents preventively evacuated in Pilar de la Horadada. A dozen ground floors (estimated 10) and several commercial premises in Porto Cristo were flooded. 8 building and establishment floods were reported in Mallorca.",
+        "severity_inference": "moderate",
+        "source": "index0, index1, index3",
         "confidence": "high"
       }
+    },
+    "response": {
+      "summary": "Emergency plans activated, alerts issued, and water pumping operations underway.",
+      "details": [
+        "Mallorca Firefighters were performing water pumping operations in Porto Cristo.",
+        "The General Directorate of Emergencies of the Govern diffused an alert to residents of Llevant and northern Mallorca.",
+        "Emergency plans METEOBAL and INUNBAL were activated for the Balearic Islands.",
+        "Mallorca was placed in Operational Situation 1 under the INUNBAL Plan."
+      ]
     }
   }
 }
@@ -641,7 +540,7 @@ Important Notes:
 
 ### 🤖 LLM 请求: 步骤 4 - 报告生成
 
-**时间**: 2025-11-08T23:06:03.153535
+**时间**: 2025-11-09T12:12:47.850897
 
 - **提供商**: gemini
 - **模型**: gemini-2.5-flash
@@ -666,74 +565,45 @@ You are a professional story map writer, skilled at creating immersive narrative
 
 #### 消息 2: user
 
-**内容长度**: 8395 字符
+**内容长度**: 6455 字符
 
 ```
 You are a professional story map writer, skilled at creating immersive narrative reports similar to ArcGIS StoryMaps style. Generate a complete English flood event report based on the following information, using a storytelling narrative approach.
 
 Event Information:
 - Time: 2025-10-11 00:00:00
-- Location: Torreblanca (Castellón, Spain)
+- Location: Manacor (Mallorca, Spain)
 - Local terms: "lluvia" (rain), "inundación" (flood)
 
 Timeline:
-- 2025-10-09: Extensive rainfall accumulations across Valencia and Castellón provinces over a 72-hour period leading up to Oct 11, with some areas exceeding 250 l/m².
-- 2025-10-11 00:00-09:00: Heavy rainfall and strong storms began, leading to high accumulations and orange alerts across the region.
-- 2025-10-11 18:00-24:00: Increased emergency service activity and reported flooding in multiple towns, particularly in Castellón and Ibiza.
-- 2025-10-12: Continued heavy rainfall and emergency responses, particularly in northern Castellón, with no personal injuries reported.
-- 2025-10-13: Major disruption to train services due to flooding, affecting routes between Castellón and Barcelona.
-- 2025-10-14 10:00-12:00: Ongoing efforts to clear roads, with significant road closures still in effect in Valencia and Castellón provinces.
+- 2025-10-10 12:00-18:00: Severe floods in Porto Cristo, multiple premises affected, emergency alert issued.
+- 2025-10-11: Road closures, ongoing floods, overflowing sewers, emergency plans activated, evacuations.
 
 
 Impact Assessment:
-- transport: Multiple roads and highways closed or affected by flooding, leading to significant traffic disruptions and suspension of train services.
-- economy: Local events were suspended, indicating some disruption to community activities and potentially local businesses.
-- safety: No personal injuries or deaths reported despite numerous incidents and emergency service interventions. Incidents included fallen trees, cornices, and vehicle rescues.
+- transport: One major road closed, multiple other road disruptions and liquid obstacles reported in Mallorca.
+- economy: Multiple commercial premises and ground-floor establishments flooded in Mallorca.
+- safety: 60 residents preventively evacuated; multiple ground-floor homes and establishments flooded. No casualties reported.
+- response: Emergency plans activated, alerts issued, and water pumping operations underway.
 
 
 Multimedia & News Sources:
 
-[1] Dana Alice, en directo: última hora de las lluvias en España
-    URL: https://www.elmundo.es/espana/2025/10/14/68edd9701ee97cbdb6dfadb3-directo.html
-    Description: Asimismo, permanece cortada por la inundación de la vía la carretera CV-1486 en el municipio castellonense de Cabanes
+[1] Los efectos de la dana Alice en el este peninsular y Baleares
+    URL: https://www.rtve.es/noticias/20251011/dana-alice-region-murcia/16766363.shtml
+    Description: También se ha cortado una carretera por las lluvias en el levante de Mallorca, la carretera de Manacor a Cales de Mallorca, inundada a la altura del punto kilométrico 3, ha informado el Consell de Mal
 
-Compartir en X
+[2] Un fuerte aguacero provoca graves inundaciones en Porto Cristo
+    URL: https://www.diariodemallorca.es/sucesos/sucesos-mallorca/2025/10/11/fuerte-aguacero-provoca-graves-inundaciones-122519981.html
+    Description: Una decena de plantas bajas y varios locales comerciales de Porto Cristo, en la salida hacia Son Servera, sufrieron inundaciones ayer por la tarde a consecuencia de un fuerte aguacero. En algunas call
 
-10:30
+[3] La DANA inunda Baleares: Alice causa estragos en las islas con ...
+    URL: https://www.lasexta.com/noticias/el-tiempo/alice-inunda-baleares-provoca-cortes-luz-carreteras-mallorca-ibiza-formentera_2025101168eaa10de81f417969441088.html
+    Description: Ushuaia. En Mallorca, las inundaciones han desbordado alcantarillas y cortado carreteras. En Murcia y Valencia, los vecinos evalúan los daños, mientras Cataluña mantiene activo el INUNCAT ante las int
 
-## Los Bomberos de Cataluña trabajan para reabrir carreter
-
-[2] Una nueva tormenta descarga sobre La Ribera: 110 litros en una ...
-    URL: https://www.lasprovincias.es/comunitat/el-tiempo/tormentas-golpean-fuerza-valencia-aemet-advierte-peor-20251011094337-nt.html
-    Description: > Rayos de las últimas dos horas. Los blancos son de la última hora. Vemos como hay tormenta en el litoral de Castellón. Esas tormentas litorales son muy peligrosas, porque provocan mucha lluvia en po
-
-[3] Castellón aún mira al cielo tras dejar las lluvias más de 120l/m² en ...
-    URL: https://www.elperiodicomediterraneo.com/castello-provincia/2025/10/11/castellon-dana-alice-alerta-tiempo-mira-cielo-lluvias-122523350.html
-    Description: ¿Ya estás suscrito? inicia sesión  
-Click aquí) para configurar preferencias
-
-Saltar al contenido principal
-Saltar al pie de página
-
-El Periódico Mediterráneo
-
-# Castellón aún mira al cielo tras dejar
-
-[4] La dana Alice provoca lluvias torrenciales y cortes de carreteras en ...
-    URL: https://elpais.com/espana/comunidad-valenciana/2025-10-11/la-dana-alice-provoca-lluvias-torrenciales-y-cortes-de-carreteras-en-la-comunidad-valenciana.html
-    Description: En la provincia de Valencia, también se ha cortado por inundaciones la carretera CV-525, de los kilómetros 0 a 5, entre las localidades de Alginet y Algemesí, en ambos sentidos. Asimismo, en Castellón
-
-[5] Las lluvias se aferran a Castellón tras el paso de 'Alice': nuevas ...
-    URL: https://www.elperiodicomediterraneo.com/castello-provincia/2025/10/12/tiempo-castellon-lluvias-dana-alice-alertas-lunes-122550016.html
-    Description: Desde el organismo han incidido en que serán "tormentas litorales que, aunque sean generales, pueden focalizarse en zonas reducidas del territorio, quedándose estáticas o con movimiento lento, provoca
-
-[6] Última hora de la DANA Alice en España, en directo: alerta por ...
-    URL: https://www.infobae.com/espana/2025/10/11/ultima-hora-de-la-dana-alice-en-espana-en-directo-las-lluvias-dejan-inundaciones-y-desbordamientos-en-el-area-mediterranea/
-    Description: De acuerdo al pronóstico de la Agencia Estatal de Meteorología (Aemet), las lluvias en la Comunidad Valenciana, Cataluña y Baleares pueden ser localmente fuertes y/o persistentes, incluso muy fuertes 
-
-[7] Las lluvias obligan a cientos de personas a pasar la ... - RTVE.es
-    URL: https://www.rtve.es/noticias/20251013/intensas-lluvias-tarragona-inundaciones-incidencias/16767720.shtml
-    Description: Debido a la inundación de las vías se ha tenido que interrumpir también la circulación de trenes, la línea R-16 de Rodalies entre Ulldecona y Tortosa, por lo que Renfe ha establecido un servicio alter
+[4] Última hora de la dana, en directo: La influencia de la dana Alice se ...
+    URL: https://www.ondacero.es/noticias/eltiempo/dana-alice-agrava-este-fin-semana-aemet-mantiene-nivel-alerta-naranja-fuertes-lluvias_2025101168e9d6639c028a4cad2f463b.html
+    Description: Por tipología, los incidentes que siguen abiertos son 48 inundaciones de edificios y establecimientos -38 en Ibiza, ocho en Mallorca y dos en Formentera-; 15 obstáculos líquidos en la calzada, de los 
 
 
 Generate a structured Markdown report in ArcGIS StoryMaps narrative style, including the following sections:
@@ -810,17 +680,17 @@ Return the Markdown format report directly, without code block markers. The repo
 
 ### 🤖 LLM 响应: 步骤 4 - 报告生成
 
-**时间**: 2025-11-08T23:06:21.887710
+**时间**: 2025-11-09T12:13:04.348967
 
 - **提供商**: gemini
-- **原始响应长度**: 10313 字符
+- **原始响应长度**: 9311 字符
 
 **原始响应预览**:
 
 ```
-# Torreblanca Under Water: A Chronicle of the October 2025 Floods
+# Manacor Under Siege: A Chronicle of Mallorca's October 2025 Floods
 
-The tranquil coastal town of Torreblanca, nestled in Spain's Castellón province, awoke to an unwelcome reality on **October 11, 2025**. What began as persistent "lluvia" (rain) had transformed into a widespread "inundación" (flood) by the early hours, marking the peak of a relentless weather event that would grip the region for days. This report delves into the unfolding drama, tracing the path of the powerful DANA (Depresión Ais
+As the clock struck midnight on **October 11, 2025**, a profound sense of unease settled over Manacor, a vibrant heart of Mallorca, Spain. The island, renowned for its sun-drenched landscapes, was battling a relentless onslaught of **lluvia** (rain) that had transformed familiar streets into raging torrents, bringing widespread **inundación** (flood). This report chronicles the unfolding events, impacts, and the resilient resp
 ```
 
 ---

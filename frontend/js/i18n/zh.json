@@ -12,7 +12,9 @@
     "success": "成功",
     "confirm": "确认",
     "cancel": "取消",
-    "to": "至"
+    "to": "至",
+    "unknownDate": "未知日期",
+    "unknownRegion": "未知地区"
   },
   "stats": {
     "totalRecords": "总记录数",
@@ -180,7 +182,7 @@
   },
   "interpolation": {
     "title": {
-      "spatialInterpolation": "🗺️ 空间插值分析"
+      "spatialInterpolation": "📥 降雨导入"
     },
     "form": {
       "confirmDate": "确认日期（可手动修改，用于生成事件ID）",
@@ -214,7 +216,7 @@
   "nav": {
     "dashboard": "总览仪表盘",
     "events": "事件查询",
-    "interpolation": "空间插值分析",
+    "interpolation": "降雨导入",
     "analysis": "数据分析",
     "management": "数据管理"
   },
@@ -231,7 +233,15 @@
   "dashboard": {
     "welcome": "欢迎使用欧盟洪水监测系统",
     "description": "使用左侧全局查询功能查询降雨事件，然后在各个页面中查看和分析数据。",
-    "currentQuery": "当前查询结果："
+    "currentQuery": "当前查询结果：",
+    "map": {
+      "title": "事件分布地图"
+    },
+    "recentEvents": "最近事件",
+    "chart": {
+      "trend": "事件趋势",
+      "distribution": "风险分布"
+    }
   },
   "events": {
     "hint": {
@@ -275,6 +285,11 @@
       "fullName": "完整名称",
       "countryNuts3": "国家-NUTS3"
     },
-    "geojsonLoaded": "GeoJSON区域已加载（鼠标悬停查看NUTS信息）"
+    "geojsonLoaded": "GeoJSON区域已加载（鼠标悬停查看NUTS信息）",
+    "popup": {
+      "country": "国家",
+      "date": "日期",
+      "rainfall": "降雨量"
+    }
   }
 }

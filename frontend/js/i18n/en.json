@@ -12,7 +12,9 @@
     "success": "Success",
     "confirm": "Confirm",
     "cancel": "Cancel",
-    "to": "to"
+    "to": "to",
+    "unknownDate": "Unknown Date",
+    "unknownRegion": "Unknown Region"
   },
   "stats": {
     "totalRecords": "Total Records",
@@ -180,7 +182,7 @@
   },
   "interpolation": {
     "title": {
-      "spatialInterpolation": "🗺️ Spatial Interpolation Analysis"
+      "spatialInterpolation": "📥 Rainfall Import"
     },
     "form": {
       "confirmDate": "Confirm Date (can be manually modified, used for generating event ID)",
@@ -214,7 +216,7 @@
   "nav": {
     "dashboard": "Overview Dashboard",
     "events": "Event Query",
-    "interpolation": "Spatial Interpolation",
+    "interpolation": "Rainfall Import",
     "analysis": "Data Analysis",
     "management": "Data Management"
   },
@@ -231,7 +233,15 @@
   "dashboard": {
     "welcome": "Welcome to EU Flood Monitoring System",
     "description": "Use the global query function on the left to query rainfall events, then view and analyze data on various pages.",
-    "currentQuery": "Current Query Results:"
+    "currentQuery": "Current Query Results:",
+    "map": {
+      "title": "Event Distribution Map"
+    },
+    "recentEvents": "Recent Events",
+    "chart": {
+      "trend": "Event Trend",
+      "distribution": "Risk Distribution"
+    }
   },
   "events": {
     "hint": {
@@ -275,6 +285,11 @@
       "fullName": "Full Name",
       "countryNuts3": "Country-NUTS3"
     },
-    "geojsonLoaded": "GeoJSON region loaded (hover to view NUTS information)"
+    "geojsonLoaded": "GeoJSON region loaded (hover to view NUTS information)",
+    "popup": {
+      "country": "Country",
+      "date": "Date",
+      "rainfall": "Rainfall"
+    }
   }
 }

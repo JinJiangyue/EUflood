@@ -1,5 +1,5 @@
 /**
- * 空间插值分析模块
+ * 降雨导入模块
  */
 
 let uploadedFileInfo = null;
@@ -57,18 +57,8 @@ function renderPlacesList(points, containerId = 'interpolationPlaces') {
 function initMapAndAddMarkers(points, threshold, statusElement) {
     // 初始化地图（如果还未初始化）
     if (typeof initMap === 'function' && !window.map) {
-        const validPoints = points.filter(p => p.latitude && p.longitude);
-        let center = [50, 10]; // 默认中心（欧洲）
-        let zoom = 6;
-        
-        if (validPoints.length > 0) {
-            const avgLat = validPoints.reduce((sum, p) => sum + p.latitude, 0) / validPoints.length;
-            const avgLon = validPoints.reduce((sum, p) => sum + p.longitude, 0) / validPoints.length;
-            center = [avgLat, avgLon];
-            zoom = 8;
-        }
-        
-        initMap(center, zoom);
+        // 使用与仪表盘相同的初始视图设置
+        initMap([55, 10], 4);
     }
     
     // 等待地图完全初始化后再添加标记
@@ -104,7 +94,7 @@ function initMapAndAddMarkers(points, threshold, statusElement) {
 }
 
 /**
- * 初始化空间插值分析模块
+ * 初始化降雨导入模块
  */
 function initInterpolation() {
     // 设置确认日期输入框的默认值为今天
@@ -346,7 +336,7 @@ function initInterpolation() {
         });
     }
     
-    // 运行空间插值分析
+    // 运行降雨数据处理
     const btnRun = document.getElementById('btnRunInterpolation');
     if (btnRun) {
         btnRun.addEventListener('click', async function() {
@@ -371,7 +361,7 @@ function initInterpolation() {
             btn.textContent = '🗺️ 处理中...';
             if (status) {
                 status.style.display = 'block';
-                status.innerHTML = '<div style="color: #3498db;">正在运行空间插值分析，请稍候（可能需要几分钟）...</div>';
+                status.innerHTML = '<div style="color: #3498db;">正在处理数据，请稍候（可能需要几分钟）...</div>';
             }
             
             try {
@@ -488,7 +478,7 @@ function initInterpolation() {
                 }
             } finally {
                 btn.disabled = false;
-                btn.textContent = '🗺️ 运行空间插值';
+                btn.textContent = '📥 处理降雨数据';
             }
         });
     }

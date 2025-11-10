@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (window.router) {
         window.router.register('dashboard', 'page-dashboard', '总览仪表盘');
         window.router.register('events', 'page-events', '事件查询');
-        window.router.register('interpolation', 'page-interpolation', '空间插值分析');
+        window.router.register('interpolation', 'page-interpolation', '降雨导入');
         window.router.register('analysis', 'page-analysis', '数据分析');
         window.router.register('management', 'page-management', '数据管理');
         window.router.init('dashboard');
@@ -25,9 +25,13 @@ document.addEventListener('DOMContentLoaded', function() {
         initGlobalQuery();
     }
     
-    // 初始化统计数据
-    if (typeof loadStats === 'function') {
-        loadStats();
+    // 初始化统计数据（如果当前在仪表盘页面）
+    if (window.router && window.router.getCurrentRoute()?.path === 'dashboard') {
+        if (typeof initDashboard === 'function') {
+            setTimeout(() => initDashboard(), 300);
+        } else if (typeof loadStats === 'function') {
+            loadStats();
+        }
     }
     
     // 初始化事件管理模块
@@ -35,7 +39,7 @@ document.addEventListener('DOMContentLoaded', function() {
         initEvents();
     }
     
-    // 初始化空间插值分析模块
+    // 初始化降雨导入模块
     if (typeof initInterpolation === 'function') {
         initInterpolation();
     }
@@ -54,12 +58,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // 页面加载时自动初始化地图并加载GeoJSON（仅在空间插值页面）
+    // 页面加载时自动初始化地图并加载GeoJSON（仅在降雨导入页面）
     setTimeout(() => {
         // 初始化地图（如果不存在）
         if (typeof initMap === 'function') {
             if (!window.map && !window.mapInitializing) {
-                // 只在空间插值页面初始化地图
+                // 只在降雨导入页面初始化地图
                 const interpolationPage = document.getElementById('page-interpolation');
                 if (interpolationPage && interpolationPage.style.display !== 'none') {
                     initMap();
@@ -88,7 +92,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, 500);
     
-    // 监听页面切换事件，在空间插值页面显示时初始化地图
+    // 监听页面切换事件，在降雨导入页面显示时初始化地图
     document.addEventListener('page:show', function(e) {
         if (e.detail.pageId === 'page-interpolation') {
             setTimeout(() => {

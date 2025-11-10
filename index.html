@@ -59,8 +59,8 @@
                     <span class="nav-text" data-i18n="nav.events">事件查询</span>
                 </a>
                 <a href="#" class="nav-item" data-route="interpolation">
-                    <span class="nav-icon">🗺️</span>
-                    <span class="nav-text" data-i18n="nav.interpolation">空间插值分析</span>
+                    <span class="nav-icon">📥</span>
+                    <span class="nav-text" data-i18n="nav.interpolation">降雨导入</span>
                 </a>
                 <a href="#" class="nav-item" data-route="analysis">
                     <span class="nav-icon">📈</span>
@@ -75,35 +75,74 @@
         
         <!-- 主内容区 -->
         <main class="main-content">
-            <!-- 语言切换器（右上角） -->
-            <div id="languageSwitcher" class="top-language-switcher"></div>
-            
             <!-- 页面：总览仪表盘 -->
             <div id="page-dashboard" class="page-container">
                 <div class="page-header">
                     <h2 data-i18n="nav.dashboard">📊 总览仪表盘</h2>
                 </div>
                 <div class="page-body">
+                    <!-- 统计卡片区域 -->
                     <div class="stats" id="stats">
                         <div class="stats-grid">
-                            <div class="stat-item">
-                                <div class="stat-number" id="totalRecords">-</div>
-                                <div class="stat-label" data-i18n="stats.totalRecords">总记录数</div>
+                            <div class="stat-card stat-card-primary">
+                                <div class="stat-icon">📊</div>
+                                <div class="stat-content">
+                                    <div class="stat-number" id="totalRecords">-</div>
+                                    <div class="stat-label" data-i18n="stats.totalRecords">总记录数</div>
+                                </div>
                             </div>
-                            <div class="stat-item">
-                                <div class="stat-number" id="processedRecords">-</div>
-                                <div class="stat-label" data-i18n="stats.processedRecords">已处理记录</div>
+                            <div class="stat-card stat-card-success">
+                                <div class="stat-icon">✅</div>
+                                <div class="stat-content">
+                                    <div class="stat-number" id="processedRecords">-</div>
+                                    <div class="stat-label" data-i18n="stats.processedRecords">已处理记录</div>
+                                </div>
                             </div>
-                            <div class="stat-item">
-                                <div class="stat-number" id="averageRisk">-</div>
-                                <div class="stat-label" data-i18n="stats.averageRisk">平均风险</div>
+                            <div class="stat-card stat-card-warning">
+                                <div class="stat-icon">⚠️</div>
+                                <div class="stat-content">
+                                    <div class="stat-number" id="averageRisk">-</div>
+                                    <div class="stat-label" data-i18n="stats.averageRisk">平均风险</div>
+                                </div>
                             </div>
-                            <div class="stat-item">
-                                <div class="stat-number" id="maxWaterLevel">-</div>
-                                <div class="stat-label" data-i18n="stats.maxWaterLevel">最大水位(m)</div>
+                            <div class="stat-card stat-card-danger">
+                                <div class="stat-icon">🌊</div>
+                                <div class="stat-content">
+                                    <div class="stat-number" id="maxWaterLevel">-</div>
+                                    <div class="stat-label" data-i18n="stats.maxWaterLevel">最大水位(m)</div>
+                                </div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- 地图展示区域 -->
+                    <div class="dashboard-map-section">
+                        <div class="section-header">
+                            <h3 data-i18n="dashboard.map.title">🗺️ 事件分布地图</h3>
+                            <div class="map-controls">
+                                <select id="dashboardCountryFilter" class="country-filter-select">
+                                    <option value="" data-i18n="country.allCountries">所有国家</option>
+                                </select>
+                                <button id="btnRefreshMap" class="icon-btn" title="刷新地图" data-i18n-title="button.refresh">🔄</button>
+                            </div>
+                        </div>
+                        <div id="dashboardMapContainer" class="dashboard-map-container">
+                            <div id="dashboardMap" class="dashboard-map"></div>
+                        </div>
+                    </div>
+
+                    <!-- 最近事件列表 -->
+                    <div class="dashboard-section">
+                        <div class="section-header">
+                            <h3 data-i18n="dashboard.recentEvents">🕐 最近事件</h3>
+                            <button id="btnRefreshRecent" class="icon-btn" title="刷新" data-i18n-title="button.refresh">🔄</button>
+                        </div>
+                        <div id="recentEventsList" class="recent-events-list">
+                            <div class="loading-placeholder" data-i18n="common.loading">加载中...</div>
+                        </div>
+                    </div>
+
+                    <!-- 欢迎信息卡片 -->
                     <div class="dashboard-content">
                         <div class="info-card">
                             <h3 data-i18n="dashboard.welcome">欢迎使用欧盟洪水监测系统</h3>
@@ -157,14 +196,14 @@
                 </div>
             </div>
             
-            <!-- 页面：空间插值分析 -->
+            <!-- 页面：降雨导入 -->
             <div id="page-interpolation" class="page-container" style="display: none;">
                 <div class="page-header">
-                    <h2 data-i18n="nav.interpolation">🗺️ 空间插值分析</h2>
+                    <h2 data-i18n="nav.interpolation">📥 降雨导入</h2>
                 </div>
                 <div class="page-body">
                     <div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
-                        <h2 style="margin-bottom: 15px; color: #1e3c72;" data-i18n="interpolation.title.spatialInterpolation">🗺️ 空间插值分析</h2>
+                        <h2 style="margin-bottom: 15px; color: #1e3c72;" data-i18n="interpolation.title.spatialInterpolation">📥 降雨导入</h2>
                         <div style="margin-bottom: 15px;">
                             <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #2c3e50;" data-i18n="file.select.dataFile">选择数据文件（CSV、Excel、TXT）</label>
                             <div style="position: relative; display: inline-block; width: 100%;">
@@ -209,6 +248,24 @@
                     <h2 data-i18n="nav.analysis">📈 数据分析</h2>
                 </div>
                 <div class="page-body">
+                    <!-- 图表区域 -->
+                    <div class="dashboard-charts">
+                        <div class="chart-row">
+                            <div class="chart-card">
+                                <h3 data-i18n="dashboard.chart.trend">📈 事件趋势</h3>
+                                <div class="chart-container">
+                                    <canvas id="trendChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="chart-card">
+                                <h3 data-i18n="dashboard.chart.distribution">📊 风险分布</h3>
+                                <div class="chart-container">
+                                    <canvas id="distributionChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="info-card">
                         <h3 data-i18n="analysis.comingSoon">数据分析功能开发中</h3>
                         <p data-i18n="analysis.description">此页面将提供数据统计、趋势分析、区域对比等功能。</p>
@@ -233,6 +290,9 @@
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     
     <!-- 国际化模块（最先加载） -->
     <script src="frontend/js/i18n.js"></script>
