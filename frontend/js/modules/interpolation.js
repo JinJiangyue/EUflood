@@ -5,26 +5,6 @@
 let uploadedFileInfo = null;
 
 /**
- * 获取 i18n 翻译函数（统一辅助函数）
- */
-function getI18n() {
-    if (typeof t === 'function') {
-        return (key, params) => {
-            const text = t(key);
-            if (params && Object.keys(params).length > 0) {
-                return Object.keys(params).reduce((str, k) => str.replace(`{${k}}`, params[k]), text);
-            }
-            return text;
-        };
-    }
-    return (key, params) => {
-        let text = key;
-        if (params) Object.keys(params).forEach(k => text = text.replace(`{${k}}`, params[k]));
-        return text;
-    };
-}
-
-/**
  * 更新文件选择按钮显示状态
  */
 function updateFileButtonDisplay(fileInput, fileButtonText, fileStatusText) {
@@ -118,6 +98,54 @@ function renderPlacesList(points, containerId = 'interpolationPlaces') {
 }
 
 /**
+ * 确保地图图例存在（使用与首页相同的固定阈值）
+ */
+function ensureMapLegend() {
+    if (!window.map || typeof L === 'undefined') return;
+    
+    // 移除旧图例
+    if (window.mapLegendControl) {
+        window.mapLegendControl.remove();
+        window.mapLegendControl = null;
+    }
+    
+    // 使用与首页相同的固定阈值
+    const MAP_THRESHOLDS = {
+        medium: 50,
+        high: 100
+    };
+    
+    const i18n = getI18n();
+    const legendTitle = i18n('map.legend.title') || '图例';
+    const highLabel = i18n('map.legend.high', { value: MAP_THRESHOLDS.high }) || `> ${MAP_THRESHOLDS.high} mm（高强度）`;
+    const mediumLabel = i18n('map.legend.medium', { min: MAP_THRESHOLDS.medium, max: MAP_THRESHOLDS.high }) || `${MAP_THRESHOLDS.medium}-${MAP_THRESHOLDS.high} mm（中等强度）`;
+    const lowLabel = i18n('map.legend.low', { value: MAP_THRESHOLDS.medium }) || `≤ ${MAP_THRESHOLDS.medium} mm（低强度）`;
+    
+    const legendControl = L.control({ position: 'bottomright' });
+    legendControl.onAdd = function() {
+        const div = L.DomUtil.create('div', 'dashboard-map-legend');
+        div.innerHTML = `
+            <div class="legend-title">${legendTitle}</div>
+            <div class="legend-item">
+                <span class="legend-color high"></span>
+                <div>${highLabel}</div>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color medium"></span>
+                <div>${mediumLabel}</div>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color low"></span>
+                <div>${lowLabel}</div>
+            </div>
+        `;
+        return div;
+    };
+    legendControl.addTo(window.map);
+    window.mapLegendControl = legendControl;
+}
+
+/**
  * 初始化地图并添加标记
  */
 function initMapAndAddMarkers(points, threshold, statusElement) {
@@ -129,24 +157,22 @@ function initMapAndAddMarkers(points, threshold, statusElement) {
     
     // 等待地图完全初始化后再添加标记
     if (typeof addMarkersToMap === 'function') {
-        if (!window.map) {
-            setTimeout(() => {
-                const markerCount = addMarkersToMap(points, threshold);
-                if (statusElement && markerCount > 0) {
-                    const i18n = getI18n();
-                    statusElement.innerHTML += `<div style="margin-top: 10px; color: #27ae60;">✅ ${i18n('interpolation.place.pointsDisplayed', { count: markerCount })}</div>`;
-                } else if (statusElement) {
-                    statusElement.innerHTML += `<div style="margin-top: 10px; color: #f39c12;">⚠️ 没有找到符合条件的数据点</div>`;
-                }
-            }, 500);
-        } else {
+        const addMarkers = () => {
             const markerCount = addMarkersToMap(points, threshold);
+            // 添加图例（使用与首页相同的固定阈值）
+            ensureMapLegend();
             if (statusElement && markerCount > 0) {
                 const i18n = getI18n();
                 statusElement.innerHTML += `<div style="margin-top: 10px; color: #27ae60;">✅ ${i18n('interpolation.place.pointsDisplayed', { count: markerCount })}</div>`;
             } else if (statusElement) {
                 statusElement.innerHTML += `<div style="margin-top: 10px; color: #f39c12;">⚠️ 没有找到符合条件的数据点</div>`;
             }
+        };
+        
+        if (!window.map) {
+            setTimeout(addMarkers, 500);
+        } else {
+            addMarkers();
         }
     }
 }
@@ -159,6 +185,12 @@ function initInterpolation() {
     const confirmedDateInput = document.getElementById('confirmedDateInput');
     if (confirmedDateInput && !confirmedDateInput.value) {
         confirmedDateInput.value = new Date().toISOString().slice(0, 10);
+    }
+    
+    // 设置查询日期输入框的默认值为今天
+    const queryDateInput = document.getElementById('queryDateInput');
+    if (queryDateInput && !queryDateInput.value) {
+        queryDateInput.value = new Date().toISOString().slice(0, 10);
     }
 
     // 同步阈值输入的可编辑状态（grid 时禁用）
@@ -259,20 +291,34 @@ function initInterpolation() {
                 
                 if (data.success) {
                     uploadedFileInfo = data.file;
-                    if (status) {
-                        status.innerHTML = `<div style="color: #27ae60;">${i18n('file.upload.success', { filename: data.file.filename })}</div>`;
-                    }
-                    // 上传成功后，启用"筛选入库"按钮
-                    const btnSave = document.getElementById('btnSaveRainEvents');
-                    if (btnSave) {
-                        btnSave.disabled = false;
-                    }
                     
                     // 更新文件信息
                     const fileInfo = document.getElementById('interpolationFileInfo');
                     if (fileInfo) {
                         fileInfo.innerHTML = 
                             `<strong>${i18n('file.info.fileName')}：</strong>${data.file.filename}<br><strong>${i18n('file.info.fileSize')}：</strong>${(data.file.size / 1024).toFixed(2)} KB`;
+                        fileInfo.style.display = 'block';
+                    }
+                    
+                    // 显示成功消息（使用更明显的样式，并确保显示）
+                    if (status) {
+                        status.style.display = 'block';
+                        status.innerHTML = `<div style="color: #27ae60; padding: 12px 15px; background: #e8f8f0; border-left: 4px solid #27ae60; border-radius: 4px; font-weight: 600; margin-top: 10px;">
+                            ✅ ${i18n('file.upload.success', { filename: data.file.filename })}
+                        </div>`;
+                        
+                        // 确保状态区域可见（延迟一点，确保DOM更新）
+                        setTimeout(() => {
+                            if (status) {
+                                status.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                            }
+                        }, 100);
+                    }
+                    
+                    // 上传成功后，启用"筛选入库"按钮
+                    const btnSave = document.getElementById('btnSaveRainEvents');
+                    if (btnSave) {
+                        btnSave.disabled = false;
                     }
                 } else {
                     throw new Error(data.error || i18n('file.upload.failed'));
@@ -513,6 +559,147 @@ function initInterpolation() {
             } finally {
                 btn.disabled = false;
                 btn.textContent = '📥 处理降雨数据';
+            }
+        });
+    }
+    
+    // 按地址查询降雨数据
+    const btnQueryByLocation = document.getElementById('btnQueryByLocation');
+    if (btnQueryByLocation) {
+        btnQueryByLocation.addEventListener('click', async function() {
+            const addressInput = document.getElementById('queryAddressInput');
+            const dateInput = document.getElementById('queryDateInput');
+            const status = document.getElementById('queryByLocationStatus');
+            const i18n = getI18n();
+            
+            const address = addressInput?.value?.trim();
+            const date = dateInput?.value;
+            
+            if (!address) {
+                if (status) {
+                    status.style.display = 'block';
+                    status.innerHTML = `<div style="color: #e74c3c; padding: 10px; background: #fff5f5; border-left: 4px solid #e74c3c; border-radius: 4px;">
+                        ❌ ${i18n('interpolation.query.addressRequired')}
+                    </div>`;
+                }
+                return;
+            }
+            
+            if (!date) {
+                if (status) {
+                    status.style.display = 'block';
+                    status.innerHTML = `<div style="color: #e74c3c; padding: 10px; background: #fff5f5; border-left: 4px solid #e74c3c; border-radius: 4px;">
+                        ❌ ${i18n('interpolation.query.dateRequired')}
+                    </div>`;
+                }
+                return;
+            }
+            
+            const btn = this;
+            btn.disabled = true;
+            btn.textContent = i18n('interpolation.query.searching');
+            
+            if (status) {
+                status.style.display = 'block';
+                status.innerHTML = `<div style="color: #3498db; padding: 10px; background: #e8f4f8; border-left: 4px solid #3498db; border-radius: 4px;">
+                    🔍 ${i18n('interpolation.query.searching')}...
+                </div>`;
+            }
+            
+            try {
+                // 获取阈值设置（如果输入框为空则不传，让后端使用默认值50）
+                const thInput = document.getElementById('valueThreshold');
+                let threshold = undefined;
+                if (thInput && thInput.value !== undefined && thInput.value !== null && thInput.value !== '') {
+                    const v = parseFloat(thInput.value);
+                    if (!Number.isNaN(v) && Number.isFinite(v) && v >= 0) {
+                        threshold = v;
+                    }
+                }
+                
+                const modeSel = document.getElementById('thresholdMode');
+                const thresholdMode = modeSel && modeSel.value ? modeSel.value : 'grid';
+                
+                const requestBody = {
+                    address: address,
+                    date: date,
+                    threshold_mode: thresholdMode
+                };
+                // 只有当阈值有值时才添加到请求中
+                if (threshold !== undefined) {
+                    requestBody.value_threshold = threshold;
+                }
+                
+                const response = await fetch('/python/rain/query-by-location', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok || !data.success) {
+                    // 翻译错误消息
+                    let errorMsg = data.error || i18n('interpolation.query.searchFailed');
+                    // 常见错误消息的翻译
+                    if (errorMsg.includes('No file found for date')) {
+                        const dateMatch = errorMsg.match(/date\s+([\d-]+)/);
+                        const date = dateMatch ? dateMatch[1] : '';
+                        errorMsg = i18n('interpolation.query.fileNotFound', { date: date }) || `未找到日期 ${date} 对应的文件，请先上传文件`;
+                    } else if (errorMsg.includes('Address not found')) {
+                        errorMsg = i18n('interpolation.query.addressNotFound') || '地址未找到，请提供更具体的地址';
+                    } else if (errorMsg.includes('Geocoding failed')) {
+                        errorMsg = i18n('interpolation.query.geocodingFailed') || '地理编码失败';
+                    } else if (errorMsg.includes('NUTS3')) {
+                        errorMsg = i18n('interpolation.query.nuts3NotFound') || '未找到该位置所在的NUTS3区域';
+                    }
+                    throw new Error(errorMsg);
+                }
+                
+                // 显示成功信息
+                if (status) {
+                    const pointCount = data.data?.points?.length || 0;
+                    status.innerHTML = `<div style="color: #27ae60; padding: 10px; background: #e8f8f0; border-left: 4px solid #27ae60; border-radius: 4px;">
+                        ✅ ${i18n('interpolation.query.searchSuccess', { count: pointCount })}<br>
+                        <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">
+                            ${i18n('interpolation.query.location')}: ${data.location?.address || address}<br>
+                            ${i18n('interpolation.query.filename')}: ${data.filename || ''}
+                        </small>
+                    </div>`;
+                }
+                
+                // 在地图上显示结果
+                if (data.data && data.data.points && data.data.points.length > 0) {
+                    const points = data.data.points;
+                    // 使用实际使用的阈值（如果未传则使用默认值50）
+                    const displayThreshold = threshold !== undefined ? threshold : 50;
+                    
+                    // 显示地点列表
+                    renderPlacesList(points);
+                    
+                    // 在地图上显示标记
+                    initMapAndAddMarkers(points, displayThreshold, status);
+                } else {
+                    if (status) {
+                        status.innerHTML += `<div style="color: #f39c12; padding: 10px; background: #fff8e1; border-left: 4px solid #f39c12; border-radius: 4px; margin-top: 10px;">
+                            ⚠️ ${i18n('interpolation.query.noPointsFound')}
+                        </div>`;
+                    }
+                }
+            } catch (error) {
+                console.error('Query by location error:', error);
+                const errorMsg = error.message || String(error);
+                
+                if (status) {
+                    status.innerHTML = `<div style="color: #e74c3c; padding: 10px; background: #fff5f5; border-left: 4px solid #e74c3c; border-radius: 4px;">
+                        ❌ ${i18n('interpolation.query.searchFailed')}: ${errorMsg}
+                    </div>`;
+                }
+            } finally {
+                btn.disabled = false;
+                btn.textContent = i18n('interpolation.query.search');
             }
         });
     }

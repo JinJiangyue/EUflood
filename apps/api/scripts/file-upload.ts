@@ -5,14 +5,48 @@ import fs from 'fs';
 import { getUploadDir, getOutputDir } from './config';
 import crypto from 'crypto';
 
-// 直接使用原始文件名（同名文件会覆盖）
+// 按年月文件夹存储文件
 // 配置multer存储
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = getUploadDir();
-    console.log('[File Upload] Upload directory:', uploadDir);
-    console.log('[File Upload] File originalname:', file.originalname);
-    cb(null, uploadDir);
+    try {
+      const uploadDir = getUploadDir();
+      
+      // 从文件名中提取日期（格式：pr6_20241001000000.txt 或类似）
+      // 尝试匹配 YYYYMMDD 格式（8位连续数字）
+      const dateMatch = file.originalname.match(/(\d{4})(\d{2})(\d{2})/);
+      let yearMonthDir = uploadDir;
+      
+      if (dateMatch && dateMatch.length >= 3) {
+        const year = dateMatch[1];   // 2024
+        const month = dateMatch[2];  // 10
+        yearMonthDir = path.join(uploadDir, `${year}${month}`);
+        console.log('[File Upload] Extracted date from filename:', { year, month, yearMonth: `${year}${month}` });
+      } else {
+        // 如果没有找到日期，使用当前日期
+        const now = new Date();
+        const year = now.getFullYear().toString();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        yearMonthDir = path.join(uploadDir, `${year}${month}`);
+        console.log('[File Upload] Using current date:', { year, month, yearMonth: `${year}${month}` });
+      }
+      
+      // 确保年月文件夹存在
+      if (!fs.existsSync(yearMonthDir)) {
+        fs.mkdirSync(yearMonthDir, { recursive: true });
+        console.log('[File Upload] Created year-month directory:', yearMonthDir);
+      } else {
+        console.log('[File Upload] Year-month directory already exists:', yearMonthDir);
+      }
+      
+      console.log('[File Upload] Upload directory:', yearMonthDir);
+      console.log('[File Upload] File originalname:', file.originalname);
+      cb(null, yearMonthDir);
+    } catch (error: any) {
+      console.error('[File Upload] Error in destination callback:', error);
+      // 如果出错，回退到根目录
+      cb(null, getUploadDir());
+    }
   },
   filename: (req, file, cb) => {
     // 直接使用原始文件名，同名文件会覆盖
@@ -55,8 +89,9 @@ export const uploadSingle = upload.single('file');
 
 // 获取文件信息
 export function getFileInfo(file: Express.Multer.File, basePath: string) {
-  const uploadDir = getUploadDir();
-  const filePath = path.join(uploadDir, file.filename);
+  // 使用 file.path（multer保存后的完整路径，已包含年月文件夹）
+  // 如果 file.path 不存在，则回退到使用 uploadDir + filename
+  const filePath = file.path || path.join(getUploadDir(), file.filename);
   const fileSize = fs.statSync(filePath).size;
   const fileId = crypto.randomBytes(8).toString('hex');
   
@@ -64,7 +99,7 @@ export function getFileInfo(file: Express.Multer.File, basePath: string) {
     id: fileId,
     originalName: file.originalname,
     filename: file.filename,
-    path: filePath,
+    path: filePath, // 使用multer保存的完整路径（包含年月文件夹）
     relativePath: path.relative(basePath, filePath),
     size: fileSize,
     mimetype: file.mimetype,

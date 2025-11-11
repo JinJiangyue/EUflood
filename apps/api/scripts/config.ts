@@ -4,6 +4,66 @@ import path from 'path';
 import fs from 'fs';
 
 /**
+ * 查找项目根目录（包含 apps 目录的目录）
+ * 会跳过当前目录名为 'apps' 的情况，避免将 apps 目录误认为项目根
+ */
+function findProjectRoot(): string {
+  let projectRoot: string | null = null;
+  
+  // 方法1：从 __dirname 向上查找
+  let currentDir = __dirname;
+  for (let i = 0; i < 10; i++) {
+    const dirName = path.basename(currentDir);
+    // 如果当前目录名是 apps，继续向上查找
+    if (dirName === 'apps') {
+      const parent = path.dirname(currentDir);
+      if (parent === currentDir) break;
+      currentDir = parent;
+      continue;
+    }
+    const appsPath = path.join(currentDir, 'apps');
+    if (fs.existsSync(appsPath) && fs.statSync(appsPath).isDirectory()) {
+      projectRoot = currentDir;
+      break;
+    }
+    const parent = path.dirname(currentDir);
+    if (parent === currentDir) break;
+    currentDir = parent;
+  }
+  
+  // 方法2：如果方法1失败，从 process.cwd() 查找
+  if (!projectRoot) {
+    currentDir = process.cwd();
+    for (let i = 0; i < 10; i++) {
+      const dirName = path.basename(currentDir);
+      // 如果当前目录名是 apps，继续向上查找
+      if (dirName === 'apps') {
+        const parent = path.dirname(currentDir);
+        if (parent === currentDir) break;
+        currentDir = parent;
+        continue;
+      }
+      const appsPath = path.join(currentDir, 'apps');
+      if (fs.existsSync(appsPath) && fs.statSync(appsPath).isDirectory()) {
+        projectRoot = currentDir;
+        break;
+      }
+      const parent = path.dirname(currentDir);
+      if (parent === currentDir) break;
+      currentDir = parent;
+    }
+  }
+  
+  // 回退方案
+  if (!projectRoot) {
+    projectRoot = path.resolve(__dirname, '../../../../..');
+    console.warn(`[Config] Could not find project root, using fallback: ${projectRoot}`);
+  }
+  
+  return projectRoot;
+}
+
+/**
  * 获取Python脚本目录
  */
 export function getPythonScriptDir(): string {
@@ -20,34 +80,9 @@ export function getPythonScriptDir(): string {
       }
     } else {
       // 相对路径：从项目根目录解析
-      // 先尝试从 __dirname 找到项目根目录
-      let projectRoot: string | null = null;
-      let currentDir = __dirname;
-      
-      // 向上查找，直到找到包含 'apps' 的目录
-      for (let i = 0; i < 6; i++) {
-        const dirName = path.basename(currentDir);
-        if (dirName === 'apps' || currentDir.includes('apps' + path.sep) || currentDir.includes('apps\\')) {
-          // 找到 apps 目录，项目根目录是其父目录
-          projectRoot = path.dirname(currentDir);
-          break;
-        }
-        const parent = path.dirname(currentDir);
-        if (parent === currentDir) {
-          // 到达根目录，使用默认方法
-          projectRoot = path.resolve(__dirname, '../../../../..');
-          break;
-        }
-        currentDir = parent;
-      }
-      
-      if (!projectRoot) {
-        projectRoot = path.resolve(__dirname, '../../../../..');
-      }
-      
+      const projectRoot = findProjectRoot();
       const resolvedDir = path.resolve(projectRoot, scriptDir);
-      console.log(`[Config] Resolving PYTHON_SCRIPT_DIR: ${scriptDir} -> ${resolvedDir}`);
-      console.log(`[Config] Project root: ${projectRoot}`);
+      console.log(`[Config] Resolving PYTHON_SCRIPT_DIR: ${scriptDir} -> ${resolvedDir} (project root: ${projectRoot})`);
       
       if (fs.existsSync(resolvedDir)) {
         console.log(`[Config] Using PYTHON_SCRIPT_DIR (relative): ${resolvedDir}`);
@@ -178,43 +213,7 @@ export function getUploadDir(): string {
       return uploadDir;
     }
     // 相对路径：从项目根目录解析
-    // 先找到项目根目录（包含 apps 目录的目录）
-    let projectRoot: string | null = null;
-    let currentDir = __dirname;
-    
-    // 从 __dirname 向上查找包含 apps 目录的目录
-    for (let i = 0; i < 10; i++) {
-      const appsPath = path.join(currentDir, 'apps');
-      if (fs.existsSync(appsPath) && fs.statSync(appsPath).isDirectory()) {
-        projectRoot = currentDir;
-        break;
-      }
-      const parent = path.dirname(currentDir);
-      if (parent === currentDir) break;
-      currentDir = parent;
-    }
-    
-    // 如果找不到，尝试从 process.cwd() 查找
-    if (!projectRoot) {
-      currentDir = process.cwd();
-      for (let i = 0; i < 10; i++) {
-        const appsPath = path.join(currentDir, 'apps');
-        if (fs.existsSync(appsPath) && fs.statSync(appsPath).isDirectory()) {
-          projectRoot = currentDir;
-          break;
-        }
-        const parent = path.dirname(currentDir);
-        if (parent === currentDir) break;
-        currentDir = parent;
-      }
-    }
-    
-    if (!projectRoot) {
-      // 回退方案：使用 __dirname 向上查找（但不超过文件系统根目录）
-      projectRoot = path.resolve(__dirname, '../../..');
-      console.warn(`[Config] Could not find project root, using fallback: ${projectRoot}`);
-    }
-    
+    const projectRoot = findProjectRoot();
     const resolvedDir = path.resolve(projectRoot, uploadDir);
     console.log(`[Config] Resolving relative UPLOAD_DIR: ${uploadDir} -> ${resolvedDir} (project root: ${projectRoot})`);
     if (!fs.existsSync(resolvedDir)) {
@@ -223,47 +222,9 @@ export function getUploadDir(): string {
     return resolvedDir;
   }
   
-  // 默认路径：从 process.cwd() 或 __dirname 找到项目根目录（包含 apps 目录的目录）
-  let projectRoot: string | null = null;
-  
-  // 方法1：从 process.cwd() 向上查找包含 apps 目录的目录
-  let currentDir = process.cwd();
-  for (let i = 0; i < 10; i++) {
-    const appsPath = path.join(currentDir, 'apps');
-    if (fs.existsSync(appsPath) && fs.statSync(appsPath).isDirectory()) {
-      projectRoot = currentDir;
-      break;
-    }
-    const parent = path.dirname(currentDir);
-    if (parent === currentDir) break;
-    currentDir = parent;
-  }
-  
-  // 方法2：从 __dirname 向上查找包含 apps 目录的目录
-  if (!projectRoot) {
-    currentDir = __dirname;
-    for (let i = 0; i < 10; i++) {
-      const appsPath = path.join(currentDir, 'apps');
-      if (fs.existsSync(appsPath) && fs.statSync(appsPath).isDirectory()) {
-        projectRoot = currentDir;
-        break;
-      }
-      const parent = path.dirname(currentDir);
-      if (parent === currentDir) break;
-      currentDir = parent;
-    }
-  }
-  
-  let uploadDir: string;
-  if (projectRoot) {
-    uploadDir = path.join(projectRoot, 'apps', 'uploads', 'rain_file');
-  } else {
-    // 回退方案：从 __dirname 向上查找（假设结构为 .../apps/api/dist/scripts）
-    // 向上5级应该能到达项目根目录
-    const fallbackRoot = path.resolve(__dirname, '../../../../..');
-    uploadDir = path.join(fallbackRoot, 'apps', 'uploads', 'rain_file');
-    console.warn(`[Config] Could not find project root, using fallback: ${fallbackRoot}`);
-  }
+  // 默认路径：从项目根目录构建
+  const projectRoot = findProjectRoot();
+  const uploadDir = path.join(projectRoot, 'apps', 'uploads', 'rain_file');
   
   // 确保目录存在
   if (!fs.existsSync(uploadDir)) {
@@ -287,44 +248,41 @@ export function getGeoFileDir(): string {
       if (!fs.existsSync(geoFileDir)) fs.mkdirSync(geoFileDir, { recursive: true });
       return geoFileDir;
     }
-    // 相对路径：严格以项目根为基准。用 getUploadDir() 可靠推断项目根
-    // uploadDir 形如: <projectRoot>/apps/uploads/rain_file
-    const uploadDir = getUploadDir();
-    const uploadsRoot = path.dirname(uploadDir); // <projectRoot>/apps/uploads
-    const projectRoot = path.dirname(uploadsRoot); // <projectRoot>/apps -> 再上一级得到 <projectRoot>
-    const realProjectRoot = path.dirname(projectRoot); // <projectRoot>
-    const resolvedDir = path.resolve(realProjectRoot, geoFileDir);
+    // 相对路径：从项目根目录解析
+    const projectRoot = findProjectRoot();
+    
+    // 解析路径
+    let resolvedDir: string;
+    if (geoFileDir.startsWith('apps/') || geoFileDir.startsWith('apps\\')) {
+      // 如果路径以 apps/ 开头，直接从项目根解析
+      resolvedDir = path.resolve(projectRoot, geoFileDir);
+    } else {
+      // 否则，假设是相对于 apps/uploads 的路径
+      const uploadsRoot = path.join(projectRoot, 'apps', 'uploads');
+      resolvedDir = path.resolve(uploadsRoot, geoFileDir);
+    }
+    
+    console.log(`[Config] Resolving GEO_FILE_DIR: ${geoFileDir} -> ${resolvedDir} (project root: ${projectRoot})`);
     if (!fs.existsSync(resolvedDir)) fs.mkdirSync(resolvedDir, { recursive: true });
     return resolvedDir;
   }
   
-  // 默认路径：沿用上传目录的父级（apps/uploads）
-  try {
-    const uploadDir = getUploadDir();
-    const uploadsRoot = path.dirname(uploadDir); // apps/uploads
-    const geoFileDir = path.join(uploadsRoot, 'geofile');
-    if (!fs.existsSync(geoFileDir)) {
-      fs.mkdirSync(geoFileDir, { recursive: true });
-    }
-    // 同时确保常用子目录存在，避免后续访问失败
-    const nuts3Dir = path.join(geoFileDir, 'nuts3');
-    const cityDir = path.join(geoFileDir, 'city');
-    if (!fs.existsSync(nuts3Dir)) {
-      fs.mkdirSync(nuts3Dir, { recursive: true });
-    }
-    if (!fs.existsSync(cityDir)) {
-      fs.mkdirSync(cityDir, { recursive: true });
-    }
-    return geoFileDir;
-  } catch (err) {
-    // 回退方案：从项目根目录计算
-    const projectRoot = path.resolve(__dirname, '../../../../..');
-    const geoFileDir = path.join(projectRoot, 'apps', 'uploads', 'geofile');
-    if (!fs.existsSync(geoFileDir)) {
-      fs.mkdirSync(geoFileDir, { recursive: true });
-    }
-    return geoFileDir;
+  // 默认路径：从项目根目录构建
+  const projectRoot = findProjectRoot();
+  const geoFileDir = path.join(projectRoot, 'apps', 'uploads', 'geofile');
+  if (!fs.existsSync(geoFileDir)) {
+    fs.mkdirSync(geoFileDir, { recursive: true });
   }
+  // 同时确保常用子目录存在，避免后续访问失败
+  const nuts3Dir = path.join(geoFileDir, 'nuts3');
+  const cityDir = path.join(geoFileDir, 'city');
+  if (!fs.existsSync(nuts3Dir)) {
+    fs.mkdirSync(nuts3Dir, { recursive: true });
+  }
+  if (!fs.existsSync(cityDir)) {
+    fs.mkdirSync(cityDir, { recursive: true });
+  }
+  return geoFileDir;
 }
 
 /**

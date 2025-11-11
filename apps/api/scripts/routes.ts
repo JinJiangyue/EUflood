@@ -39,6 +39,50 @@ function buildGridThresholdArgs(
   return args;
 }
 
+/**
+ * 查找第一个存在的文件路径
+ */
+function findFirstExisting(candidates: string[]): string | undefined {
+  return candidates.find(p => fs.existsSync(p));
+}
+
+/**
+ * 构建NUTS3文件候选列表
+ */
+function buildNutsCandidates(geoFileDir: string, reqNuts?: string): string[] {
+  const candidates = [
+    reqNuts,
+    path.join(geoFileDir, 'nuts3', 'NUTS_RG_20M_2021_4326.gpkg'),
+    path.join(geoFileDir, 'nuts3', 'NUTS_RG_20M_2021_4326.geojson'),
+    path.join(geoFileDir, 'nuts3', 'domain_xinyu_20250729_093415.geojson')
+  ];
+  return candidates.filter(Boolean) as string[];
+}
+
+/**
+ * 构建LAU文件候选列表
+ */
+function buildLauCandidates(geoFileDir: string, reqLau?: string): string[] {
+  const candidates = [
+    reqLau,
+    path.join(geoFileDir, 'city', 'LAU_2019.gpkg'),
+    path.join(geoFileDir, 'city', 'LAU_2019.geojson')
+  ];
+  return candidates.filter(Boolean) as string[];
+}
+
+/**
+ * 解析数据文件路径（支持绝对路径和相对路径）
+ */
+function resolveDataPath(p: string | undefined, geoFileDir: string, subdir?: string): string | undefined {
+  if (!p) return undefined;
+  if (path.isAbsolute(p)) return p;
+  if (subdir) {
+    return path.join(geoFileDir, subdir, p);
+  }
+  return p;
+}
+
 export function registerPythonModule(app: Express) {
   console.log('[Python Module] Registering Python module routes...');
   
@@ -80,7 +124,7 @@ export function registerPythonModule(app: Express) {
   // 文件上传接口
   app.post('/python/upload', (req: Request, res: Response) => {
     console.log('[Upload] Received upload request');
-    uploadSingle(req, res, (err: any) => {
+    uploadSingle(req, res, async (err: any) => {
       if (err) {
         console.error('[Upload] Error:', err);
         return res.status(400).json({
@@ -100,18 +144,30 @@ export function registerPythonModule(app: Express) {
       }
       
       try {
+        const fileInfo = getFileInfo(req.file, process.cwd());
         console.log('[Upload] File uploaded successfully:', {
           originalname: req.file.originalname,
           filename: req.file.filename,
           size: req.file.size,
           mimetype: req.file.mimetype,
-          path: req.file.path
+          path: req.file.path,
+          finalPath: fileInfo.path
         });
-        const fileInfo = getFileInfo(req.file, process.cwd());
         console.log('[Upload] File saved to:', fileInfo.path);
+        
+        // 验证文件是否真的存在于指定路径
+        const fs = await import('fs');
+        if (!fs.existsSync(fileInfo.path)) {
+          console.error('[Upload] WARNING: File not found at expected path:', fileInfo.path);
+          console.error('[Upload] Actual file path from multer:', req.file.path);
+          // 使用multer的实际路径
+          fileInfo.path = req.file.path;
+        }
+        
         res.json({
           success: true,
-          file: fileInfo
+          file: fileInfo,
+          message: `File uploaded successfully to ${fileInfo.path}`
         });
       } catch (error: any) {
         console.error('[Upload] Processing error:', error);
@@ -231,11 +287,10 @@ export function registerPythonModule(app: Express) {
         const { getGeoFileDir } = await import('./config');
         const geoFileDir = getGeoFileDir();
         const fs = await import('fs');
-        const pathMod = await import('path');
 
         // 默认域 GeoJSON（从新位置读取）
         let geojsonPath: string | undefined;
-        const defaultGeo = pathMod.join(geoFileDir, 'nuts3', 'domain_xinyu_20250729_093415.geojson');
+        const defaultGeo = path.join(geoFileDir, 'nuts3', 'domain_xinyu_20250729_093415.geojson');
         if (fs.existsSync(defaultGeo)) {
           geojsonPath = defaultGeo;
         }
@@ -243,34 +298,14 @@ export function registerPythonModule(app: Express) {
         // 阈值网格（NC）默认目录：与 uploads 同级的 threshold_file
         const { getUploadDir } = await import('./config');
         const uploadDir = getUploadDir();
-        const uploadsRoot = pathMod.dirname(uploadDir);
-        const thresholdDir = pathMod.join(uploadsRoot, 'threshold_file');
+        const uploadsRoot = path.dirname(uploadDir);
+        const thresholdDir = path.join(uploadsRoot, 'threshold_file');
 
         // NUTS/LAU 候选（优先请求体覆盖，其次默认，使用新位置）
-        const resolveDataPath = (p?: string, subdir?: string) => {
-          if (!p) return undefined;
-          if (pathMod.isAbsolute(p)) return p;
-          if (subdir) {
-            return pathMod.join(geoFileDir, subdir, p);
-          }
-          return p;
-        };
-        const reqNuts = resolveDataPath((req.body as any)?.nuts_file, 'nuts3');
-        const reqLau = resolveDataPath((req.body as any)?.lau_file, 'city');
-        const nutsCandidates = [
-          reqNuts,
-          pathMod.join(geoFileDir, 'nuts3', 'NUTS_RG_20M_2021_4326.gpkg'),
-          pathMod.join(geoFileDir, 'nuts3', 'NUTS_RG_20M_2021_4326.geojson'),
-          pathMod.join(geoFileDir, 'nuts3', 'domain_xinyu_20250729_093415.geojson')
-        ].filter(Boolean) as string[];
-        const lauCandidates = [
-          reqLau,
-          pathMod.join(geoFileDir, 'city', 'LAU_2019.gpkg'),
-          pathMod.join(geoFileDir, 'city', 'LAU_2019.geojson')
-        ].filter(Boolean) as string[];
-        const findFirstExisting = (cands: string[]) => cands.find(p => fs.existsSync(p));
-        const nuts_file = findFirstExisting(nutsCandidates);
-        const lau_file = findFirstExisting(lauCandidates);
+        const reqNuts = resolveDataPath((req.body as any)?.nuts_file, geoFileDir, 'nuts3');
+        const reqLau = resolveDataPath((req.body as any)?.lau_file, geoFileDir, 'city');
+        const nuts_file = findFirstExisting(buildNutsCandidates(geoFileDir, reqNuts));
+        const lau_file = findFirstExisting(buildLauCandidates(geoFileDir, reqLau));
 
         // 调用 Python 插值脚本（传递阈值/域GeoJSON/LAU，并启用每多边形取最大值）
         const pyArgs: Record<string, any> = {
@@ -287,7 +322,8 @@ export function registerPythonModule(app: Express) {
         const result = await executePythonScriptJSON<any>('interpolation.py', pyArgs, { timeout: 120000 });
 
         if (!result.success) {
-          cleanupFile(inputFile);
+          // 不再删除文件，保留原始文件
+          // cleanupFile(inputFile);
           return res.status(500).json({ success: false, error: result.error || 'interpolation failed' });
         }
 
@@ -402,7 +438,8 @@ export function registerPythonModule(app: Express) {
         }
 
         tx(rows);
-        cleanupFile(inputFile);
+        // 不再删除文件，保留原始文件以便后续查询
+        // cleanupFile(inputFile);
         // 返回入库结果和插值数据（用于前端显示）
         // data 是 Python 返回的整个对象：{ success: true, summary: {...}, points: [...] }
         return res.json({ 
@@ -582,38 +619,13 @@ export function registerPythonModule(app: Express) {
       }
       
       // 查找 NUTS/LAU 数据源（可选，支持多候选与请求体覆盖）
-      const resolveDataPath = (p?: string, subdir?: string) => {
-        if (!p) return undefined;
-        if (path.isAbsolute(p)) return p;
-        // 如果指定了子目录，使用新的地理数据目录
-        if (subdir) {
-          return path.join(geoFileDir, subdir, p);
-        }
-        return p;
-      };
-
       // 允许请求体直接传入（可选）
-      const reqNuts = resolveDataPath((req.body as any).nuts_file, 'nuts3');
-      const reqLau = resolveDataPath((req.body as any).lau_file, 'city');
+      const reqNuts = resolveDataPath((req.body as any).nuts_file, geoFileDir, 'nuts3');
+      const reqLau = resolveDataPath((req.body as any).lau_file, geoFileDir, 'city');
 
       // 默认候选列表（使用新的地理数据目录）
-      const nutsCandidates = [
-        reqNuts,
-        path.join(geoFileDir, 'nuts3', 'NUTS_RG_20M_2021_4326.gpkg'),
-        path.join(geoFileDir, 'nuts3', 'NUTS_RG_20M_2021_4326.geojson'),
-        path.join(geoFileDir, 'nuts3', 'domain_xinyu_20250729_093415.geojson')
-      ].filter(Boolean) as string[];
-
-      const lauCandidates = [
-        reqLau,
-        // 使用新位置的 LAU 数据源（优先）
-        path.join(geoFileDir, 'city', 'LAU_2019.gpkg'),
-        path.join(geoFileDir, 'city', 'LAU_2019.geojson')
-      ].filter(Boolean) as string[];
-
-      const findFirstExisting = (cands: string[]) => cands.find(p => fs.existsSync(p));
-      const nuts_file = findFirstExisting(nutsCandidates);
-      const lau_file = findFirstExisting(lauCandidates);
+      const nuts_file = findFirstExisting(buildNutsCandidates(geoFileDir, reqNuts));
+      const lau_file = findFirstExisting(buildLauCandidates(geoFileDir, reqLau));
 
       // 阈值模式与网格参数（可选）
       // 阈值模式优先顺序：请求体 > 环境变量 DEFAULT_THRESHOLD_MODE > fixed
@@ -762,6 +774,206 @@ export function registerPythonModule(app: Express) {
       res.status(500).json({
         success: false,
         error: e?.message || String(e)
+      });
+    }
+  });
+
+  // 根据地址和时间查询NUTS3区域内的降雨点
+  app.post('/python/rain/query-by-location', async (req: Request, res: Response) => {
+    try {
+      const schema = z.object({
+        address: z.string().min(1, 'Address is required'),
+        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
+        value_threshold: z.number().optional(),
+        threshold_mode: z.enum(['grid', 'fixed']).optional().default('grid')
+      });
+      
+      const { address, date, value_threshold, threshold_mode } = schema.parse(req.body);
+      
+      // 默认阈值设为50
+      const finalThreshold = value_threshold !== undefined ? value_threshold : 50;
+      
+      // 1. 地理编码：将地址转换为坐标
+      let lat: number, lon: number;
+      try {
+        const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
+        const geocodeRes = await fetch(geocodeUrl, {
+          headers: {
+            'User-Agent': 'EUFlood/1.0'
+          }
+        });
+        
+        if (!geocodeRes.ok) {
+          throw new Error('Geocoding service unavailable');
+        }
+        
+        const geocodeData = await geocodeRes.json();
+        if (!geocodeData || geocodeData.length === 0) {
+          return res.status(404).json({
+            success: false,
+            error: 'Address not found. Please provide a more specific address.'
+          });
+        }
+        
+        lat = parseFloat(geocodeData[0].lat);
+        lon = parseFloat(geocodeData[0].lon);
+      } catch (error: any) {
+        return res.status(500).json({
+          success: false,
+          error: `Geocoding failed: ${error.message}`
+        });
+      }
+      
+      // 2. 根据日期查找对应的txt文件（从上传目录中查找，支持年月文件夹）
+      const { getUploadDir } = await import('./config');
+      const uploadDir = getUploadDir();
+      const fs = await import('fs');
+      
+      // 将日期格式从 YYYY-MM-DD 转换为年月文件夹格式（如 202410）
+      const dateParts = date.split('-');
+      const yearMonth = dateParts[0] + dateParts[1]; // YYYYMM
+      const dateStr = dateParts.join(''); // YYYYMMDD
+      
+      // 先尝试在年月文件夹中查找
+      const yearMonthDir = path.join(uploadDir, yearMonth);
+      let matchingFiles: string[] = [];
+      
+      if (fs.existsSync(yearMonthDir) && fs.statSync(yearMonthDir).isDirectory()) {
+        // 在年月文件夹中查找
+        const files = fs.readdirSync(yearMonthDir);
+        matchingFiles = files.filter(f => {
+          const lower = f.toLowerCase();
+          return (lower.includes(dateStr) || lower.includes(dateParts[2])) && 
+                 (lower.endsWith('.txt') || lower.endsWith('.csv'));
+        }).map(f => path.join(yearMonthDir, f));
+      }
+      
+      // 如果年月文件夹中没找到，在根目录查找（兼容旧文件）
+      if (matchingFiles.length === 0) {
+        const files = fs.readdirSync(uploadDir);
+        const rootFiles = files.filter(f => {
+          const filePath = path.join(uploadDir, f);
+          // 跳过子目录
+          if (fs.statSync(filePath).isDirectory()) return false;
+          const lower = f.toLowerCase();
+          return (lower.includes(dateStr) || lower.includes(dateParts[2])) && 
+                 (lower.endsWith('.txt') || lower.endsWith('.csv'));
+        });
+        matchingFiles = rootFiles.map(f => path.join(uploadDir, f));
+      }
+      
+      if (matchingFiles.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: `No file found for date ${date}. Please upload the file first.`
+        });
+      }
+      
+      // 使用第一个匹配的文件（已经是完整路径）
+      const inputFile = matchingFiles[0];
+      const filename = path.basename(inputFile);
+      
+      // 3. 根据坐标找到NUTS3区域（使用Python脚本查找）
+      const { getGeoFileDir } = await import('./config');
+      const geoFileDir = getGeoFileDir();
+      
+      // 查找NUTS3数据文件
+      const nutsFile = findFirstExisting(buildNutsCandidates(geoFileDir));
+      
+      if (!nutsFile) {
+        return res.status(500).json({
+          success: false,
+          error: 'NUTS3 data file not found. Please ensure NUTS3 data is available.'
+        });
+      }
+      
+      // 调用Python脚本查找NUTS3区域
+      const findNuts3Result = await executePythonScriptJSON('find_nuts3.py', {
+        lon,
+        lat,
+        nuts_file: nutsFile
+      }, { timeout: 30000 });
+      
+      if (!findNuts3Result.success || !findNuts3Result.data?.success) {
+        return res.status(404).json({
+          success: false,
+          error: findNuts3Result.data?.error || findNuts3Result.error || 'Failed to find NUTS3 region for the given location.'
+        });
+      }
+      
+      const nuts3GeoJSON = findNuts3Result.data.geojson;
+      const nuts3Properties = findNuts3Result.data.properties;
+      
+      // 将NUTS3区域GeoJSON写入临时文件
+      const tempGeoJSONPath = path.join(uploadDir, `temp_nuts3_${Date.now()}.geojson`);
+      fs.writeFileSync(tempGeoJSONPath, JSON.stringify(nuts3GeoJSON));
+      
+      try {
+        // 4. 调用interpolation接口，使用NUTS3区域作为过滤条件
+        const lauFile = findFirstExisting(buildLauCandidates(geoFileDir));
+        
+        const pyArgs: any = {
+          input_file: inputFile,
+          value_threshold: finalThreshold,
+          max_points: 10000,
+          geojson_file: tempGeoJSONPath,
+          take_max_per_polygon: false, // 返回所有点，不取最大值
+          threshold_mode: threshold_mode || 'grid',
+          grid_rp_for_filter: '005y',
+          grid_interp_method: 'nearest',
+          nuts_file: nutsFile,
+          lau_file: lauFile
+        };
+        
+        const result = await executePythonScriptJSON('interpolation.py', pyArgs, {
+          timeout: 120000
+        });
+        
+        // 清理临时文件
+        if (fs.existsSync(tempGeoJSONPath)) {
+          fs.unlinkSync(tempGeoJSONPath);
+        }
+        
+        if (result.success) {
+          res.json({
+            success: true,
+            data: result.data,
+            location: { 
+              lat, 
+              lon, 
+              address,
+              nuts3: nuts3Properties?.NUTS_NAME || nuts3Properties?.NAME || 'Unknown'
+            },
+            date,
+            filename,
+            executionTime: result.executionTime
+          });
+        } else {
+          res.status(500).json({
+            success: false,
+            error: result.error || 'Unknown error occurred',
+            executionTime: result.executionTime
+          });
+        }
+      } catch (error: any) {
+        // 清理临时文件
+        if (fs.existsSync(tempGeoJSONPath)) {
+          fs.unlinkSync(tempGeoJSONPath);
+        }
+        throw error;
+      }
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid request body',
+          details: error.errors
+        });
+      }
+      
+      res.status(500).json({
+        success: false,
+        error: error.message || 'Unknown error'
       });
     }
   });

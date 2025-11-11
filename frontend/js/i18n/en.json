@@ -220,6 +220,30 @@
       "points": "points",
       "pointsDisplayed": "{count} data points have been displayed on the map",
       "noLocationInfo": "No country/province/city information identified"
+    },
+    "query": {
+      "title": "📍 Query Rainfall Data by Address",
+      "description": "Enter an address and date to find rainfall points within the NUTS3 region of that address",
+      "thresholdHint": "💡 Default threshold for query: 50 (can be modified in threshold setting above)",
+      "address": "Address",
+      "addressPlaceholder": "e.g., Berlin, Germany",
+      "addressHint": "Enter city name or specific address",
+      "date": "Date",
+      "dateHint": "Select the date to query",
+      "search": "🔍 Search",
+      "searching": "Searching...",
+      "addressRequired": "Please enter an address",
+      "dateRequired": "Please select a date",
+      "searchSuccess": "Search successful! Found {count} rainfall points",
+      "searchFailed": "Search failed",
+      "location": "Location",
+      "filename": "Filename",
+      "mapDisplayHint": "Search successful, but map display needs further integration",
+      "noPointsFound": "No rainfall points found matching the criteria",
+      "fileNotFound": "No file found for date {date}. Please upload the file first.",
+      "addressNotFound": "Address not found. Please provide a more specific address.",
+      "geocodingFailed": "Geocoding failed",
+      "nuts3NotFound": "Failed to find NUTS3 region for the given location"
     }
   },
   "language": {
@@ -271,7 +295,44 @@
   },
   "management": {
     "comingSoon": "Data Management Feature Under Development",
-    "description": "This page will provide data source management, data synchronization status, data quality monitoring and other functions."
+    "description": "This page will provide data source management, data synchronization status, data quality monitoring and other functions.",
+    "referenceSites": {
+      "title": "Reference Websites",
+      "subtitle": "Official websites related to rainfall and flood monitoring that we reference",
+      "categories": {
+        "emergency": "Emergency Management",
+        "monitoring": "Flood Monitoring",
+        "meteorology": "Meteorological Data",
+        "media": "Media Platforms"
+      },
+      "sites": {
+        "copernicus": {
+          "name": "Copernicus Emergency Management Service",
+          "description": "EU Copernicus Emergency Management Service providing rapid mapping and situational reporting for floods, fires and other disasters"
+        },
+        "efas": {
+          "name": "European Flood Awareness System (EFAS)",
+          "description": "European Flood Awareness System providing flood warnings and forecasts across Europe"
+        },
+        "gfms": {
+          "name": "Global Flood Monitoring System (GFMS)",
+          "description": "Real-time flood detection and monitoring system using satellite data"
+        },
+        "nasaGpm": {
+          "name": "NASA Global Precipitation Measurement (GPM)",
+          "description": "NASA Global Precipitation Measurement mission providing global rainfall and snowfall data"
+        },
+        "wmo": {
+          "name": "World Meteorological Organization (WMO)",
+          "description": "World Meteorological Organization providing global meteorological data and flood forecasting information"
+        },
+        "youtube": {
+          "name": "YouTube",
+          "description": "Video platform containing extensive flood-related news reports and real-time information"
+        }
+      },
+      "visitSite": "Visit Website"
+    }
   },
   "country": {
     "countryRegion": "Country/Region",
@@ -314,7 +375,11 @@
       "loading": "Loading details...",
       "fetchError": "Failed to load details",
       "timelineCount": "Timeline Items",
-      "searchedStatus": "Search Status"
+      "searchedStatus": "Search Status",
+      "dataPoint": "Data Point",
+      "longitude": "Longitude",
+      "latitude": "Latitude",
+      "value": "Value"
     }
   }
 }

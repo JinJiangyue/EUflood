@@ -220,6 +220,30 @@
       "points": "puntos",
       "pointsDisplayed": "Se han mostrado {count} puntos de datos en el mapa",
       "noLocationInfo": "No se identificó información de país/provincia/ciudad"
+    },
+    "query": {
+      "title": "📍 Consultar Datos de Lluvia por Dirección",
+      "description": "Ingrese una dirección y fecha para encontrar puntos de lluvia dentro de la región NUTS3 de esa dirección",
+      "thresholdHint": "💡 Umbral predeterminado para consulta: 50 (se puede modificar en la configuración de umbral arriba)",
+      "address": "Dirección",
+      "addressPlaceholder": "ej., Berlin, Germany",
+      "addressHint": "Ingrese el nombre de la ciudad o dirección específica",
+      "date": "Fecha",
+      "dateHint": "Seleccione la fecha a consultar",
+      "search": "🔍 Buscar",
+      "searching": "Buscando...",
+      "addressRequired": "Por favor ingrese una dirección",
+      "dateRequired": "Por favor seleccione una fecha",
+      "searchSuccess": "¡Búsqueda exitosa! Se encontraron {count} puntos de lluvia",
+      "searchFailed": "Búsqueda fallida",
+      "location": "Ubicación",
+      "filename": "Nombre de archivo",
+      "mapDisplayHint": "Búsqueda exitosa, pero la visualización del mapa necesita más integración",
+      "noPointsFound": "No se encontraron puntos de lluvia que coincidan con los criterios",
+      "fileNotFound": "No se encontró archivo para la fecha {date}. Por favor suba el archivo primero.",
+      "addressNotFound": "Dirección no encontrada. Por favor proporcione una dirección más específica.",
+      "geocodingFailed": "Error en la geocodificación",
+      "nuts3NotFound": "No se pudo encontrar la región NUTS3 para la ubicación dada"
     }
   },
   "language": {
@@ -271,7 +295,44 @@
   },
   "management": {
     "comingSoon": "Función de Gestión de Datos en Desarrollo",
-    "description": "Esta página proporcionará gestión de fuentes de datos, estado de sincronización de datos, monitoreo de calidad de datos y otras funciones."
+    "description": "Esta página proporcionará gestión de fuentes de datos, estado de sincronización de datos, monitoreo de calidad de datos y otras funciones.",
+    "referenceSites": {
+      "title": "Sitios Web de Referencia",
+      "subtitle": "Sitios web oficiales relacionados con el monitoreo de lluvias e inundaciones que consultamos",
+      "categories": {
+        "emergency": "Gestión de Emergencias",
+        "monitoring": "Monitoreo de Inundaciones",
+        "meteorology": "Datos Meteorológicos",
+        "media": "Plataformas de Medios"
+      },
+      "sites": {
+        "copernicus": {
+          "name": "Servicio de Gestión de Emergencias Copernicus",
+          "description": "Servicio de Gestión de Emergencias Copernicus de la UE que proporciona mapeo rápido e informes de situación para inundaciones, incendios y otros desastres"
+        },
+        "efas": {
+          "name": "Sistema Europeo de Concienciación sobre Inundaciones (EFAS)",
+          "description": "Sistema Europeo de Concienciación sobre Inundaciones que proporciona alertas y pronósticos de inundaciones en toda Europa"
+        },
+        "gfms": {
+          "name": "Sistema Global de Monitoreo de Inundaciones (GFMS)",
+          "description": "Sistema de detección y monitoreo de inundaciones en tiempo real utilizando datos satelitales"
+        },
+        "nasaGpm": {
+          "name": "Medición Global de Precipitación de la NASA (GPM)",
+          "description": "Misión de Medición Global de Precipitación de la NASA que proporciona datos globales de lluvia y nieve"
+        },
+        "wmo": {
+          "name": "Organización Meteorológica Mundial (OMM)",
+          "description": "Organización Meteorológica Mundial que proporciona datos meteorológicos globales e información de pronóstico de inundaciones"
+        },
+        "youtube": {
+          "name": "YouTube",
+          "description": "Plataforma de video que contiene extensos informes de noticias relacionados con inundaciones e información en tiempo real"
+        }
+      },
+      "visitSite": "Visitar Sitio Web"
+    }
   },
   "country": {
     "countryRegion": "País/Región",
@@ -314,7 +375,11 @@
       "loading": "Cargando detalles...",
       "fetchError": "Error al cargar detalles",
       "timelineCount": "Elementos de la cronología",
-      "searchedStatus": "Estado de búsqueda"
+      "searchedStatus": "Estado de búsqueda",
+      "dataPoint": "Punto de Datos",
+      "longitude": "Longitud",
+      "latitude": "Latitud",
+      "value": "Valor"
     }
   }
 }

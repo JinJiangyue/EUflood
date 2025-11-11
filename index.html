@@ -241,7 +241,30 @@
                             <button id="btnUploadInterpolationFile" class="search-btn" type="button" style="flex: 1;" data-i18n="file.upload.file">📤 上传文件</button>
                             <button id="btnSaveRainEvents" class="search-btn" type="button" style="flex: 1; background: linear-gradient(135deg, #27ae60 0%, #229954 100%);" disabled data-i18n="interpolation.action.filterAndSave">💾 筛选入库</button>
                         </div>
-                        <div id="interpolationStatus" style="margin-top: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
+                        
+                        <!-- 地址查询区域 -->
+                        <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 2px solid #e1e5e9;">
+                            <h3 style="margin-bottom: 15px; color: #1e3c72; font-size: 1.2em;" data-i18n="interpolation.query.title">📍 按地址查询降雨数据</h3>
+                            <p style="margin-bottom: 10px; color: #666; font-size: 0.9em;" data-i18n="interpolation.query.description">输入地址和时间，查找该地址所在NUTS3区域内的降雨点数据</p>
+                            <p style="margin-bottom: 15px; color: #27ae60; font-size: 0.85em; font-weight: 600;" data-i18n="interpolation.query.thresholdHint">💡 查询时默认阈值：10（可在上方阈值设置中修改）</p>
+                            <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: end;">
+                                <div style="flex: 1; min-width: 200px;">
+                                    <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #2c3e50;" data-i18n="interpolation.query.address">地址</label>
+                                    <input type="text" id="queryAddressInput" class="form-input" style="width: 100%; padding: 10px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 14px;" data-i18n-placeholder="interpolation.query.addressPlaceholder" placeholder="例如：Berlin, Germany">
+                                    <small style="display: block; margin-top: 5px; color: #666; font-size: 12px;" data-i18n="interpolation.query.addressHint">输入城市名或具体地址</small>
+                                </div>
+                                <div style="min-width: 200px;">
+                                    <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #2c3e50;" data-i18n="interpolation.query.date">日期</label>
+                                    <input type="date" id="queryDateInput" class="form-input" style="width: 100%; padding: 10px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 14px;">
+                                    <small style="display: block; margin-top: 5px; color: #666; font-size: 12px;" data-i18n="interpolation.query.dateHint">选择要查询的日期</small>
+                                </div>
+                                <div style="min-width: 120px;">
+                                    <button id="btnQueryByLocation" class="search-btn" type="button" style="width: 100%; padding: 10px; background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);" data-i18n="interpolation.query.search">🔍 查询</button>
+                                </div>
+                            </div>
+                            <div id="queryByLocationStatus" style="margin-top: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
+                        </div>
+                        <div id="interpolationStatus" style="margin-top: 15px; padding: 0; border-radius: 5px; display: none; min-height: 20px;"></div>
                         <!-- 地图容器 -->
                         <div id="mapContainer" style="margin-top: 20px; height: 600px; border-radius: 8px; overflow: hidden; display: block; border: 2px solid #e1e5e9;">
                             <div id="map" style="width: 100%; height: 100%;"></div>
@@ -292,6 +315,124 @@
                     <div class="info-card">
                         <h3 data-i18n="management.comingSoon">数据管理功能开发中</h3>
                         <p data-i18n="management.description">此页面将提供数据源管理、数据同步状态、数据质量监控等功能。</p>
+                    </div>
+                    
+                    <!-- 参考网站区域 -->
+                    <div class="reference-sites-section">
+                        <div class="reference-sites-header">
+                            <h3 data-i18n="management.referenceSites.title">参考网站</h3>
+                            <p class="reference-sites-subtitle" data-i18n="management.referenceSites.subtitle">以下是我们参考的降雨洪水监测相关官方网站</p>
+                        </div>
+                        
+                        <div class="reference-sites-grid">
+                            <!-- Copernicus EMS -->
+                            <div class="reference-site-card" data-category="emergency">
+                                <div class="site-card-header">
+                                    <div class="site-icon">🌍</div>
+                                    <div class="site-category" data-i18n="management.referenceSites.categories.emergency">应急管理</div>
+                                </div>
+                                <div class="site-card-body">
+                                    <h4 class="site-name" data-i18n="management.referenceSites.sites.copernicus.name">Copernicus 应急管理服务</h4>
+                                    <p class="site-description" data-i18n="management.referenceSites.sites.copernicus.description">欧盟哥白尼应急管理服务，提供洪水、火灾等灾害的快速制图和情况报告</p>
+                                </div>
+                                <div class="site-card-footer">
+                                    <a href="https://mapping.emergency.copernicus.eu/news/" target="_blank" rel="noopener noreferrer" class="site-link">
+                                        <span data-i18n="management.referenceSites.visitSite">访问网站</span>
+                                        <span class="link-icon">↗</span>
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <!-- EFAS -->
+                            <div class="reference-site-card" data-category="monitoring">
+                                <div class="site-card-header">
+                                    <div class="site-icon">🌊</div>
+                                    <div class="site-category" data-i18n="management.referenceSites.categories.monitoring">洪水监测</div>
+                                </div>
+                                <div class="site-card-body">
+                                    <h4 class="site-name" data-i18n="management.referenceSites.sites.efas.name">欧洲洪水预警系统 (EFAS)</h4>
+                                    <p class="site-description" data-i18n="management.referenceSites.sites.efas.description">欧洲洪水预警系统，提供全欧洲范围的洪水预警和预报服务</p>
+                                </div>
+                                <div class="site-card-footer">
+                                    <a href="https://www.efas.eu/" target="_blank" rel="noopener noreferrer" class="site-link">
+                                        <span data-i18n="management.referenceSites.visitSite">访问网站</span>
+                                        <span class="link-icon">↗</span>
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <!-- GFMS -->
+                            <div class="reference-site-card" data-category="monitoring">
+                                <div class="site-card-header">
+                                    <div class="site-icon">🛰️</div>
+                                    <div class="site-category" data-i18n="management.referenceSites.categories.monitoring">洪水监测</div>
+                                </div>
+                                <div class="site-card-body">
+                                    <h4 class="site-name" data-i18n="management.referenceSites.sites.gfms.name">全球洪水监测系统 (GFMS)</h4>
+                                    <p class="site-description" data-i18n="management.referenceSites.sites.gfms.description">基于卫星数据的实时洪水检测和监测系统</p>
+                                </div>
+                                <div class="site-card-footer">
+                                    <a href="https://flood.umd.edu/" target="_blank" rel="noopener noreferrer" class="site-link">
+                                        <span data-i18n="management.referenceSites.visitSite">访问网站</span>
+                                        <span class="link-icon">↗</span>
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <!-- NASA GPM -->
+                            <div class="reference-site-card" data-category="meteorology">
+                                <div class="site-card-header">
+                                    <div class="site-icon">🌧️</div>
+                                    <div class="site-category" data-i18n="management.referenceSites.categories.meteorology">气象数据</div>
+                                </div>
+                                <div class="site-card-body">
+                                    <h4 class="site-name" data-i18n="management.referenceSites.sites.nasaGpm.name">NASA 全球降水测量 (GPM)</h4>
+                                    <p class="site-description" data-i18n="management.referenceSites.sites.nasaGpm.description">NASA全球降水测量任务，提供全球降雨和降雪数据</p>
+                                </div>
+                                <div class="site-card-footer">
+                                    <a href="https://gpm.nasa.gov/" target="_blank" rel="noopener noreferrer" class="site-link">
+                                        <span data-i18n="management.referenceSites.visitSite">访问网站</span>
+                                        <span class="link-icon">↗</span>
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <!-- WMO -->
+                            <div class="reference-site-card" data-category="meteorology">
+                                <div class="site-card-header">
+                                    <div class="site-icon">🌐</div>
+                                    <div class="site-category" data-i18n="management.referenceSites.categories.meteorology">气象数据</div>
+                                </div>
+                                <div class="site-card-body">
+                                    <h4 class="site-name" data-i18n="management.referenceSites.sites.wmo.name">世界气象组织 (WMO)</h4>
+                                    <p class="site-description" data-i18n="management.referenceSites.sites.wmo.description">世界气象组织，提供全球气象数据和洪水预报信息</p>
+                                </div>
+                                <div class="site-card-footer">
+                                    <a href="https://public.wmo.int/" target="_blank" rel="noopener noreferrer" class="site-link">
+                                        <span data-i18n="management.referenceSites.visitSite">访问网站</span>
+                                        <span class="link-icon">↗</span>
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <!-- YouTube -->
+                            <div class="reference-site-card" data-category="media">
+                                <div class="site-card-header">
+                                    <div class="site-icon">📺</div>
+                                    <div class="site-category" data-i18n="management.referenceSites.categories.media">媒体平台</div>
+                                </div>
+                                <div class="site-card-body">
+                                    <h4 class="site-name" data-i18n="management.referenceSites.sites.youtube.name">YouTube</h4>
+                                    <p class="site-description" data-i18n="management.referenceSites.sites.youtube.description">视频平台，包含大量洪水相关的新闻报道和实时信息</p>
+                                </div>
+                                <div class="site-card-footer">
+                                    <a href="https://www.youtube.com/" target="_blank" rel="noopener noreferrer" class="site-link">
+                                        <span data-i18n="management.referenceSites.visitSite">访问网站</span>
+                                        <span class="link-icon">↗</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -462,13 +462,21 @@ function addMarkersToMap(points, threshold = 50.0) {
                     fillOpacity: 0.8
                 }).addTo(map);
                 
-                // 添加弹出信息
-                let popupContent = `<strong>数据点 #${index + 1}</strong><br>`;
-                popupContent += `经度：${point.longitude.toFixed(4)}<br>`;
-                popupContent += `纬度：${point.latitude.toFixed(4)}<br>`;
+                // 添加弹出信息（使用翻译）
+                const i18n = getI18n();
+                const dataPointLabel = i18n('map.popup.dataPoint') || '数据点';
+                const longitudeLabel = i18n('map.popup.longitude') || '经度';
+                const latitudeLabel = i18n('map.popup.latitude') || '纬度';
+                const valueLabel = i18n('map.popup.value') || '值';
+                
+                let popupContent = `<div style="min-width: 150px;">`;
+                popupContent += `<strong>${dataPointLabel} #${index + 1}</strong><br>`;
+                popupContent += `${longitudeLabel}: ${point.longitude.toFixed(4)}<br>`;
+                popupContent += `${latitudeLabel}: ${point.latitude.toFixed(4)}<br>`;
                 if (point.value !== null && point.value !== undefined) {
-                    popupContent += `值：${point.value}<br>`;
+                    popupContent += `${valueLabel}: ${point.value}<br>`;
                 }
+                popupContent += `</div>`;
                 
                 marker.bindPopup(popupContent);
                 markers.push(marker);
