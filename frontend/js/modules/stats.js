@@ -5,16 +5,10 @@
 let trendChart = null;
 let distributionChart = null;
 
-/**
- * 获取翻译函数（如果可用）
- */
-function getI18n() {
-    if (typeof t === 'function') {
-        return t;
-    }
-    // 如果i18n未加载，返回默认函数
-    return (key) => key;
-}
+const DASHBOARD_MAP_THRESHOLDS = {
+    medium: 50,
+    high: 100
+};
 
 /**
  * 加载统计数据（不包含图表，用于仪表盘）
@@ -403,20 +397,14 @@ async function loadMapData() {
         }
         
         // 添加新标记
-        events.forEach((event, index) => {
+        events.forEach((event) => {
             if (event.latitude && event.longitude) {
                 const lat = parseFloat(event.latitude);
                 const lng = parseFloat(event.longitude);
                 
                 if (!isNaN(lat) && !isNaN(lng)) {
-                    // 根据值设置颜色
-                    let color = '#3498db'; // 默认蓝色
-                    const value = event.value ? parseFloat(event.value) : 0;
-                    if (value > 100) {
-                        color = '#e74c3c'; // 红色：高值
-                    } else if (value > 50) {
-                        color = '#f39c12'; // 橙色：中等值
-                    }
+                    const value = event.value ? parseFloat(event.value) : null;
+                    const color = getDashboardMarkerColor(value);
                     
                     const marker = L.circleMarker([lat, lng], {
                         radius: 6,
@@ -426,7 +414,7 @@ async function loadMapData() {
                         fillOpacity: 0.7
                     });
                     
-                    // 添加弹出信息（使用翻译）
+                    // 添加提示信息（使用翻译）
                     const i18n = getI18n();
                     const unknownRegion = i18n('common.unknownRegion') || '未知地区';
                     const countryLabel = i18n('map.popup.country') || '国家';
@@ -437,18 +425,210 @@ async function loadMapData() {
                     popupContent += `<strong>${event.province || event.city || unknownRegion}</strong><br>`;
                     if (event.country) popupContent += `${countryLabel}: ${event.country}<br>`;
                     if (event.date) popupContent += `${dateLabel}: ${event.date}<br>`;
-                    if (event.value) popupContent += `${rainfallLabel}: ${event.value.toFixed(1)}mm<br>`;
+                    if (value !== null && !isNaN(value)) popupContent += `${rainfallLabel}: ${value.toFixed(1)}mm<br>`;
                     popupContent += `</div>`;
                     
-                    marker.bindPopup(popupContent);
+                    marker.bindTooltip(popupContent, {
+                        direction: 'top',
+                        offset: [0, -8],
+                        opacity: 0.85
+                    });
+                    
+                    marker.on('click', () => showDashboardEventDetailsOnMap(marker, event));
                     window.dashboardMapMarkers.addLayer(marker);
                 }
             }
         });
         
+        ensureDashboardLegend();
+        
     } catch (error) {
         console.error('加载地图数据失败:', error);
     }
+}
+
+function getDashboardMarkerColor(value) {
+    return getMarkerColorByValue(value, DASHBOARD_MAP_THRESHOLDS);
+}
+
+function ensureDashboardLegend() {
+    if (!window.dashboardMap || typeof L === 'undefined') return;
+    
+    if (window.dashboardLegendControl) {
+        window.dashboardLegendControl.remove();
+        window.dashboardLegendControl = null;
+    }
+    
+    const i18n = getI18n();
+    const legendTitle = i18n('map.legend.title') || '图例';
+    const highLabel = i18n('map.legend.high', { value: DASHBOARD_MAP_THRESHOLDS.high }) || `> ${DASHBOARD_MAP_THRESHOLDS.high} mm`;
+    const mediumLabel = i18n('map.legend.medium', { min: DASHBOARD_MAP_THRESHOLDS.medium, max: DASHBOARD_MAP_THRESHOLDS.high }) || `${DASHBOARD_MAP_THRESHOLDS.medium}-${DASHBOARD_MAP_THRESHOLDS.high} mm`;
+    const lowLabel = i18n('map.legend.low', { value: DASHBOARD_MAP_THRESHOLDS.medium }) || `≤ ${DASHBOARD_MAP_THRESHOLDS.medium} mm`;
+    
+    const legendControl = L.control({ position: 'bottomright' });
+    legendControl.onAdd = function() {
+        const div = L.DomUtil.create('div', 'dashboard-map-legend');
+        div.innerHTML = `
+            <div class="legend-title">${legendTitle}</div>
+            <div class="legend-item">
+                <span class="legend-color high"></span>
+                <div>${highLabel}</div>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color medium"></span>
+                <div>${mediumLabel}</div>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color low"></span>
+                <div>${lowLabel}</div>
+            </div>
+        `;
+        return div;
+    };
+    legendControl.addTo(window.dashboardMap);
+    window.dashboardLegendControl = legendControl;
+}
+
+async function showDashboardEventDetailsOnMap(marker, event) {
+    const i18n = getI18n();
+    const eventId = event?.id || event?.rain_event_id;
+    if (!eventId) {
+        const errorText = i18n('map.popup.fetchError') || '加载详情失败';
+        const html = `<div class="map-popup-error">${errorText}</div>`;
+        marker.bindPopup(html).openPopup();
+        return;
+    }
+    
+    const loadingText = i18n('map.popup.loading') || '正在加载详情...';
+    const loadingHtml = `<div class="map-popup-loading">${loadingText}</div>`;
+    let popup = marker.getPopup();
+    if (popup) {
+        popup.setContent(loadingHtml);
+    } else {
+        marker.bindPopup(loadingHtml);
+        popup = marker.getPopup();
+    }
+    marker.openPopup();
+    
+    try {
+        const encodedId = String(eventId).includes('%') ? eventId : encodeURIComponent(eventId);
+        const res = await fetch(`/events/rain/${encodedId}`);
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        if (!data.success || !data.event) {
+            throw new Error(data.error || 'INVALID_RESPONSE');
+        }
+        
+        const popupHtml = buildDashboardPopupHtml(data.event, data.searched === true, i18n);
+        if (popup) {
+            popup.setContent(popupHtml);
+        } else {
+            marker.bindPopup(popupHtml);
+        }
+        marker.openPopup();
+    } catch (error) {
+        const errorText = (i18n('map.popup.fetchError') || '加载详情失败') + (error?.message ? `: ${error.message}` : '');
+        if (popup) {
+            popup.setContent(`<div class="map-popup-error">${errorText}</div>`);
+        } else {
+            marker.bindPopup(`<div class="map-popup-error">${errorText}</div>`).openPopup();
+        }
+    }
+}
+
+function buildDashboardPopupHtml(event, isSearched, i18n) {
+    const naText = i18n('common.na') || 'N/A';
+    const safe = (value) => {
+        if (value === null || value === undefined || value === '') {
+            return naText;
+        }
+        return value;
+    };
+    const renderRow = (label, value, options = {}) => {
+        const { highlight = false } = options;
+        let content = value;
+        if (content === null || content === undefined || content === '') {
+            content = naText;
+        }
+        const highlightClass = highlight ? ' map-popup-highlight' : '';
+        return `
+            <div class="map-popup-row">
+                <span>${label}：</span>
+                <div class="map-popup-value${highlightClass}">${content}</div>
+            </div>
+        `;
+    };
+    
+    const statusLabel = (() => {
+        const status = Number(event.searched);
+        if (status === 1 || isSearched) {
+            return i18n('table.status.searched') || '已搜索';
+        }
+        if (status === 2) {
+            return i18n('table.status.needResearch') || '需重搜';
+        }
+        return i18n('table.status.unsearched') || '未搜索';
+    })();
+    
+    if (isSearched) {
+        const timelineCount = (() => {
+            if (!event.timeline_data) return 0;
+            if (Array.isArray(event.timeline_data)) return event.timeline_data.length;
+            if (event.timeline_data.events && Array.isArray(event.timeline_data.events)) {
+                return event.timeline_data.events.length;
+            }
+            return Object.keys(event.timeline_data).length;
+        })();
+        
+        return `
+            <div style="min-width: 220px;">
+                <div class="map-popup-section-title">${i18n('detail.section.impactInfo') || '影响评估（表2）'}</div>
+                ${renderRow(i18n('detail.field.eventId'), safe(event.rain_event_id || event.id))}
+                ${renderRow(i18n('detail.field.time'), safe(event.time))}
+                ${renderRow(i18n('detail.field.country'), safe(event.country))}
+                ${renderRow(i18n('detail.field.province'), safe(event.province))}
+                ${renderRow(i18n('detail.field.city'), safe(event.city))}
+                ${renderRow(i18n('detail.impact.level'), safe(event.level), { highlight: true })}
+                ${renderRow(i18n('detail.impact.transportImpact'), safe(event.transport_impact_level))}
+                ${renderRow(i18n('detail.impact.economyImpact'), safe(event.economy_impact_level))}
+                ${renderRow(i18n('detail.impact.safetyImpact'), safe(event.safety_impact_level))}
+                ${renderRow(i18n('map.popup.timelineCount') || '时间线条目', timelineCount)}
+                ${renderRow(i18n('detail.impact.sourceCount'), safe(event.source_count))}
+                ${renderRow(i18n('detail.impact.detailFile'), safe(event.detail_file))}
+            </div>
+        `;
+    }
+    
+    const threshold = Number(event.threshold);
+    const value = Number(event.value);
+    const valueDisplay = Number.isFinite(value)
+        ? (Number.isFinite(threshold) && value > threshold
+            ? `<span class="map-popup-highlight">${value.toFixed(2)}</span>`
+            : value.toFixed(2))
+        : naText;
+    const returnPeriod = event.return_period_band || (event.return_period_estimate !== null && event.return_period_estimate !== undefined
+        ? `${formatNumber(event.return_period_estimate, 1)}y`
+        : naText);
+    
+    return `
+        <div style="min-width: 220px;">
+            <div class="map-popup-section-title">${i18n('detail.section.basicInfo') || '基本信息（表1）'}</div>
+            ${renderRow(i18n('detail.field.eventId'), safe(event.id))}
+            ${renderRow(i18n('detail.field.date'), safe(event.date))}
+            ${renderRow(i18n('detail.field.country'), safe(event.country))}
+            ${renderRow(i18n('detail.field.province'), safe(event.province))}
+            ${renderRow(i18n('detail.field.city'), safe(event.city))}
+            ${renderRow(i18n('detail.field.coordinates'), formatCoordinates(event.latitude, event.longitude))}
+            ${renderRow(i18n('detail.field.value'), valueDisplay)}
+            ${renderRow(i18n('detail.field.threshold'), Number.isFinite(threshold) ? threshold.toFixed(2) : naText)}
+            ${renderRow(i18n('table.header.returnPeriod'), returnPeriod)}
+            ${renderRow(i18n('detail.field.fileName'), safe(event.file_name))}
+            ${renderRow(i18n('detail.field.sequence'), safe(event.seq))}
+            ${renderRow(i18n('map.popup.searchedStatus') || '搜索状态', statusLabel)}
+        </div>
+    `;
 }
 
 /**

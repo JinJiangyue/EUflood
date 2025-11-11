@@ -6,7 +6,38 @@ import { checkPythonAvailable } from './utils/executor';
 import { getRuntimeInfo } from './config';
 import { uploadSingle, getFileInfo, cleanupFile } from './file-upload';
 import path from 'path';
+import fs from 'fs';
 import { db } from '../src/db';
+
+/**
+ * 构建网格阈值参数（grid 模式）
+ */
+function buildGridThresholdArgs(
+  thresholdMode: string | undefined,
+  gridRpForFilter: string | undefined,
+  gridInterpMethod: string | undefined,
+  valueThreshold: number | string | undefined,
+  thresholdDir: string
+): Record<string, any> {
+  const args: Record<string, any> = {};
+  
+  if (String(thresholdMode || '').toLowerCase() === 'grid') {
+    args.threshold_mode = 'grid';
+    args.grid_rp_for_filter = (gridRpForFilter || '005y').toLowerCase();
+    args.grid_interp_method = (gridInterpMethod || 'nearest').toLowerCase();
+    
+    const nc002 = path.join(thresholdDir, 'idfceu_opera_efas4326_1amin_24h_002y.nc');
+    const nc005 = path.join(thresholdDir, 'idfceu_opera_efas4326_1amin_24h_005y.nc');
+    const nc020 = path.join(thresholdDir, 'idfceu_opera_efas4326_1amin_24h_020y.nc');
+    
+    if (fs.existsSync(nc002)) args.nc_002y = nc002;
+    if (fs.existsSync(nc005)) args.nc_005y = nc005;
+    if (fs.existsSync(nc020)) args.nc_020y = nc020;
+    args.grid_fallback = Number(valueThreshold) || 50.0;
+  }
+  
+  return args;
+}
 
 export function registerPythonModule(app: Express) {
   console.log('[Python Module] Registering Python module routes...');
@@ -185,6 +216,9 @@ export function registerPythonModule(app: Express) {
       }
       const confirmedDate = (req.body as any)?.confirmed_date;
       const valueThreshold = (req.body as any)?.value_threshold;
+      const thresholdMode = (req.body as any)?.threshold_mode; // fixed | grid
+      const gridRpForFilter = (req.body as any)?.grid_rp_for_filter; // 002y|005y|020y
+      const gridInterpMethod = (req.body as any)?.grid_interp_method; // nearest|linear
       if (!confirmedDate) {
         return res.status(400).json({ success: false, error: 'confirmed_date is required (YYYY-MM-DD)' });
       }
@@ -205,6 +239,12 @@ export function registerPythonModule(app: Express) {
         if (fs.existsSync(defaultGeo)) {
           geojsonPath = defaultGeo;
         }
+
+        // 阈值网格（NC）默认目录：与 uploads 同级的 threshold_file
+        const { getUploadDir } = await import('./config');
+        const uploadDir = getUploadDir();
+        const uploadsRoot = pathMod.dirname(uploadDir);
+        const thresholdDir = pathMod.join(uploadsRoot, 'threshold_file');
 
         // NUTS/LAU 候选（优先请求体覆盖，其次默认，使用新位置）
         const resolveDataPath = (p?: string, subdir?: string) => {
@@ -233,15 +273,18 @@ export function registerPythonModule(app: Express) {
         const lau_file = findFirstExisting(lauCandidates);
 
         // 调用 Python 插值脚本（传递阈值/域GeoJSON/LAU，并启用每多边形取最大值）
-        const result = await executePythonScriptJSON<any>('interpolation.py', {
+        const pyArgs: Record<string, any> = {
           input_file: inputFile,
           value_threshold: valueThreshold ? parseFloat(String(valueThreshold)) : 50.0,
           max_points: 1000,
           geojson_file: geojsonPath,
           take_max_per_polygon: true,
           nuts_file,
-          lau_file
-        }, { timeout: 120000 });
+          lau_file,
+          ...buildGridThresholdArgs(thresholdMode, gridRpForFilter, gridInterpMethod, valueThreshold, thresholdDir)
+        };
+
+        const result = await executePythonScriptJSON<any>('interpolation.py', pyArgs, { timeout: 120000 });
 
         if (!result.success) {
           cleanupFile(inputFile);
@@ -250,14 +293,22 @@ export function registerPythonModule(app: Express) {
 
         const data = result.data as any;
         // Python 返回的结构：{ success: true, summary: {...}, points: [...] }
-        const threshold = data?.summary?.value_threshold ?? null;
+        const thresholdModeUsed = String(data?.summary?.threshold_mode || '').toLowerCase();
+        const rpUsed = String(data?.summary?.grid_rp_for_filter || '').toLowerCase(); // 002y/005y/020y
+        const rpKeyMap: Record<string, string> = {
+          '002y': 'threshold_2y',
+          '005y': 'threshold_5y',
+          '020y': 'threshold_20y'
+        };
+        const thresholdKeyFromGrid = rpKeyMap[rpUsed] || (rpUsed ? `threshold_${rpUsed}` : null);
+        const defaultThresholdValue = data?.summary?.value_threshold ?? null;
         const points: any[] = Array.isArray(data?.points) ? data.points : [];
 
         // 批量写入 rain_event（应用层计算 seq 与 id）
         const insertStmt = db.prepare(`
           INSERT INTO rain_event
-          (id, date, country, province, city, longitude, latitude, value, threshold, file_name, seq, searched)
-          VALUES (@id, @date, @country, @province, @city, @longitude, @latitude, @value, @threshold, @file_name, @seq, @searched)
+          (id, date, country, province, city, longitude, latitude, value, threshold, return_period_band, return_period_estimate, file_name, seq, searched)
+          VALUES (@id, @date, @country, @province, @city, @longitude, @latitude, @value, @threshold, @return_period_band, @return_period_estimate, @file_name, @seq, @searched)
         `);
         const tx = db.transaction((rows: any[]) => { rows.forEach(r => insertStmt.run(r)); });
 
@@ -316,6 +367,22 @@ export function registerPythonModule(app: Express) {
           provinceToNextSeq.set(province, next + 1);
           const seq = next;
           const id = `${ymd}_${provinceForId}_${seq}`; // 使用替换空格后的版本生成 ID
+          // 选择阈值：grid 模式用每点阈值，否则用默认阈值
+          let rowThreshold: number | null = null;
+          if (thresholdModeUsed === 'grid') {
+            let tv: any = thresholdKeyFromGrid ? p[thresholdKeyFromGrid] : undefined;
+            if ((tv === undefined || tv === null || tv === '') && rpUsed) {
+              const fallbackKey = `threshold_${rpUsed}`;
+              tv = p[fallbackKey];
+            }
+            rowThreshold = tv != null ? Number(tv) : (defaultThresholdValue != null ? Number(defaultThresholdValue) : null);
+          } else {
+            rowThreshold = defaultThresholdValue != null ? Number(defaultThresholdValue) : null;
+          }
+
+          const band = p.return_period_band != null ? String(p.return_period_band) : null;
+          const estimate = p.return_period_estimate != null && p.return_period_estimate !== '' ? Number(p.return_period_estimate) : null;
+
           rows.push({
             id,
             date: dateStr,
@@ -325,7 +392,9 @@ export function registerPythonModule(app: Express) {
             longitude: lon,
             latitude: lat,
             value: p.value != null ? Number(p.value) : null,
-            threshold: threshold != null ? Number(threshold) : null,
+            threshold: rowThreshold,
+            return_period_band: band,
+            return_period_estimate: estimate,
             file_name: req.file!.originalname,
             seq,
             searched: 0
@@ -546,16 +615,31 @@ export function registerPythonModule(app: Express) {
       const nuts_file = findFirstExisting(nutsCandidates);
       const lau_file = findFirstExisting(lauCandidates);
 
+      // 阈值模式与网格参数（可选）
+      // 阈值模式优先顺序：请求体 > 环境变量 DEFAULT_THRESHOLD_MODE > fixed
+      const thresholdMode = ((req.body as any)?.threshold_mode as string | undefined) || (process.env.DEFAULT_THRESHOLD_MODE as string | undefined) || 'fixed'; // 'fixed' | 'grid'
+      const gridRpForFilter = (req.body as any)?.grid_rp_for_filter as string | undefined; // '002y' | '005y' | '020y'
+      const gridInterpMethod = (req.body as any)?.grid_interp_method as string | undefined; // 'nearest' | 'linear'
+
+      // 网格阈值文件默认路径（基于 uploads 根目录）
+      const { getUploadDir: getUploadDirForNc } = await import('./config');
+      const uploadDirForNc = getUploadDirForNc();
+      const uploadsRootForNc = path.dirname(uploadDirForNc);
+      const thresholdDir = path.join(uploadsRootForNc, 'threshold_file');
+
       // 调用Python脚本
-      const result = await executePythonScriptJSON('interpolation.py', {
+        const pyArgs: any = {
         input_file: inputFile,
         value_threshold: value_threshold || undefined,
         max_points: max_points,
         geojson_file: geojsonPath || undefined,
         take_max_per_polygon: take_max_per_polygon !== false,
         nuts_file,
-        lau_file
-      }, {
+        lau_file,
+        ...buildGridThresholdArgs(thresholdMode, gridRpForFilter, gridInterpMethod, value_threshold, thresholdDir)
+        };
+
+        const result = await executePythonScriptJSON('interpolation.py', pyArgs, {
         timeout: timeout || 120000 // 增加超时时间，因为需要处理GeoJSON
       });
       

@@ -31,7 +31,15 @@
       "coordinates": "Coordenadas",
       "value": "Valor",
       "threshold": "Umbral",
+      "returnPeriod": "Período de recurrencia",
       "searchStatus": "Estado de Búsqueda"
+    },
+    "returnPeriod": {
+      "lt2": " <2 años",
+      "between2and5": "2-5 años",
+      "between5and20": " 5-20 años",
+      "ge20": " ≥20 años",
+      "approx": "≈ {years} años"
     },
     "status": {
       "searched": "Buscado",
@@ -170,6 +178,7 @@
       "dataFile": "Seleccionar Archivo de Datos (CSV, Excel, TXT)",
       "pleaseSelectFile": "Por favor seleccione un archivo de datos primero",
       "chooseFile": "Seleccionar Archivo",
+      "replaceHint": "Haz clic para cambiar el archivo",
       "noFileChosen": "Ningún archivo seleccionado",
       "pleaseSelectFileFirst": "Por favor seleccione un archivo primero",
       "pleaseUploadFileFirst": "Por favor suba un archivo primero",
@@ -183,6 +192,12 @@
   "interpolation": {
     "title": {
       "spatialInterpolation": "📥 Importación de Lluvia"
+    },
+    "thresholdMode": {
+      "label": "Modo de umbral",
+      "grid": "Umbral basado en malla (recomendado)",
+      "fixed": "Umbral fijo",
+      "hint": "El modo grid usa umbrales NetCDF por punto; el modo fijo usa el valor superior"
     },
     "form": {
       "confirmDate": "Confirmar Fecha (se puede modificar manualmente, se usa para generar el ID del evento)",
@@ -286,10 +301,20 @@
       "countryNuts3": "País-NUTS3"
     },
     "geojsonLoaded": "Región GeoJSON cargada (pase el mouse para ver información NUTS)",
+    "legend": {
+      "title": "Leyenda",
+      "high": "> {value} mm (Alta Intensidad)",
+      "medium": "{min}-{max} mm (Intensidad Media)",
+      "low": "≤ {value} mm (Baja Intensidad)"
+    },
     "popup": {
       "country": "País",
       "date": "Fecha",
-      "rainfall": "Precipitación"
+      "rainfall": "Precipitación",
+      "loading": "Cargando detalles...",
+      "fetchError": "Error al cargar detalles",
+      "timelineCount": "Elementos de la cronología",
+      "searchedStatus": "Estado de búsqueda"
     }
   }
 }

@@ -37,6 +37,8 @@ if (isNew) {
       latitude REAL NOT NULL,
       value REAL,
       threshold REAL,
+      return_period_band TEXT,
+      return_period_estimate REAL,
       file_name TEXT NOT NULL,
       seq INTEGER,
       searched INTEGER DEFAULT 0 -- 0: 未搜索；1: 已搜索
@@ -97,6 +99,8 @@ try {
         latitude REAL NOT NULL,
         value REAL,
         threshold REAL,
+        return_period_band TEXT,
+        return_period_estimate REAL,
         file_name TEXT NOT NULL,
         seq INTEGER,
         searched INTEGER DEFAULT 0
@@ -115,6 +119,12 @@ try {
     const hasSearched = info.some(c => c.name === 'searched');
     if (!hasSearched) {
       db.exec(`ALTER TABLE rain_event ADD COLUMN searched INTEGER DEFAULT 0`);
+    }
+    if (!info.some(c => c.name === 'return_period_band')) {
+      db.exec(`ALTER TABLE rain_event ADD COLUMN return_period_band TEXT`);
+    }
+    if (!info.some(c => c.name === 'return_period_estimate')) {
+      db.exec(`ALTER TABLE rain_event ADD COLUMN return_period_estimate REAL`);
     }
   } catch {}
 

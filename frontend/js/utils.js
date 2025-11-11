@@ -3,13 +3,36 @@
  */
 
 /**
+ * 获取 i18n 翻译函数（支持参数替换）
+ * 统一所有模块使用的 i18n 函数，避免重复定义
+ */
+function getI18n() {
+    if (typeof t === 'function') {
+        return (key, params) => {
+            const text = t(key);
+            if (params) {
+                return Object.keys(params).reduce((str, k) => str.replace(`{${k}}`, params[k]), text);
+            }
+            return text;
+        };
+    }
+    return (key, params) => {
+        let text = key;
+        if (params) {
+            Object.keys(params).forEach(k => text = text.replace(`{${k}}`, params[k]));
+        }
+        return text;
+    };
+}
+
+/**
  * 自定义确认对话框（居中显示）
  * @param {string} message - 确认消息
  * @returns {Promise<boolean>} - 返回 true 如果确认，false 如果取消
  */
 function customConfirm(message) {
     return new Promise((resolve) => {
-        const i18n = typeof t === 'function' ? t : (key) => key;
+        const i18n = getI18n();
         
         // 创建遮罩层
         const overlay = document.createElement('div');
@@ -187,6 +210,59 @@ function getSourceTypeLabel(sourceType) {
         'sensor': '传感器' 
     };
     return map[sourceType] || sourceType || '未知';
+}
+
+/**
+ * 格式化数字（保留指定位数小数）
+ * @param {number|string|null|undefined} value - 要格式化的值
+ * @param {number} digits - 小数位数，默认2位
+ * @returns {string} - 格式化后的字符串，无效值返回 'N/A'
+ */
+function formatNumber(value, digits = 2) {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) {
+        const i18n = getI18n();
+        return i18n('common.na') || 'N/A';
+    }
+    return Number(value).toFixed(digits);
+}
+
+/**
+ * 格式化坐标（经纬度）
+ * @param {number|string|null|undefined} lat - 纬度
+ * @param {number|string|null|undefined} lng - 经度
+ * @returns {string} - 格式化后的坐标字符串，无效值返回 'N/A'
+ */
+function formatCoordinates(lat, lng) {
+    if (lat === null || lat === undefined || lng === null || lng === undefined) {
+        const i18n = getI18n();
+        return i18n('common.na') || 'N/A';
+    }
+    const latNum = Number(lat);
+    const lngNum = Number(lng);
+    if (Number.isNaN(latNum) || Number.isNaN(lngNum)) {
+        const i18n = getI18n();
+        return i18n('common.na') || 'N/A';
+    }
+    return `${latNum.toFixed(4)}, ${lngNum.toFixed(4)}`;
+}
+
+/**
+ * 根据降雨量值获取地图标记颜色
+ * @param {number|null|undefined} value - 降雨量值
+ * @param {Object} thresholds - 阈值配置对象，包含 medium 和 high 属性
+ * @returns {string} - 颜色代码
+ */
+function getMarkerColorByValue(value, thresholds = { medium: 50, high: 100 }) {
+    if (value === null || value === undefined || Number.isNaN(value)) {
+        return '#3498db'; // 默认蓝色
+    }
+    if (value > thresholds.high) {
+        return '#e74c3c'; // 红色：高值
+    }
+    if (value > thresholds.medium) {
+        return '#f39c12'; // 橙色：中等值
+    }
+    return '#3498db'; // 蓝色：低值
 }
 
 /**

@@ -2,28 +2,6 @@
  * 事件管理模块 - 基于 rain_event 表
  */
 
-/**
- * 获取 i18n 翻译函数（支持参数替换）
- */
-function getI18n() {
-    if (typeof t === 'function') {
-        return (key, params) => {
-            const text = t(key);
-            if (params) {
-                return Object.keys(params).reduce((str, k) => str.replace(`{${k}}`, params[k]), text);
-            }
-            return text;
-        };
-    }
-    return (key, params) => {
-        let text = key;
-        if (params) {
-            Object.keys(params).forEach(k => text = text.replace(`{${k}}`, params[k]));
-        }
-        return text;
-    };
-}
-
 // 设置默认日期范围（今天）
 function initEventDates() {
     const today = new Date().toISOString().substring(0, 10);
@@ -728,19 +706,12 @@ async function showRainEventDetails(eventId) {
 }
 
 /**
- * 加载最新事件（默认显示最新10条）
+ * 加载最新事件（默认显示最新30条）
  */
 async function loadLatestEvents() {
-    const today = new Date();
-    const dateFrom = new Date();
-    dateFrom.setDate(dateFrom.getDate() - 30); // 最近30天
-    
-    const dateFromStr = dateFrom.toISOString().substring(0, 10);
-    const dateToStr = today.toISOString().substring(0, 10);
-    
     try {
-        // API默认按日期降序排序，获取第一页的10条数据
-        const url = `/events/rain?date_from=${dateFromStr}&date_to=${dateToStr}&details=true&page=1&limit=10`;
+        // API按日期降序排序，限制为最新30条
+        const url = `/events/rain/latest?limit=30`;
         const res = await fetch(url);
         if (!res.ok) {
             throw new Error('加载失败');
@@ -752,20 +723,24 @@ async function loadLatestEvents() {
         }
         
         const results = data.details || [];
+        const range = data.dateRange || {};
         
         // 更新全局状态
         if (window.appState) {
+            window.appState.setQueryParams(range.from || '', range.to || '', '');
             window.appState.updateQueryResults(results, results.length, {
-                dateFrom: dateFromStr,
-                dateTo: dateToStr,
+                mode: 'latest',
+                dateFrom: range.from || '',
+                dateTo: range.to || '',
                 country: ''
             });
         }
         
         // 渲染列表
         renderEventsList(results, {
-            dateFrom: dateFromStr,
-            dateTo: dateToStr,
+            mode: 'latest',
+            dateFrom: range.from || '',
+            dateTo: range.to || '',
             country: ''
         });
         
@@ -897,6 +872,7 @@ function renderEventsList(results, queryParams) {
                         <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">${i18n('table.header.coordinates')}</th>
                         <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">${i18n('table.header.value')}</th>
                         <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">${i18n('table.header.threshold')}</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">${i18n('table.header.returnPeriod')}</th>
                         <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; white-space: nowrap;">${i18n('table.header.searchStatus')}</th>
                     </tr>
                 </thead>
@@ -913,6 +889,23 @@ function renderEventsList(results, queryParams) {
             searchedStatus = `<span style="color: #e74c3c; font-weight: bold;">⏳ ${i18n('table.status.unsearched')}</span>`;
         }
         const valueColor = event.value && event.threshold && event.value > event.threshold ? '#e74c3c' : '#3498db';
+        let returnPeriodDisplay = '-';
+        if (event.return_period_band) {
+            const band = String(event.return_period_band);
+            const bandMap = {
+                '<2y': i18n('table.returnPeriod.lt2'),
+                '2-5y': i18n('table.returnPeriod.between2and5'),
+                '5-20y': i18n('table.returnPeriod.between5and20'),
+                '>=20y': i18n('table.returnPeriod.ge20')
+            };
+            returnPeriodDisplay = bandMap[band] || band;
+        } else if (event.return_period_estimate !== null && event.return_period_estimate !== undefined) {
+            const est = Number(event.return_period_estimate);
+            if (!Number.isNaN(est)) {
+                returnPeriodDisplay = i18n('table.returnPeriod.approx', { years: est.toFixed(1) });
+            }
+        }
+        const safeReturnPeriodDisplay = typeof escapeHtml === 'function' ? escapeHtml(returnPeriodDisplay) : returnPeriodDisplay;
         
         html += `
             <tr class="rain-event-row" data-id="${event.id}" data-index="${startIndex + index}" 
@@ -926,6 +919,7 @@ function renderEventsList(results, queryParams) {
                 <td style="padding: 12px; white-space: nowrap;">${event.latitude ? `${event.latitude.toFixed(4)}, ${event.longitude.toFixed(4)}` : '-'}</td>
                 <td style="padding: 12px; white-space: nowrap;"><span style="color: ${valueColor}; font-weight: bold;">${event.value !== null && event.value !== undefined ? event.value.toFixed(2) : '-'}</span></td>
                 <td style="padding: 12px; white-space: nowrap;">${event.threshold !== null && event.threshold !== undefined ? event.threshold.toFixed(2) : '-'}</td>
+                <td style="padding: 12px; white-space: nowrap;">${safeReturnPeriodDisplay}</td>
                 <td style="padding: 12px; white-space: nowrap;">${searchedStatus}</td>
             </tr>
         `;

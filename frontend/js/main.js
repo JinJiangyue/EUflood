@@ -103,6 +103,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
             }, 100);
+        } else if (e.detail.pageId === 'page-events') {
+            // 事件查询页：默认显示最新10条（日期倒序）
+            try {
+                if (typeof loadLatestEvents === 'function') {
+                    loadLatestEvents();
+                } else if (typeof renderEventsListFromGlobalState === 'function') {
+                    renderEventsListFromGlobalState();
+                }
+            } catch (err) {
+                console.warn('加载最新事件失败:', err);
+            }
         }
     });
 });

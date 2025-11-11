@@ -31,7 +31,15 @@
       "coordinates": "坐标",
       "value": "数值",
       "threshold": "阈值",
+      "returnPeriod": "降雨重现期",
       "searchStatus": "搜索状态"
+    },
+    "returnPeriod": {
+      "lt2": "＜2年",
+      "between2and5": "2-5年",
+      "between5and20": "5-20年",
+      "ge20": "≥20年",
+      "approx": "≈{years}年"
     },
     "status": {
       "searched": "已搜索",
@@ -170,6 +178,7 @@
       "dataFile": "选择数据文件（CSV、Excel、TXT）",
       "pleaseSelectFile": "请先选择数据文件",
       "chooseFile": "选择文件",
+      "replaceHint": "点击可重新选择文件",
       "noFileChosen": "未选择任何文件",
       "pleaseSelectFileFirst": "请先选择文件",
       "pleaseUploadFileFirst": "请先上传文件",
@@ -183,6 +192,12 @@
   "interpolation": {
     "title": {
       "spatialInterpolation": "📥 降雨导入"
+    },
+    "thresholdMode": {
+      "label": "阈值模式",
+      "grid": "按网格阈值（推荐）",
+      "fixed": "固定阈值",
+      "hint": "grid 模式使用 NetCDF 逐点阈值，fixed 模式使用上方数值"
     },
     "form": {
       "confirmDate": "确认日期（可手动修改，用于生成事件ID）",
@@ -286,10 +301,20 @@
       "countryNuts3": "国家-NUTS3"
     },
     "geojsonLoaded": "GeoJSON区域已加载（鼠标悬停查看NUTS信息）",
+    "legend": {
+      "title": "图例",
+      "high": "> {value} mm（高强度）",
+      "medium": "{min}-{max} mm（中等强度）",
+      "low": "≤ {value} mm（低强度）"
+    },
     "popup": {
       "country": "国家",
       "date": "日期",
-      "rainfall": "降雨量"
+      "rainfall": "降雨量",
+      "loading": "正在加载详情...",
+      "fetchError": "加载详情失败",
+      "timelineCount": "时间线条目",
+      "searchedStatus": "搜索状态"
     }
   }
 }

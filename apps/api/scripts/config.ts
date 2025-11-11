@@ -284,67 +284,47 @@ export function getGeoFileDir(): string {
   if (process.env.GEO_FILE_DIR) {
     const geoFileDir = process.env.GEO_FILE_DIR;
     if (path.isAbsolute(geoFileDir)) {
-      // 确保目录存在
-      if (!fs.existsSync(geoFileDir)) {
-        fs.mkdirSync(geoFileDir, { recursive: true });
-      }
+      if (!fs.existsSync(geoFileDir)) fs.mkdirSync(geoFileDir, { recursive: true });
       return geoFileDir;
     }
-    // 相对路径：从项目根目录解析
-    const projectRoot = path.resolve(__dirname, '../../../../..');
-    const resolvedDir = path.resolve(projectRoot, geoFileDir);
-    if (!fs.existsSync(resolvedDir)) {
-      fs.mkdirSync(resolvedDir, { recursive: true });
-    }
+    // 相对路径：严格以项目根为基准。用 getUploadDir() 可靠推断项目根
+    // uploadDir 形如: <projectRoot>/apps/uploads/rain_file
+    const uploadDir = getUploadDir();
+    const uploadsRoot = path.dirname(uploadDir); // <projectRoot>/apps/uploads
+    const projectRoot = path.dirname(uploadsRoot); // <projectRoot>/apps -> 再上一级得到 <projectRoot>
+    const realProjectRoot = path.dirname(projectRoot); // <projectRoot>
+    const resolvedDir = path.resolve(realProjectRoot, geoFileDir);
+    if (!fs.existsSync(resolvedDir)) fs.mkdirSync(resolvedDir, { recursive: true });
     return resolvedDir;
   }
   
-  // 默认路径：从 process.cwd() 或 __dirname 找到 apps 目录
-  let appsDir: string | null = null;
-  
-  // 方法1：从 process.cwd() 查找
-  let currentDir = process.cwd();
-  for (let i = 0; i < 6; i++) {
-    const dirName = path.basename(currentDir);
-    if (dirName === 'apps') {
-      appsDir = currentDir;
-      break;
+  // 默认路径：沿用上传目录的父级（apps/uploads）
+  try {
+    const uploadDir = getUploadDir();
+    const uploadsRoot = path.dirname(uploadDir); // apps/uploads
+    const geoFileDir = path.join(uploadsRoot, 'geofile');
+    if (!fs.existsSync(geoFileDir)) {
+      fs.mkdirSync(geoFileDir, { recursive: true });
     }
-    const parent = path.dirname(currentDir);
-    if (parent === currentDir) break;
-    currentDir = parent;
-  }
-  
-  // 方法2：从 __dirname 向上查找
-  if (!appsDir) {
-    currentDir = __dirname;
-    for (let i = 0; i < 6; i++) {
-      const dirName = path.basename(currentDir);
-      if (dirName === 'apps') {
-        appsDir = currentDir;
-        break;
-      }
-      const parent = path.dirname(currentDir);
-      if (parent === currentDir) break;
-      currentDir = parent;
+    // 同时确保常用子目录存在，避免后续访问失败
+    const nuts3Dir = path.join(geoFileDir, 'nuts3');
+    const cityDir = path.join(geoFileDir, 'city');
+    if (!fs.existsSync(nuts3Dir)) {
+      fs.mkdirSync(nuts3Dir, { recursive: true });
     }
-  }
-  
-  let geoFileDir: string;
-  if (appsDir) {
-    geoFileDir = path.join(appsDir, 'uploads', 'geofile');
-  } else {
+    if (!fs.existsSync(cityDir)) {
+      fs.mkdirSync(cityDir, { recursive: true });
+    }
+    return geoFileDir;
+  } catch (err) {
     // 回退方案：从项目根目录计算
     const projectRoot = path.resolve(__dirname, '../../../../..');
-    geoFileDir = path.join(projectRoot, 'apps', 'uploads', 'geofile');
+    const geoFileDir = path.join(projectRoot, 'apps', 'uploads', 'geofile');
+    if (!fs.existsSync(geoFileDir)) {
+      fs.mkdirSync(geoFileDir, { recursive: true });
+    }
+    return geoFileDir;
   }
-  
-  // 确保目录存在
-  if (!fs.existsSync(geoFileDir)) {
-    fs.mkdirSync(geoFileDir, { recursive: true });
-  }
-  
-  return geoFileDir;
 }
 
 /**

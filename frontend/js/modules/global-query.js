@@ -4,28 +4,6 @@
  */
 
 /**
- * 获取 i18n 翻译函数（支持参数替换）
- */
-function getI18n() {
-    if (typeof t === 'function') {
-        return (key, params) => {
-            const text = t(key);
-            if (params) {
-                return Object.keys(params).reduce((str, k) => str.replace(`{${k}}`, params[k]), text);
-            }
-            return text;
-        };
-    }
-    return (key, params) => {
-        let text = key;
-        if (params) {
-            Object.keys(params).forEach(k => text = text.replace(`{${k}}`, params[k]));
-        }
-        return text;
-    };
-}
-
-/**
  * 执行查询 API 调用
  */
 async function fetchEventsData(dateFrom, dateTo, country) {
@@ -152,12 +130,20 @@ function setQuickDateRangeForPage(range) {
     let dateFrom, dateTo;
     
     switch(range) {
-        case 'latest':
-            // 最新：最近30天
+        case 'latest': {
+            // 最新：直接请求后端“按日期倒序的前10条”
+            const isEventsPage = window.router && window.router.getCurrentRoute()?.path === 'events';
+            if (isEventsPage && typeof loadLatestEvents === 'function') {
+                // 事件页：调用专用函数渲染前10条
+                loadLatestEvents();
+                return;
+            }
+            // 其它页面：仍然设置最近30天，但查询结果不在此页展示列表
             dateTo = new Date(today);
             dateFrom = new Date(today);
             dateFrom.setDate(dateFrom.getDate() - 30);
             break;
+        }
         case 'today':
             // 今天
             dateFrom = new Date(today);

@@ -31,7 +31,15 @@
       "coordinates": "Coordinates",
       "value": "Value",
       "threshold": "Threshold",
+      "returnPeriod": "Return Period",
       "searchStatus": "Search Status"
+    },
+    "returnPeriod": {
+      "lt2": "<2-year",
+      "between2and5": "2-5 year",
+      "between5and20": "5-20 year",
+      "ge20": "≥20-year",
+      "approx": "≈{years}-year"
     },
     "status": {
       "searched": "Searched",
@@ -170,6 +178,7 @@
       "dataFile": "Select Data File (CSV, Excel, TXT)",
       "pleaseSelectFile": "Please select a data file first",
       "chooseFile": "Choose File",
+      "replaceHint": "Click to change file",
       "noFileChosen": "No file chosen",
       "pleaseSelectFileFirst": "Please select a file first",
       "pleaseUploadFileFirst": "Please upload a file first",
@@ -183,6 +192,12 @@
   "interpolation": {
     "title": {
       "spatialInterpolation": "📥 Rainfall Import"
+    },
+    "thresholdMode": {
+      "label": "Threshold Mode",
+      "grid": "Grid-based threshold (recommended)",
+      "fixed": "Fixed threshold",
+      "hint": "Grid mode uses NetCDF thresholds per point; fixed mode uses the value above"
     },
     "form": {
       "confirmDate": "Confirm Date (can be manually modified, used for generating event ID)",
@@ -286,10 +301,20 @@
       "countryNuts3": "Country-NUTS3"
     },
     "geojsonLoaded": "GeoJSON region loaded (hover to view NUTS information)",
+    "legend": {
+      "title": "Legend",
+      "high": "> {value} mm (High Intensity)",
+      "medium": "{min}-{max} mm (Medium Intensity)",
+      "low": "≤ {value} mm (Low Intensity)"
+    },
     "popup": {
       "country": "Country",
       "date": "Date",
-      "rainfall": "Rainfall"
+      "rainfall": "Rainfall",
+      "loading": "Loading details...",
+      "fetchError": "Failed to load details",
+      "timelineCount": "Timeline Items",
+      "searchedStatus": "Search Status"
     }
   }
 }

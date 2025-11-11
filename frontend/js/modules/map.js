@@ -448,15 +448,11 @@ function addMarkersToMap(points, threshold = 50.0) {
         
         points.forEach((point, index) => {
             if (point.latitude && point.longitude) {
-                // 根据值设置颜色
-                let color = '#3498db'; // 默认蓝色
-                if (point.value !== null && point.value !== undefined) {
-                    if (threshold && point.value > threshold * 1.5) {
-                        color = '#e74c3c'; // 红色：高值
-                    } else if (threshold && point.value > threshold) {
-                        color = '#f39c12'; // 橙色：中等值
-                    }
-                }
+                // 根据值设置颜色（使用统一的颜色判断函数）
+                const color = getMarkerColorByValue(point.value, { 
+                    medium: threshold, 
+                    high: threshold * 1.5 
+                });
                 
                 const marker = L.circleMarker([point.latitude, point.longitude], {
                     radius: 8,

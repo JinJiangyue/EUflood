@@ -2,6 +2,7 @@ import pandas as pd
 import json
 import sys
 import os
+from typing import Optional, Tuple, Dict, Any, List
 
 def detect_coordinate_columns(df):
     """自动检测经纬度和值列"""
@@ -63,6 +64,78 @@ def transform_coordinates_batch(x_coords, y_coords):
     except Exception:
         return None
 
+_NC_CACHE: Dict[str, Any] = {}
+
+def _load_threshold_grid(nc_path: str):
+    """加载 NetCDF 阈值文件，返回 xarray DataArray: idf[y, x]（WGS84经纬度坐标）"""
+    if not os.path.exists(nc_path):
+        raise FileNotFoundError(f"NC file not found: {nc_path}")
+    if nc_path in _NC_CACHE:
+        return _NC_CACHE[nc_path]
+    try:
+        import xarray as xr
+        ds = xr.open_dataset(nc_path)
+        # 选第一层 duration/hazard（不同文件已代表不同重现期）
+        da = ds['idf']
+        if 'duration' in da.dims:
+            da = da.isel(duration=0)
+        if 'hazard' in da.dims:
+            da = da.isel(hazard=0)
+        # 确保维度顺序为 (y, x)
+        if tuple(da.dims)[-2:] != ('y', 'x'):
+            # 尝试重排
+            target_order = [d for d in da.dims if d not in ('y', 'x')] + ['y', 'x']
+            da = da.transpose(*target_order)
+        _NC_CACHE[nc_path] = da
+        return da
+    except ImportError:
+        raise ImportError("Missing dependency: xarray. Please install: pip install xarray netCDF4")
+    except Exception as e:
+        raise RuntimeError(f"Failed to load NC thresholds: {e}")
+
+def _sample_thresholds(da, lons: List[float], lats: List[float], method: str = 'nearest'):
+    """在阈值栅格上批量采样阈值，支持最近邻或线性插值。返回 numpy.ndarray"""
+    import numpy as np
+    import xarray as xr
+    if not isinstance(da, xr.DataArray):
+        raise ValueError("da must be an xarray.DataArray")
+    # x/y 坐标名约定：x=经度, y=纬度
+    x_name = 'x'
+    y_name = 'y'
+    # 统一使用 interp，method 取 'nearest' 或 'linear'，可稳定处理批量坐标
+    interp_method = 'nearest' if method == 'nearest' else 'linear'
+    sampled = da.interp({x_name: (['pts'], lons), y_name: (['pts'], lats)}, method=interp_method).values
+    sampled = np.asarray(sampled)
+    # 如果 shape 为 (pts,) 直接返回；若为 (1,1,pts) 等，压缩
+    sampled = np.squeeze(sampled)
+    return sampled
+
+def _estimate_return_period(r: float, t2: Optional[float], t5: Optional[float], t20: Optional[float]) -> Tuple[str, Optional[float]]:
+    """根据R与 2/5/20年阈值的关系，给出区间和一个简单的估算值（线性插值）。"""
+    import math
+    if r is None or any(v is None for v in [t2, t5, t20]):
+        return "unknown", None
+    # 区间
+    if r < t2:
+        band = "<2y"
+        # 外推（保守）：按 [1y,2y] 线性外推估个 1-2 之间的值（用 t2 做尺度）
+        rp = max(1.0, 2.0 * (r / t2)) if t2 > 0 else 1.0
+        return band, rp
+    if r < t5:
+        band = "2-5y"
+        rp = 2.0 + (r - t2) / max(t5 - t2, 1e-6) * 3.0
+        return band, rp
+    if r < t20:
+        band = "5-20y"
+        rp = 5.0 + (r - t5) / max(t20 - t5, 1e-6) * 15.0
+        return band, rp
+    # >=20y
+    band = ">=20y"
+    # 简单外推：每再增加 (t20 - t5) 的幅度，增加 15 年（与上段一致的尺度）
+    step = max(t20 - t5, 1e-6)
+    rp = 20.0 + max(0.0, (r - t20) / step) * 15.0
+    return band, rp
+
 def main():
     args = {}
     if len(sys.argv) > 1:
@@ -110,6 +183,22 @@ def main():
     # 如果用户没有提供阈值，使用固定阈值50.0
     if value_threshold is None:
         value_threshold = 50.0
+    
+    # 网格阈值/重现期相关配置
+    threshold_mode = str(args.get('threshold_mode', 'fixed')).lower()  # fixed | grid
+    # 指定用于筛选的“几年一遇”版本：002y/005y/020y
+    grid_rp_for_filter = str(args.get('grid_rp_for_filter', '005y')).lower()
+    grid_interp_method = str(args.get('grid_interp_method', 'nearest')).lower()  # nearest | linear
+    # 各重现期阈值文件路径（可只给一个；若都提供，则可输出三个阈值与RP估算）
+    rp_files = {
+        '002y': args.get('nc_002y'),
+        '005y': args.get('nc_005y'),
+        '020y': args.get('nc_020y'),
+    }
+    # 回退阈值（越界/NaN）
+    grid_fallback = float(args.get('grid_fallback', value_threshold))
+    # 是否输出阈值与RP列
+    output_rp_columns = bool(args.get('output_rp_columns', True))
     
     max_points = args.get('max_points', 1000)
     enable_coord_transform = args.get('enable_coord_transform', True)
@@ -220,17 +309,68 @@ def main():
             df_valid['longitude'] = df_valid['x_raw']
             df_valid['latitude'] = df_valid['y_raw']
         
-        # 应用阈值筛选（固定阈值，始终执行）
+        # 应用阈值筛选（支持 fixed / grid）
         if value_col:
-            print(f"[Progress] Applying threshold filter: value > {value_threshold}...", file=sys.stderr)
-            before_count = len(df_valid)
-            # 确保value列是数值类型
+            # 统一数值类型
             df_valid['value'] = pd.to_numeric(df_valid['value'], errors='coerce')
-            # 应用阈值筛选：只保留值大于阈值的点
-            df_valid = df_valid[df_valid['value'] > value_threshold]
-            # 按value从大到小排序（与原始脚本一致）
-            df_valid = df_valid.sort_values(by='value', ascending=False)
-            print(f"[Progress] After threshold: {len(df_valid)}/{before_count} points (threshold: {value_threshold})", file=sys.stderr)
+            before_count = len(df_valid)
+            if threshold_mode == 'grid':
+                print(f"[Progress] Threshold mode: grid ({grid_rp_for_filter}), method={grid_interp_method}", file=sys.stderr)
+                # 准备需要的阈值网格
+                da_002 = _load_threshold_grid(rp_files['002y']) if rp_files.get('002y') else None
+                da_005 = _load_threshold_grid(rp_files['005y']) if rp_files.get('005y') else None
+                da_020 = _load_threshold_grid(rp_files['020y']) if rp_files.get('020y') else None
+                if grid_rp_for_filter not in rp_files or not rp_files[grid_rp_for_filter]:
+                    # 若未提供指定RP文件，退回 fixed
+                    print(f"[Warning] Missing NC for selected RP {grid_rp_for_filter}, fallback to fixed {value_threshold}", file=sys.stderr)
+                    thr_for_filter = pd.Series([value_threshold] * len(df_valid), index=df_valid.index)
+                else:
+                    da_sel = {'002y': da_002, '005y': da_005, '020y': da_020}[grid_rp_for_filter]
+                    vals = _sample_thresholds(
+                        da_sel,
+                        df_valid['longitude'].tolist(),
+                        df_valid['latitude'].tolist(),
+                        method=grid_interp_method
+                    )
+                    # 回退处理
+                    import numpy as np
+                    vals = np.where(~pd.isna(vals), vals, grid_fallback)
+                    thr_for_filter = pd.Series(vals, index=df_valid.index, dtype='float64')
+                    df_valid[f'threshold_{grid_rp_for_filter}'] = thr_for_filter
+                # 计算其它阈值与RP（如需）
+                if output_rp_columns:
+                    import numpy as np
+                    if da_002 is not None:
+                        v2 = _sample_thresholds(da_002, df_valid['longitude'].tolist(), df_valid['latitude'].tolist(), method=grid_interp_method)
+                        v2 = np.where(~pd.isna(v2), v2, grid_fallback)
+                        df_valid['threshold_2y'] = v2
+                    if da_005 is not None:
+                        v5 = _sample_thresholds(da_005, df_valid['longitude'].tolist(), df_valid['latitude'].tolist(), method=grid_interp_method)
+                        v5 = np.where(~pd.isna(v5), v5, grid_fallback)
+                        df_valid['threshold_5y'] = v5
+                    if da_020 is not None:
+                        v20 = _sample_thresholds(da_020, df_valid['longitude'].tolist(), df_valid['latitude'].tolist(), method=grid_interp_method)
+                        v20 = np.where(~pd.isna(v20), v20, grid_fallback)
+                        df_valid['threshold_20y'] = v20
+                    # 估算重现期
+                    if all(col in df_valid.columns for col in ['threshold_2y', 'threshold_5y', 'threshold_20y']):
+                        bands = []
+                        rps = []
+                        for r, t2, t5, t20 in zip(df_valid['value'].tolist(), df_valid['threshold_2y'].tolist(), df_valid['threshold_5y'].tolist(), df_valid['threshold_20y'].tolist()):
+                            band, rp = _estimate_return_period(r, t2, t5, t20)
+                            bands.append(band)
+                            rps.append(rp)
+                        df_valid['return_period_band'] = bands
+                        df_valid['return_period_estimate'] = rps
+                # 使用选择的RP阈值进行筛选（>= 阈值）
+                df_valid = df_valid[df_valid['value'] > thr_for_filter]
+                df_valid = df_valid.sort_values(by='value', ascending=False)
+                print(f"[Progress] After grid-threshold: {len(df_valid)}/{before_count} points (rp={grid_rp_for_filter})", file=sys.stderr)
+            else:
+                print(f"[Progress] Applying fixed threshold: value >= {value_threshold}", file=sys.stderr)
+                df_valid = df_valid[df_valid['value'] > value_threshold]
+                df_valid = df_valid.sort_values(by='value', ascending=False)
+                print(f"[Progress] After fixed threshold: {len(df_valid)}/{before_count} points", file=sys.stderr)
         else:
             print(f"[Progress] No value column found, skipping threshold filter", file=sys.stderr)
         
@@ -475,6 +615,11 @@ def main():
                 "latitude": float(row['latitude']),
                 "value": float(row['value']) if pd.notna(row['value']) else None
             }
+            # 附加阈值/重现期信息（如有）
+            for c in ['threshold_2y', 'threshold_5y', 'threshold_20y', f'threshold_{grid_rp_for_filter}', 'return_period_band', 'return_period_estimate']:
+                if c in final_points.columns and pd.notna(row.get(c)):
+                    v = row.get(c)
+                    item[c] = float(v) if isinstance(v, (int, float)) and pd.notna(v) else (str(v) if v is not None else None)
             # 附加行政区（如果有）
             if 'province_name' in row and pd.notna(row['province_name']):
                 item['province_name'] = str(row['province_name'])
@@ -499,6 +644,9 @@ def main():
             "summary": {
                 "total_points": len(points),
                 "value_threshold": float(value_threshold),
+                "threshold_mode": threshold_mode,
+                "grid_rp_for_filter": grid_rp_for_filter if threshold_mode == 'grid' else None,
+                "grid_interp_method": grid_interp_method if threshold_mode == 'grid' else None,
                 "max_points": int(max_points),
                 "coordinate_transform": bool(needs_transform),
                 "geojson_filtered": bool(geojson_file is not None and os.path.exists(geojson_file) if geojson_file else False),

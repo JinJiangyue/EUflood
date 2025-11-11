@@ -5,6 +5,44 @@ import { z } from 'zod';
 import { db } from '../../db';
 
 export function registerRainEventsModule(app: Express) {
+  // 获取最新的降雨事件（按日期倒序，限制条数）
+  app.get('/events/rain/latest', async (req: Request, res: Response) => {
+    try {
+      const rawLimit = parseInt(req.query.limit as string);
+      const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 100) : 30;
+
+      const detailsQuery = `
+        SELECT 
+          id, date, country, province, city, 
+          longitude, latitude, value, threshold, 
+          return_period_band, return_period_estimate,
+          file_name, seq, searched
+        FROM rain_event
+        ORDER BY date DESC, country ASC, province ASC, seq ASC
+        LIMIT ?
+      `;
+      const details = db.prepare(detailsQuery).all(limit) as any[];
+
+      const earliestDate = details.length > 0 ? details[details.length - 1].date : null;
+      const latestDate = details.length > 0 ? details[0].date : null;
+
+      res.json({
+        success: true,
+        details,
+        dateRange: {
+          from: earliestDate,
+          to: latestDate
+        },
+        total: details.length
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        error: error?.message || String(error)
+      });
+    }
+  });
+
   // 查询降雨事件（支持日期范围和国家筛选）
   app.get('/events/rain', async (req: Request, res: Response) => {
     try {
@@ -86,6 +124,7 @@ export function registerRainEventsModule(app: Express) {
           SELECT 
             id, date, country, province, city, 
             longitude, latitude, value, threshold, 
+            return_period_band, return_period_estimate,
             file_name, seq, searched
           FROM rain_event
           ${whereClause}
