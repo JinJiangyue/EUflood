@@ -1,5 +1,124 @@
 # Development Notes
 
+## 1.1.5 - 2025-11-14（新增条目，旧内容保留在本条目下方）
+
+### 数据库迁移至 PocketBase
+
+**迁移原因**：
+- SQLite 不适合远程部署和多实例场景
+- PocketBase 提供 REST API，便于统一管理
+- 支持更好的扩展性和维护性
+
+**实现策略**：
+- **适配器模式**：创建 `IDatabaseAdapter` 接口，定义统一的数据库操作
+- **PocketBase 适配器**：实现 `PocketBaseAdapter`，封装 PocketBase SDK 调用
+- **辅助函数**：创建 `db-helper.ts`，提供 `dbFind`、`dbCreate`、`dbUpdate` 等统一接口
+- **集合名称映射**：使用单数形式（`rain_event`、`rain_flood_impact`）
+
+**关键实现**：
+- **认证**：优先使用邮箱密码认证，失败时回退到 Token 认证
+- **分页处理**：自动处理 PocketBase 的 500 条分页限制，循环获取所有记录
+- **错误处理**：捕获重复记录错误（400/409），记录警告但继续处理
+- **字段映射**：PocketBase 使用下划线命名（`file_name`），统一字段名格式
+
+### 统一数据流程模式
+
+**问题**：
+- 数据点导入：Python 处理数据，Node.js 写入数据库
+- 深度搜索：Python 处理并写入数据库（需要 PocketBase Python SDK）
+
+**解决方案**：
+- **统一模式**：Python 脚本只负责数据处理，返回 JSON 结果
+- **Node.js 写入**：所有数据库写入操作由 Node.js 完成
+- **移除依赖**：移除了 Python 的 PocketBase SDK 依赖
+
+**实现细节**：
+- **数据点导入**：保持原有模式（Python 返回 JSON，Node.js 写入）
+- **深度搜索**：
+  - 修改 `prepare_rain_flood_impact_data()` 函数，只返回数据不写入
+  - 修改 `workflow.py`，将表2数据包含在返回结果中
+  - 修改 `deep_search.py`，输出 JSON 结果到 stdout
+  - 修改 Node.js 路由，解析 JSON 并写入 PocketBase
+
+### 字段名统一
+
+**变更**：
+- `rain_event` 表：统一使用 `rain_event_id` 作为业务主键
+- 移除了所有 `id` 字段的兼容性处理
+- `rain_flood_impact` 表：`time` 字段改为 `date`
+
+**影响范围**：
+- 后端 API：所有查询和更新操作使用 `rain_event_id`
+- 前端：统一使用 `event.rain_event_id`
+- Python 脚本：使用 `rain_event_id` 字段
+
+### PocketBase 查询注意事项
+
+**主键区别**：
+- **系统 ID**：PocketBase 自动生成的 `id` 字段（用于 `dbGet`、`dbUpdate`、`dbDelete`）
+- **业务 ID**：我们自定义的 `rain_event_id` 字段（用于业务逻辑）
+
+**查询策略**：
+- 使用 `dbFind` + filter 通过 `rain_event_id` 查询记录
+- 获取记录后，使用记录的 `id` 字段进行更新/删除操作
+- 不能直接用 `rain_event_id` 调用 `dbGet` 或 `dbUpdate`
+
+**示例**：
+```typescript
+// ✅ 正确：使用 filter 查询
+const events = await dbFind('rain_event', {
+  filter: `rain_event_id = "${rainEventId}"`,
+  limit: 1
+});
+const event = events[0];
+
+// ✅ 正确：使用系统 ID 更新
+await dbUpdate('rain_event', event.id, { searched: 1 });
+
+// ❌ 错误：不能直接用业务 ID
+await dbGet('rain_event', rainEventId); // 找不到！
+```
+
+### 去重逻辑优化
+
+**问题**：
+- 浮点数精度问题导致去重失败
+- 日期格式不一致导致查询不到已存在记录
+- 逐个查询性能差
+
+**解决方案**：
+- **批量查询**：一次查询所有已存在记录，使用 `Set` 进行 O(1) 查找
+- **坐标标准化**：保留 6 位小数，避免精度差异
+- **日期标准化**：统一为 `YYYY-MM-DD` 格式
+- **日期范围查询**：使用 `date >= "YYYY-MM-DDTHH:MM:SS.000Z" && date <= "YYYY-MM-DDTHH:MM:SS.999Z"` 匹配完整日期范围
+
+**唯一键生成**：
+```typescript
+const key = `${normalizeDate(date)}|${fileName}|${normalizeCoord(longitude)}|${normalizeCoord(latitude)}`;
+```
+
+### 编码问题处理
+
+**问题**：
+- `.env` 文件编码不是 UTF-8，导致 Python 脚本读取失败
+- 错误：`UnicodeDecodeError: 'utf-8' codec can't decode bytes`
+
+**解决方案**：
+- 在 `settings.py` 中添加自动检测和修复逻辑
+- 如果 UTF-8 解码失败，尝试用 latin-1 读取并转换为 UTF-8
+- 修复后的文件保存为 UTF-8 编码
+
+### 代码重构
+
+**提取重复代码**：
+- 将 `rain_event_data` 构建逻辑提取为 `_build_rain_event_data()` 方法
+- 在 `_process_contents()` 和 `_fill_table2_with_empty_data()` 中复用
+
+**简化函数**：
+- 移除废弃的参数（如 `rain_event_id`、`db_path`）
+- 清理重复的导入语句
+- 简化函数签名和逻辑
+
 ## 1.1.0 - 2025-11-11（新增条目，旧内容保留在本条目下方）
 
 ### 按地址查询降雨数据实现
@@ -217,7 +336,7 @@
 
 **数据一致性**：
 - 表2的 `rain_event_id` 必须直接复制表1的 `id`，确保完全匹配
-- 表2的 `time` 字段直接复制表1的 `date` 字段
+- 表2的 `date` 字段直接复制表1的 `date` 字段
 - 报告路径使用完整事件ID和日期文件夹结构
 
 **超时处理**：
@@ -261,7 +380,7 @@
 
 **表2（rain_flood_impact）设计**：
 - `rain_event_id` 字段：直接复制表1的 `id`，确保完全匹配
-- `time` 字段：直接复制表1的 `date` 字段
+- `date` 字段：直接复制表1的 `date` 字段
 - `detail_file` 字段：使用完整事件ID和日期文件夹结构
 - 外键关系：通过 `rain_event_id` 关联表1
 

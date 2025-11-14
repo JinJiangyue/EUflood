@@ -1,5 +1,58 @@
 # Changelog
 
+## 1.1.5 - 2025-11-14
+
+### 🔄 重大变更
+- **数据库迁移**：从 SQLite 迁移到 PocketBase（BaaS，REST API）
+  - 支持远程部署，统一数据管理
+  - 使用适配器模式（`IDatabaseAdapter`），便于未来扩展
+  - 通过环境变量配置连接信息（`POCKETBASE_URL`、`POCKETBASE_ADMIN_EMAIL`、`POCKETBASE_ADMIN_PASSWORD`）
+- **架构统一**：统一数据点导入和深度搜索的流程模式
+  - Python 脚本只负责数据处理，返回 JSON 结果
+  - Node.js 负责所有数据库写入操作
+  - 移除了 Python 的 PocketBase 依赖
+
+### ✨ 新增功能
+- **数据库适配器**：
+  - 创建 `db-adapter.ts` 接口定义
+  - 实现 `PocketBaseAdapter`（`db-pocketbase.ts`）
+  - 创建 `db-helper.ts` 辅助函数，统一数据库操作
+- **自动分页**：PocketBase 查询自动处理 500 条分页限制
+- **编码修复**：自动检测和修复 `.env` 文件编码问题（UTF-8）
+
+### 🛠️ 技术改进
+- **字段名统一**：
+  - `rain_event` 表统一使用 `rain_event_id` 作为业务主键
+  - 移除了所有 `id` 字段的兼容性处理
+  - `rain_flood_impact` 表的 `time` 字段改为 `date`
+- **去重逻辑优化**：
+  - 批量查询已存在记录，使用 `Set` 进行 O(1) 查找
+  - 处理浮点数精度问题（坐标保留 6 位小数）
+  - 统一日期格式为 `YYYY-MM-DD`
+  - 添加并发冲突检查（`rain_event_id` 唯一性）
+- **错误处理增强**：
+  - 批量创建时捕获重复错误，继续处理其他记录
+  - 详细的错误日志和统计信息
+  - 防止程序崩溃的异常处理
+
+### 🐛 问题修复
+- **详情页修复**：修复了详情页和深度搜索的 404 错误
+  - 使用 `dbFind` 通过 `rain_event_id` 查询，而不是 `dbGet`（需要 PocketBase 内部 `id`）
+  - 更新操作时先查询获取 PocketBase 内部 `id`
+- **编码问题修复**：
+  - 修复 `.env` 文件编码错误（UnicodeDecodeError）
+  - 自动检测并修复编码问题（latin-1 → UTF-8）
+- **代码清理**：
+  - 提取重复的 `rain_event_data` 构建逻辑为 `_build_rain_event_data()` 方法
+  - 移除废弃的参数和函数
+  - 清理重复的导入语句
+  - 简化函数签名和逻辑
+
+### 📝 文档
+- 更新 `CODE_TREE.md`：反映 PocketBase 架构变更
+- 更新 `README.md`：更新数据库配置说明
+- 更新 `CHANGELOG.md` 和 `DEVELOPMENT_NOTES.md`：记录本次变更
+
 ## 1.1.0 - 2025-11-11
 
 ### ✨ 新增功能
@@ -156,7 +209,7 @@
 ### 🐛 问题修复
 - 修复省份名称显示问题：前端正确显示省份名称（去除 `/` 后的部分）
 - 修复表2 `rain_event_id` 匹配问题：确保直接复制表1的 `id`，完全匹配
-- 修复表2 `time` 字段：直接复制表1的 `date` 字段
+- 修复表2 `date` 字段：直接复制表1的 `date` 字段（将 `time` 字段重命名为 `date`）
 - 修复报告路径：使用完整事件ID和日期文件夹结构
 - 修复深度搜索超时问题：超时时间从2分钟调整为4分钟
 - 修复环境变量传递问题：过滤占位符值，确保 Python 从 `.env` 文件读取真实 API Keys

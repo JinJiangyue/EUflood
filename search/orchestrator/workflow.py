@@ -177,6 +177,25 @@ class SearchWorkflow:
             logger.exception("采集数据源失败: %s", context.rain_event.event_id)
         return {}
 
+    def _build_rain_event_data(self, context: EventContext) -> Dict[str, Any]:
+        """从 context 构建表1数据字典。
+        
+        Args:
+            context: 事件上下文
+            
+        Returns:
+            表1数据字典
+        """
+        return {
+            "rain_event_id": str(context.rain_event.event_id),
+            "date": context.rain_event.event_time.strftime("%Y-%m-%d") if context.rain_event.event_time else "",
+            "country": context.rain_event.country,
+            "province": context.location_profile.get("province", ""),
+            "city": context.rain_event.location_name or "",
+            "longitude": context.rain_event.longitude,
+            "latitude": context.rain_event.latitude,
+        }
+
     def _process_contents(self, context: EventContext) -> Dict[str, Any]:
         """使用 LLM 处理内容（完全 LLM 驱动）。"""
         try:
@@ -185,31 +204,17 @@ class SearchWorkflow:
             processor = LLMProcessor(self.config)
             result = processor.process(context)
 
-            # 填充表2（rain_flood_impact）
-            # 无论是否有extraction结果，都要填充表2（即使没有相关内容，也要记录）
+            # 准备表2（rain_flood_impact）数据（不写入数据库，返回给 Node.js）
+            # 无论是否有extraction结果，都要准备表2数据（即使没有相关内容，也要记录）
+            table2_data = None
             try:
-                from ..llm.db_writer import fill_rain_flood_impact_table
-                from pathlib import Path
+                from ..llm.db_writer import prepare_rain_flood_impact_data
                 
-                # 获取数据库路径（统一使用一个路径：apps/database/dev.db）
-                db_file = self.config.DB_FILE
-                if not db_file:
-                    # 如果未配置，使用默认路径（与Node.js API保持一致）
-                    project_root = Path(__file__).resolve().parents[2]
-                    db_file = str(project_root / "apps" / "database" / "dev.db")
-                elif not Path(db_file).is_absolute():
-                    # 如果是相对路径，转换为绝对路径（相对于项目根目录）
-                    project_root = Path(__file__).resolve().parents[2]
-                    db_file = str(project_root / db_file)
+                # 从 context 构建表1数据
+                rain_event_data = self._build_rain_event_data(context)
                 
-                # 从数据库表1（rain_event）获取完整的表1数据（包含 id 字段）
-                # 深度搜索只处理表1中已存在的事件，所以事件一定在表1中
-                event_id_from_context = context.rain_event.event_id
-                from ..llm.db_writer import get_rain_event_from_db
-                rain_event_data = get_rain_event_from_db(db_file, event_id_from_context)
-                
-                if not rain_event_data:
-                    logger.error("无法从数据库表1（rain_event）获取事件数据: %s。深度搜索只处理表1中已存在的事件。", event_id_from_context)
+                if not rain_event_data.get("rain_event_id"):
+                    logger.error("无法从 context 获取事件ID")
                 else:
                     # 确保 result 中有 extraction 字段（如果没有，创建空结构）
                     if not result.get("extraction"):
@@ -219,47 +224,22 @@ class SearchWorkflow:
                             "impact": {}
                         }
                     
-                    # 直接传入表1的完整数据，函数会使用其中的 id（直接复制，确保完全匹配）
-                    success = fill_rain_flood_impact_table(
-                        db_path=db_file,
-                        rain_event=rain_event_data,  # 传入表1的完整数据
+                    # 准备表2数据（返回给 Node.js，由 Node.js 写入 PocketBase）
+                    table2_data = prepare_rain_flood_impact_data(
+                        rain_event=rain_event_data,
                         llm_result=result,
                     )
                     
                     table1_id = rain_event_data.get("rain_event_id")
-                    if success:
-                        logger.info("✅ 表2数据填充成功: rain_event_id=%s (直接复制自表1)", table1_id)
+                    if table2_data:
+                        logger.info("✅ 表2数据准备成功: rain_event_id=%s", table1_id)
                     else:
-                        logger.warning("⚠️  表2数据填充失败: %s", table1_id)
-                        # 表2填充失败，更新表1的searched字段为2（需重搜）
-                        try:
-                            import sqlite3
-                            conn = sqlite3.connect(db_file)
-                            cursor = conn.cursor()
-                            cursor.execute("UPDATE rain_event SET searched = 2 WHERE rain_event_id = ?", (table1_id,))
-                            conn.commit()
-                            conn.close()
-                            logger.warning("⚠️ 已更新表1的searched字段为2（需重搜）: rain_event_id=%s", table1_id)
-                        except Exception as update_error:
-                            logger.warning("⚠️ 更新表1的searched字段失败: rain_event_id=%s, error=%s", table1_id, update_error)
+                        logger.warning("⚠️  表2数据准备失败: %s", table1_id)
             except Exception as e:
-                logger.exception("填充表2数据时出错: %s", e)
-                # 填充表2时发生异常，更新表1的searched字段为2（需重搜）
-                try:
-                    table1_id = rain_event_data.get("rain_event_id") if 'rain_event_data' in locals() else None
-                    if table1_id:
-                        import sqlite3
-                        conn = sqlite3.connect(db_file)
-                        cursor = conn.cursor()
-                        cursor.execute("UPDATE rain_event SET searched = 2 WHERE rain_event_id = ?", (table1_id,))
-                        conn.commit()
-                        conn.close()
-                        logger.warning("⚠️ 已更新表1的searched字段为2（需重搜，异常）: rain_event_id=%s", table1_id)
-                except Exception as update_error:
-                    logger.warning("⚠️ 更新表1的searched字段失败: error=%s", update_error)
+                logger.exception("准备表2数据时出错: %s", e)
                 # 不中断主流程，继续返回LLM结果
 
-            # 转换为兼容格式，并包含报告
+            # 转换为兼容格式，并包含报告和表2数据
             return {
                 "validation": result.get("validation", {}),
                 "extraction": result.get("extraction", {}),
@@ -271,6 +251,7 @@ class SearchWorkflow:
                     "official": result.get("validation", {}).get("relevant_items", []),
                 },
                 "report": result.get("report", ""),  # LLM 生成的报告
+                "table2_data": table2_data,  # 表2数据（由 Node.js 写入数据库）
             }
         except ImportError as e:
             logger.warning("LLM 处理模块未就绪: %s", e)
@@ -280,51 +261,41 @@ class SearchWorkflow:
         return {}
     
     def _fill_table2_with_empty_data(self, context: EventContext, llm_result: Dict[str, Any]) -> None:
-        """即使没有采集到数据，也要填充表2（使用空数据）。"""
+        """即使没有采集到数据，也要准备表2数据（使用空数据，返回给 Node.js）。"""
         try:
-            from ..llm.db_writer import fill_rain_flood_impact_table
-            from pathlib import Path
+            from ..llm.db_writer import prepare_rain_flood_impact_data
             
-            # 获取数据库路径（统一使用一个路径：apps/database/dev.db）
-            db_file = self.config.DB_FILE
-            if not db_file:
-                # 如果未配置，使用默认路径（与Node.js API保持一致）
-                project_root = Path(__file__).resolve().parents[2]
-                db_file = str(project_root / "apps" / "database" / "dev.db")
-            elif not Path(db_file).is_absolute():
-                # 如果是相对路径，转换为绝对路径（相对于项目根目录）
-                project_root = Path(__file__).resolve().parents[2]
-                db_file = str(project_root / db_file)
+            # 从 context 构建表1数据
+            rain_event_data = self._build_rain_event_data(context)
             
-            # 从数据库表1（rain_event）获取完整的表1数据（包含 id 字段）
-            event_id_from_context = context.rain_event.event_id
-            from ..llm.db_writer import get_rain_event_from_db
-            rain_event_data = get_rain_event_from_db(db_file, event_id_from_context)
+            if not rain_event_data.get("rain_event_id"):
+                logger.error("无法从 context 获取事件ID")
+                return
             
-            if not rain_event_data:
-                logger.error("无法从数据库表1（rain_event）获取事件数据: %s。深度搜索只处理表1中已存在的事件。", event_id_from_context)
+            # 确保 result 中有 extraction 字段（如果没有，创建空结构）
+            if not llm_result.get("extraction"):
+                llm_result["extraction"] = {
+                    "timeline": [],
+                    "impact": {}
+                }
+            
+            # 准备表2数据（返回给 Node.js，由 Node.js 写入 PocketBase）
+            table2_data = prepare_rain_flood_impact_data(
+                rain_event=rain_event_data,
+                llm_result=llm_result,
+            )
+            
+            table1_id = rain_event_data.get("rain_event_id")
+            if table2_data:
+                logger.info("✅ 表2数据准备成功（无数据情况）: rain_event_id=%s", table1_id)
+                # 将表2数据存储到 context 中，供后续输出
+                if not hasattr(context, 'processed_summary'):
+                    context.processed_summary = {}
+                context.processed_summary['table2_data'] = table2_data
             else:
-                # 确保 result 中有 extraction 字段（如果没有，创建空结构）
-                if not llm_result.get("extraction"):
-                    llm_result["extraction"] = {
-                        "timeline": [],
-                        "impact": {}
-                    }
-                
-                # 直接传入表1的完整数据，函数会使用其中的 id（直接复制，确保完全匹配）
-                success = fill_rain_flood_impact_table(
-                    db_path=db_file,
-                    rain_event=rain_event_data,  # 传入表1的完整数据
-                    llm_result=llm_result,
-                )
-                
-                table1_id = rain_event_data.get("rain_event_id")
-                if success:
-                    logger.info("✅ 表2数据填充成功（无数据情况）: rain_event_id=%s (直接复制自表1)", table1_id)
-                else:
-                    logger.warning("⚠️  表2数据填充失败（无数据情况）: %s", table1_id)
+                logger.warning("⚠️  表2数据准备失败（无数据情况）: %s", table1_id)
         except Exception as e:
-            logger.exception("填充表2数据时出错（无数据情况）: %s", e)
+            logger.exception("准备表2数据时出错（无数据情况）: %s", e)
 
     def _generate_reports(self, context: EventContext) -> Dict[str, str]:
         """生成报告（LLM 处理失败时的备选方案）。"""

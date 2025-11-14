@@ -1,4 +1,4 @@
-# 代码结构解析（v1.0.7）
+# 代码结构解析（v1.1.5）
 
 ## 根目录结构
 
@@ -23,12 +23,12 @@ europe/
 │       ├── main.js           主入口
 │       └── modules/           功能模块
 ├── apps/
-│   └── api/                    本地 API（Node.js + TypeScript + SQLite）
+│   └── api/                    本地 API（Node.js + TypeScript + PocketBase）
 │       ├── package.json        脚本与依赖
 │       ├── tsconfig.json       TypeScript 配置
-│       ├── .env                开发环境变量（PORT/DB_FILE/LOG_LEVEL/PYTHON_PATH等）
-│       ├── database/            数据库目录（统一位置）⭐ v1.0.5
-│       │   └── dev.db           本地 SQLite 数据库（git 忽略）
+│       ├── .env                开发环境变量（PORT/POCKETBASE_URL/POCKETBASE_ADMIN_EMAIL等）
+│       ├── database/            数据库目录（已废弃，现在使用 PocketBase）⭐ v1.1.5
+│       │   └── dev.db           本地 SQLite 数据库（已废弃，git 忽略）
 │       ├── python-embed/       嵌入式 Python 3.12 环境
 │       ├── uploads/            上传文件目录（git 忽略）
 │       │   ├── rain_file/      降雨数据文件 ⭐ v1.0.5
@@ -41,7 +41,10 @@ europe/
 │       │   └── bat_python/    批处理脚本和缓存文件
 │       ├── src/
 │       │   ├── index.ts         应用入口，注册所有路由；/ 返回根 index.html
-│       │   ├── db.ts           SQLite 连接、初始化与列升级
+│       │   ├── db.ts           PocketBase 连接与初始化 ⭐ v1.1.5
+│       │   ├── db-pocketbase.ts PocketBase 适配器实现 ⭐ v1.1.5
+│       │   ├── db-adapter.ts    数据库适配器接口 ⭐ v1.1.5
+│       │   ├── db-helper.ts     数据库操作辅助函数 ⭐ v1.1.5
 │       │   ├── routes/
 │       │   │   └── index.ts     汇总注册各模块路由
 │       │   └── modules/        功能模块
@@ -57,7 +60,7 @@ europe/
 - `index.ts`: Express 应用入口，注册所有路由模块，根路径返回 `index.html`
   - 配置静态文件服务：`/frontend` 路径提供 `frontend/` 目录下的静态资源
   - 自动设置 MIME 类型（CSS、JS）
-- `db.ts`: SQLite 数据库连接和初始化，支持列升级
+- `db.ts`: PocketBase 数据库连接和初始化 ⭐ v1.1.5
 
 ### 路由注册 (`routes/index.ts`)
 汇总注册所有模块路由：
@@ -255,24 +258,31 @@ frontend/
 
 ## 数据与模型
 
-### SQLite 数据库位置
-- **统一路径**：`apps/database/dev.db`（v1.0.5 统一）
-- **配置方式**：通过 `.env` 文件中的 `DB_FILE` 环境变量配置（支持相对路径）
+### PocketBase 数据库 ⭐ v1.1.5
+- **数据库类型**：PocketBase（BaaS，REST API）
+- **配置方式**：通过 `.env` 文件配置
+  - `POCKETBASE_URL`: PocketBase 服务器地址
+  - `POCKETBASE_ADMIN_EMAIL`: 管理员邮箱
+  - `POCKETBASE_ADMIN_PASSWORD`: 管理员密码
+  - `POCKETBASE_ADMIN_TOKEN`: 管理员 Token（可选）
+- **集合名称**：`rain_event`、`rain_flood_impact`
+- **适配器模式**：使用 `IDatabaseAdapter` 接口，便于未来扩展
 
-### SQLite 表：`flood_records`
+### 数据表：`flood_records`（已废弃）
 - **关键字段**：`record_id`（去重）、`country`、`specific_location`、`event_time`、`coordinates`
 - **来源与质量**：`source_type/name/url`、`confidence`、`evidence_count`、`metadata`
 - **处理字段**：`status`、`risk_score`、`processed_at`
 
-### SQLite 表：`rain_event`（表1）⭐ v1.0.5
-- **主键**：`id`（格式：`YYYYMMDD_Province_seq`，如 `20251011_Valencia_1`）
+### PocketBase 集合：`rain_event`（表1）⭐ v1.1.5
+- **主键**：`rain_event_id`（格式：`YYYYMMDD_Province_seq`，如 `20251011_Valencia_1`）⭐ v1.1.5 统一
+- **PocketBase 内部 ID**：系统自动生成的 `id` 字段（用于内部操作）
 - **关键字段**：`date`、`country`、`province`（保留空格，不替换为下划线）、`city`、`longitude`、`latitude`、`value`、`threshold`、`file_name`、`seq`、`searched`（0=未搜索，1=已搜索）
 - **用途**：存储从空间插值分析导入的降雨事件数据
 
-### SQLite 表：`rain_flood_impact`（表2）⭐ v1.0.5
-- **主键**：`id`（自增）
-- **外键**：`rain_event_id`（直接复制自表1的 `id`，确保完全匹配）
-- **关键字段**：`time`（直接复制自表1的 `date`）、`level`、`country`、`province`、`city`、`transport_impact_level`、`economy_impact_level`、`safety_impact_level`、`timeline_data`（JSON）、`source_count`、`detail_file`（报告路径：`search_outputs/YYYYMMDD/完整ID_report.md`）
+### PocketBase 集合：`rain_flood_impact`（表2）⭐ v1.1.5
+- **主键**：PocketBase 系统自动生成的 `id` 字段
+- **外键**：`rain_event_id`（直接复制自表1的 `rain_event_id`，确保完全匹配）⭐ v1.1.5
+- **关键字段**：`date`（直接复制自表1的 `date`，字段名从 `time` 改为 `date`）⭐ v1.1.5、`level`、`country`、`province`、`city`、`transport_impact_level`、`economy_impact_level`、`safety_impact_level`、`timeline_data`（JSON）、`source_count`、`detail_file`（报告路径：`search_outputs/YYYYMMDD/完整ID_report.md`）
 - **用途**：存储深度搜索生成的影响评估数据
 
 ### Python 脚本输入输出
@@ -345,13 +355,14 @@ search/
 ├── llm/                       LLM 处理模块
 │   ├── client.py              LLM 客户端抽象（OpenAI / Gemini）
 │   ├── processor.py           4 步处理流程
+│   ├── db_writer.py           表2数据准备（返回 JSON，不直接写入数据库）⭐ v1.1.5
 │   └── prompts.py             Prompt 模板
 ├── orchestrator/              流程编排
-│   └── workflow.py            主工作流（采集→处理→报告）
+│   └── workflow.py            主工作流（采集→处理→报告），返回表2数据给 Node.js ⭐ v1.1.5
 ├── utils/                     工具函数
 │   └── detailed_logger.py     详细日志记录（保存到 test_log.md）
 ├── watcher/                   事件监控
-│   └── rain_event_watcher.py  从数据库读取降雨事件
+│   └── rain_event_watcher.py  从数据库读取降雨事件（已废弃，现在通过 JSON 传入）⭐ v1.1.5
 ├── knowledge/                 知识存储
 │   └── state_store.py        状态存储（未来扩展）
 ├── test_search.py            测试脚本
@@ -366,7 +377,7 @@ search/
 ### 处理流程
 
 #### 1. 事件识别与地理解析
-- **输入**：`rain_events` 表中的降雨事件（时间、地点、降雨量）
+- **输入**：通过 JSON 文件传入的降雨事件（时间、地点、降雨量）⭐ v1.1.5
 - **处理**：`GeoLinguaResolver` 识别国家和官方语言
 - **输出**：国家代码、官方语言、本地术语（rain/flood 的翻译）
 
@@ -414,13 +425,21 @@ search/
 - 根据所有处理结果生成完整的英文洪水事件报告
 - 包含：事件概述、洪水时间线、多媒体与新闻来源、影响评估、总结
 
-#### 6. 报告输出
+#### 6. 报告输出与数据返回 ⭐ v1.1.5
 - **格式**：Markdown
 - **语言**：英文
 - **保存位置**：`search_outputs/{event_id}_report.md`
 - **中间结果**：同时保存原始结果、预过滤结果、LLM 验证结果
+- **表2数据返回**：Python 脚本返回 JSON 结果（包含 `table2_data`），由 Node.js 写入 PocketBase
+- **架构统一**：数据点导入和深度搜索使用相同模式（Python 处理数据，Node.js 写入数据库）
 
 ### 配置项（`.env` 文件）
+
+#### PocketBase 配置 ⭐ v1.1.5
+- `POCKETBASE_URL`: PocketBase 服务器地址
+- `POCKETBASE_ADMIN_EMAIL`: 管理员邮箱
+- `POCKETBASE_ADMIN_PASSWORD`: 管理员密码
+- `POCKETBASE_ADMIN_TOKEN`: 管理员 Token（可选）
 
 #### LLM 配置
 - `LLM_PROVIDER`: openai 或 gemini

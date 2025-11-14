@@ -19,6 +19,7 @@
 """
 
 import argparse
+import json
 import logging
 import os
 import sys
@@ -134,7 +135,6 @@ def main():
     
     if args.json:
         # 从 JSON 字符串创建事件
-        import json
         try:
             # 清理 JSON 字符串（去除可能的换行符和空白）
             json_str = args.json.strip()
@@ -203,6 +203,20 @@ def main():
                 logger.info(f"报告已保存到: {output_file}")
             else:
                 logger.warning("没有可保存的报告内容")
+            
+            # 输出 JSON 结果到 stdout（供 Node.js 读取）
+            # 获取 _process_contents 返回的结果（包含 table2_data）
+            processed_result = context.processed_summary if hasattr(context, 'processed_summary') else {}
+            result_json = {
+                "success": True,
+                "event_id": str(event.event_id),
+                "table2_data": processed_result.get("table2_data"),  # 表2数据（由 Node.js 写入数据库）
+                "report_file": str(output_file.relative_to(project_root)) if output_file.exists() else None,
+            }
+            # 输出到 stdout（Node.js 会读取）
+            sys.stdout.buffer.write(json.dumps(result_json, ensure_ascii=False).encode('utf-8'))
+            sys.stdout.buffer.write(b"\n")
+            sys.stdout.flush()
             
             return 0
             

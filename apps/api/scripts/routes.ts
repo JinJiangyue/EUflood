@@ -7,7 +7,7 @@ import { getRuntimeInfo } from './config';
 import { uploadSingle, getFileInfo, cleanupFile } from './file-upload';
 import path from 'path';
 import fs from 'fs';
-import { db } from '../src/db';
+import { dbFind, dbGet, dbCount, dbCreate, dbCreateBatch } from '../src/db-helper';
 
 /**
  * 构建网格阈值参数（grid 模式）
@@ -341,16 +341,16 @@ export function registerPythonModule(app: Express) {
         const points: any[] = Array.isArray(data?.points) ? data.points : [];
 
         // 批量写入 rain_event（应用层计算 seq 与 rain_event_id）
-        const insertStmt = db.prepare(`
-          INSERT INTO rain_event
-          (rain_event_id, date, country, province, city, longitude, latitude, value, threshold, return_period_band, file_name, seq, searched)
-          VALUES (@rain_event_id, @date, @country, @province, @city, @longitude, @latitude, @value, @threshold, @return_period_band, @file_name, @seq, @searched)
-        `);
-        const tx = db.transaction((rows: any[]) => { rows.forEach(r => insertStmt.run(r)); });
+        // 使用 PocketBase 批量创建
 
         // 计算每个 (date, province) 的起始 seq（保留旧记录，避免覆盖已搜索的数据）
-        const dateStr = String(confirmedDate);
+        // 统一使用字符串格式 "2025-10-11"
+        const dateStr = String(confirmedDate); // "2025-10-11"
         const ymd = dateStr.replace(/-/g, '');
+        
+        // 计算日期范围（用于查询）：使用日期范围查询以兼容不同的日期存储格式
+        const dateStart = new Date(dateStr + 'T00:00:00.000Z').toISOString();
+        const dateEnd = new Date(dateStr + 'T23:59:59.999Z').toISOString();
         // 获取省份名称（用于存储到数据库）：只保留 "/" 前的部分，保留空格
         const getProvinceName = (s: string) => {
           const str = s || 'UNKNOWN';
@@ -365,26 +365,86 @@ export function registerPythonModule(app: Express) {
           // 替换空格为下划线（用于生成 ID）
           return beforeSlash.replace(/\s+/g, '_');
         };
-        const getMaxSeqStmt = db.prepare(`SELECT COALESCE(MAX(seq), 0) AS maxSeq FROM rain_event WHERE date = ? AND province = ?`);
-        
-          // 检查是否已存在相同记录（date + file_name + longitude + latitude）
-          const checkExistsStmt = db.prepare(`SELECT rain_event_id FROM rain_event WHERE date = ? AND file_name = ? AND longitude = ? AND latitude = ?`);
-
         // 先统计各省份数量，查询现有 max seq，只查一次
         const provinceToCount = new Map<string, number>();
         for (const p of points) {
           const province = getProvinceName(p.province_name || 'UNKNOWN');
           provinceToCount.set(province, (provinceToCount.get(province) || 0) + 1);
         }
+        
+        // 查询现有记录以获取最大 seq
+        // 使用日期范围查询，匹配 ISO 8601 格式的日期
         const provinceToNextSeq = new Map<string, number>();
         for (const [province] of provinceToCount) {
-          const row = getMaxSeqStmt.get(dateStr, province) as any;
-          const start = (row?.maxSeq || 0) + 1;
-          provinceToNextSeq.set(province, start);
+          // 查询该日期和省份的所有记录
+          const existingRecords = await dbFind('rain_event', {
+            filter: `date >= "${dateStart}" && date <= "${dateEnd}" && province = "${province}"`,
+            sort: '-seq',
+            limit: 1
+          });
+          const maxSeq = existingRecords.length > 0 ? (existingRecords[0].seq || 0) : 0;
+          provinceToNextSeq.set(province, maxSeq + 1);
         }
+
+        // 批量查询已存在的记录（优化性能）
+        // 构建查询条件：查询该日期和文件名的所有记录
+        const fileName = req.file!.originalname;
+        
+        // 使用日期范围查询 + 文件名精确匹配
+        const dateFilter = `date >= "${dateStart}" && date <= "${dateEnd}"`;
+        const filterStr = `${dateFilter} && file_name = "${fileName}"`;
+        
+        const existingRecords = await dbFind('rain_event', {
+          filter: filterStr,
+          limit: 10000
+        });
+        
+        console.log(`[去重检查] 查询到 ${existingRecords.length} 条已存在记录（日期: ${dateStr}, 文件: ${fileName}）`);
+        
+        // 构建已存在记录的 Set（用于快速查找）
+        // 使用 "date|file_name|longitude|latitude" 作为唯一键
+        // 注意：处理浮点数精度问题，保留6位小数
+        // 注意：统一日期格式为 YYYY-MM-DD，避免格式不一致导致去重失败
+        const normalizeCoord = (coord: number | string | null | undefined): string => {
+          if (coord === null || coord === undefined) return 'null';
+          const num = typeof coord === 'string' ? parseFloat(coord) : coord;
+          if (isNaN(num)) return 'null';
+          // 保留6位小数，避免浮点数精度问题
+          return num.toFixed(6);
+        };
+        
+        // 标准化日期格式为 YYYY-MM-DD
+        const normalizeDate = (date: string | Date | null | undefined): string => {
+          if (!date) return '';
+          try {
+            const dateObj = typeof date === 'string' ? new Date(date) : date;
+            return dateObj.toISOString().split('T')[0]; // 返回 YYYY-MM-DD 格式
+          } catch {
+            return String(date).split('T')[0]; // 如果解析失败，尝试直接分割
+          }
+        };
+        
+        const existingKeys = new Set<string>();
+        for (const record of existingRecords) {
+          // 确保字段名正确（PocketBase 使用下划线命名）
+          const date = record.date;
+          const fileName = record.file_name;
+          const lon = record.longitude;
+          const lat = record.latitude;
+          
+          // 标准化日期、坐标和文件名
+          const dateNorm = normalizeDate(date);
+          const lonNorm = normalizeCoord(lon);
+          const latNorm = normalizeCoord(lat);
+          const key = `${dateNorm}|${fileName}|${lonNorm}|${latNorm}`;
+          existingKeys.add(key);
+        }
+        
+        console.log(`[去重检查] 构建了 ${existingKeys.size} 个唯一键用于去重检查`);
 
         // 生成行（带 id/seq），跳过已存在的记录（保留已搜索的数据）
         const rows: any[] = [];
+        let skippedCount = 0;
         for (const p of points) {
           const province = getProvinceName(p.province_name || 'UNKNOWN'); // 用于存储到数据库
           const provinceForId = getProvinceForId(p.province_name || 'UNKNOWN'); // 用于生成 ID
@@ -392,9 +452,15 @@ export function registerPythonModule(app: Express) {
           const lat = Number(p.latitude);
           
           // 检查是否已存在相同记录（date + file_name + longitude + latitude）
-          const existing = checkExistsStmt.get(dateStr, req.file!.originalname, lon, lat) as any;
-          if (existing) {
+          // 使用相同的精度处理和日期格式
+          const dateNorm = normalizeDate(dateStr); // 确保日期格式一致
+          const lonNorm = normalizeCoord(lon);
+          const latNorm = normalizeCoord(lat);
+          const key = `${dateNorm}|${req.file!.originalname}|${lonNorm}|${latNorm}`;
+          
+          if (existingKeys.has(key)) {
             // 已存在，跳过（保留旧记录，包括 searched 状态）
+            skippedCount++;
             continue;
           }
           
@@ -420,7 +486,7 @@ export function registerPythonModule(app: Express) {
 
           rows.push({
             rain_event_id: id,
-            date: dateStr,
+            date: dateStr, // 统一使用字符串格式 "2025-10-11"
             country: p.country_name ?? null,
             province, // 存储保留空格的版本
             city: p.city_name ?? null,
@@ -435,18 +501,85 @@ export function registerPythonModule(app: Express) {
           });
         }
 
-        tx(rows);
+        // 批量创建记录
+        let insertedCount = 0;
+        let errorCount = 0;
+        if (rows.length > 0) {
+          try {
+            // 再次检查 rain_event_id 是否已存在（防止并发冲突）
+            // 批量查询所有可能的 rain_event_id
+            const idsToCheck = rows.map(row => row.rain_event_id);
+            const existingIds = new Set<string>();
+            
+            // 批量查询：检查 rain_event_id 是否已存在（防止并发冲突）
+            if (idsToCheck.length > 0) {
+              try {
+                // PocketBase 的 OR 查询语法：field = "value1" || field = "value2" || ...
+                // 如果 ID 太多，分批查询（每批最多 50 个）
+                const batchSize = 50;
+                for (let i = 0; i < idsToCheck.length; i += batchSize) {
+                  const batch = idsToCheck.slice(i, i + batchSize);
+                  const orConditions = batch.map(id => `rain_event_id = "${id}"`).join(' || ');
+                  const existingRecords = await dbFind('rain_event', {
+                    filter: orConditions,
+                    limit: batch.length
+                  });
+                  
+                  for (const record of existingRecords) {
+                    if (record.rain_event_id) {
+                      existingIds.add(record.rain_event_id);
+                    }
+                  }
+                }
+              } catch (e: any) {
+                // 如果批量查询失败，记录警告但继续（createBatch 会处理重复错误）
+                console.warn(`[入库] 批量查询 rain_event_id 失败，将在插入时处理重复:`, e.message);
+              }
+            }
+            
+            // 过滤掉已存在的 ID
+            const rowsToInsert = rows.filter(row => !existingIds.has(row.rain_event_id));
+            if (existingIds.size > 0) {
+              console.log(`[入库] 检测到 ${existingIds.size} 个已存在的 rain_event_id，将跳过`);
+            }
+            
+            if (rowsToInsert.length > 0) {
+              const created = await dbCreateBatch('rain_event', rowsToInsert);
+              insertedCount = created.length;
+              errorCount = rowsToInsert.length - created.length;
+            } else {
+              console.log(`[入库] 所有记录的 rain_event_id 都已存在，跳过插入`);
+            }
+            
+            console.log(`[入库] 成功插入 ${insertedCount} 条新记录，跳过 ${skippedCount} 条重复记录，${errorCount} 条失败`);
+          } catch (error: any) {
+            console.error(`[入库] 批量创建失败:`, error.message);
+            errorCount = rows.length;
+            // 不抛出错误，继续返回结果，避免程序崩溃
+          }
+        } else {
+          console.log(`[入库] 所有记录都已存在，跳过 ${skippedCount} 条重复记录`);
+        }
+        
         // 不再删除文件，保留原始文件以便后续查询
         // cleanupFile(inputFile);
         // 返回入库结果和插值数据（用于前端显示）
         // data 是 Python 返回的整个对象：{ success: true, summary: {...}, points: [...] }
         return res.json({ 
           success: true, 
-          inserted: rows.length,
+          inserted: insertedCount,
+          skipped: skippedCount,
+          errors: errorCount,
+          total: points.length,
           data: data // 返回插值结果，包含 points 和 summary
         });
       } catch (e: any) {
-        return res.status(500).json({ success: false, error: e?.message || String(e) });
+        console.error(`[入库] 处理失败:`, e);
+        return res.status(500).json({ 
+          success: false, 
+          error: e?.message || String(e),
+          stack: process.env.NODE_ENV === 'development' ? e?.stack : undefined
+        });
       }
     });
   });
@@ -683,27 +816,41 @@ export function registerPythonModule(app: Express) {
   });
   
   // 查询 rain_event 表统计信息
-  app.get('/python/rain/stats', (_req: Request, res: Response) => {
+  app.get('/python/rain/stats', async (_req: Request, res: Response) => {
     try {
-      const total = db.prepare(`SELECT COUNT(*) AS count FROM rain_event`).get() as any;
-      const byDate = db.prepare(`
-        SELECT date, COUNT(*) AS count 
-        FROM rain_event 
-        GROUP BY date 
-        ORDER BY date DESC 
-        LIMIT 10
-      `).all() as any[];
-      const byProvince = db.prepare(`
-        SELECT province, COUNT(*) AS count 
-        FROM rain_event 
-        GROUP BY province 
-        ORDER BY count DESC 
-        LIMIT 10
-      `).all() as any[];
+      const total = await dbCount('rain_event');
+      
+      // 获取所有记录进行分组统计
+      const allRecords = await dbFind('rain_event', {
+        sort: '-date',
+        limit: 10000 // 获取足够多的记录用于统计
+      });
+      
+      // 按日期分组
+      const dateMap = new Map<string, number>();
+      for (const record of allRecords) {
+        const date = record.date;
+        dateMap.set(date, (dateMap.get(date) || 0) + 1);
+      }
+      const byDate = Array.from(dateMap.entries())
+        .map(([date, count]) => ({ date, count }))
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .slice(0, 10);
+      
+      // 按省份分组
+      const provinceMap = new Map<string, number>();
+      for (const record of allRecords) {
+        const province = record.province || 'UNKNOWN';
+        provinceMap.set(province, (provinceMap.get(province) || 0) + 1);
+      }
+      const byProvince = Array.from(provinceMap.entries())
+        .map(([province, count]) => ({ province, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
       
       res.json({
         success: true,
-        total: total?.count || 0,
+        total,
         byDate,
         byProvince
       });
@@ -716,7 +863,7 @@ export function registerPythonModule(app: Express) {
   });
 
   // 查询 rain_event 表所有数据（支持分页和筛选）
-  app.get('/python/rain/list', (req: Request, res: Response) => {
+  app.get('/python/rain/list', async (req: Request, res: Response) => {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 100;
@@ -725,47 +872,36 @@ export function registerPythonModule(app: Express) {
       const province = req.query.province as string;
       const country = req.query.country as string;
 
-      // 构建 WHERE 条件
-      const where: string[] = [];
-      const params: any = {};
-      
+      // 构建 PocketBase 过滤器
+      const filters: string[] = [];
       if (date) {
-        where.push('date = @date');
-        params.date = date;
+        filters.push(`date = "${date}"`);
       }
       if (province) {
-        where.push('province = @province');
-        params.province = province;
+        filters.push(`province = "${province}"`);
       }
       if (country) {
-        where.push('country = @country');
-        params.country = country;
+        filters.push(`country = "${country}"`);
       }
-
-      const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+      const filter = filters.length > 0 ? filters.join(' && ') : undefined;
       
       // 查询总数
-      const countStmt = db.prepare(`SELECT COUNT(*) AS count FROM rain_event ${whereClause}`);
-      const total = (where.length > 0 ? countStmt.get(params) : countStmt.get()) as any;
+      const total = await dbCount('rain_event', filter);
       
       // 查询数据
-      const dataStmt = db.prepare(`
-        SELECT rain_event_id, date, country, province, city, longitude, latitude, value, threshold, return_period_band, file_name, seq, searched
-        FROM rain_event 
-        ${whereClause}
-        ORDER BY date DESC, seq ASC
-        LIMIT @limit OFFSET @offset
-      `);
-      params.limit = limit;
-      params.offset = offset;
-      const data = (where.length > 0 ? dataStmt.all(params) : dataStmt.all({ limit, offset })) as any[];
+      const data = await dbFind('rain_event', {
+        filter,
+        sort: '-date,seq',
+        limit,
+        offset
+      });
 
       res.json({
         success: true,
-        total: total?.count || 0,
+        total,
         page,
         limit,
-        totalPages: Math.ceil((total?.count || 0) / limit),
+        totalPages: Math.ceil(total / limit),
         data
       });
     } catch (e: any) {
@@ -977,7 +1113,7 @@ export function registerPythonModule(app: Express) {
   });
 
   // 查看表2（rain_flood_impact）数据
-  app.get('/python/rain/impact/list', (req: Request, res: Response) => {
+  app.get('/python/rain/impact/list', async (req: Request, res: Response) => {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 100;
@@ -988,69 +1124,51 @@ export function registerPythonModule(app: Express) {
       const level = req.query.level as string; // 整体级别筛选
       const rain_event_id = req.query.rain_event_id as string; // 事件ID筛选
 
-      // 构建 WHERE 条件
-      const where: string[] = [];
-      const params: any = {};
-      
+      // 构建 PocketBase 过滤器
+      const filters: string[] = [];
       if (date) {
-        where.push('time = @date');
-        params.date = date;
+        filters.push(`date = "${date}"`);
       }
       if (province) {
-        where.push('province = @province');
-        params.province = province;
+        filters.push(`province = "${province}"`);
       }
       if (country) {
-        where.push('country = @country');
-        params.country = country;
+        filters.push(`country = "${country}"`);
       }
       if (level) {
         const levelNum = parseInt(level);
         if (!isNaN(levelNum)) {
-          where.push('level = @level');
-          params.level = levelNum;
+          filters.push(`level = ${levelNum}`);
         }
       }
       if (rain_event_id) {
-        where.push('rain_event_id = @rain_event_id');
-        params.rain_event_id = rain_event_id;
+        filters.push(`rain_event_id = "${rain_event_id}"`);
       }
-
-      const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+      const filter = filters.length > 0 ? filters.join(' && ') : undefined;
       
       // 查询总数
-      const countStmt = db.prepare(`SELECT COUNT(*) AS count FROM rain_flood_impact ${whereClause}`);
-      const total = (where.length > 0 ? countStmt.get(params) : countStmt.get()) as any;
+      const total = await dbCount('rain_flood_impact', filter);
       
       // 查询数据
-      const dataStmt = db.prepare(`
-        SELECT 
-          id, rain_event_id, time, level,
-          country, province, city,
-          transport_impact_level, economy_impact_level, safety_impact_level,
-          timeline_data, source_count, detail_file,
-          created_at, updated_at
-        FROM rain_flood_impact 
-        ${whereClause}
-        ORDER BY created_at DESC
-        LIMIT @limit OFFSET @offset
-      `);
-      params.limit = limit;
-      params.offset = offset;
-      const data = (where.length > 0 ? dataStmt.all(params) : dataStmt.all({ limit, offset })) as any[];
+      const data = await dbFind('rain_flood_impact', {
+        filter,
+        sort: '-created',
+        limit,
+        offset
+      });
 
       // 解析 timeline_data JSON
       const parsedData = data.map(item => ({
         ...item,
-        timeline_data: item.timeline_data ? JSON.parse(item.timeline_data) : null
+        timeline_data: item.timeline_data ? (typeof item.timeline_data === 'string' ? JSON.parse(item.timeline_data) : item.timeline_data) : null
       }));
 
       res.json({
         success: true,
-        total: total?.count || 0,
+        total,
         page,
         limit,
-        totalPages: Math.ceil((total?.count || 0) / limit),
+        totalPages: Math.ceil(total / limit),
         data: parsedData
       });
     } catch (e: any) {

@@ -586,7 +586,7 @@ function buildDashboardPopupHtml(event, isSearched, i18n) {
             <div style="min-width: 220px;">
                 <div class="map-popup-section-title">${i18n('detail.section.impactInfo') || '影响评估（表2）'}</div>
                 ${renderRow(i18n('detail.field.eventId'), safe(event.rain_event_id))}
-                ${renderRow(i18n('detail.field.time'), safe(event.time))}
+                ${renderRow(i18n('detail.field.time'), safe(event.date))}
                 ${renderRow(i18n('detail.field.country'), safe(event.country))}
                 ${renderRow(i18n('detail.field.province'), safe(event.province))}
                 ${renderRow(i18n('detail.field.city'), safe(event.city))}

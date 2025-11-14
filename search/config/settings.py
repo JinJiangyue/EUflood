@@ -9,6 +9,7 @@
 
 from pathlib import Path
 from typing import Literal, Optional
+import os
 
 from pydantic import Field
 from pydantic_settings import BaseSettings
@@ -17,6 +18,28 @@ from pydantic_settings import BaseSettings
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 # 使用根目录的 .env 作为统一配置文件
 DEFAULT_ENV_PATH = PROJECT_ROOT / ".env"
+
+# 如果 .env 文件存在但编码有问题，尝试修复
+if DEFAULT_ENV_PATH.exists():
+    try:
+        # 尝试读取文件，检查编码
+        with open(DEFAULT_ENV_PATH, 'r', encoding='utf-8') as f:
+            f.read()
+    except UnicodeDecodeError:
+        # 如果 UTF-8 解码失败，尝试用 latin-1 读取并转换为 UTF-8
+        try:
+            with open(DEFAULT_ENV_PATH, 'rb') as f:
+                raw_data = f.read()
+            # 尝试用 latin-1 解码（可以解码任何字节），然后重新编码为 UTF-8
+            decoded = raw_data.decode('latin-1')
+            # 将修复后的内容写回（使用 UTF-8）
+            with open(DEFAULT_ENV_PATH, 'w', encoding='utf-8', newline='\n') as f:
+                f.write(decoded)
+            import logging
+            logging.getLogger(__name__).warning(f"⚠️  已修复 .env 文件编码问题（从 latin-1 转换为 UTF-8）")
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"⚠️  无法修复 .env 文件编码: {e}")
 
 
 class Settings(BaseSettings):
@@ -27,19 +50,23 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = Field("INFO", description="日志级别")
 
     # ---------------------- 数据库配置 ------------------------
+    # 注意：Python 脚本不再直接操作数据库，所有数据库操作由 Node.js 处理
+    # 以下配置已废弃，保留仅用于向后兼容
+    
+    # SQLite 配置（已废弃）
     DB_DIALECT: Literal["sqlite", "mysql", "postgresql"] = Field(
-        "sqlite", description="底层数据库类型，用于 rain_events 与派生结果存储"
+        "sqlite", description="底层数据库类型（已废弃，现在使用 PocketBase）"
     )
-    # SQLite 数据库文件路径（与 Node.js API 的 DB_FILE 保持一致）
-    DB_FILE: Optional[str] = Field(None, description="SQLite 数据库文件路径（相对于项目根目录）")
-    DB_HOST: str = Field("127.0.0.1", description="数据库主机")
-    DB_PORT: int = Field(3306, description="数据库端口")
-    DB_USER: str = Field("search_user", description="数据库用户名")
-    DB_PASSWORD: str = Field("search_password", description="数据库密码")
-    DB_NAME: str = Field("search_service", description="数据库名称（MySQL/PostgreSQL）或 SQLite 文件路径（如果 DB_FILE 未设置）")
-    DB_CHARSET: str = Field("utf8mb4", description="数据库字符集")
-    RAIN_EVENTS_TABLE: str = Field("rain_event", description="降雨事件原始表名")
-    REPORT_REGISTRY_TABLE: str = Field("rain_reports", description="处理后报告登记表")
+    # SQLite 数据库文件路径（已废弃）
+    DB_FILE: Optional[str] = Field(None, description="SQLite 数据库文件路径（已废弃，现在使用 PocketBase）")
+    DB_HOST: str = Field("127.0.0.1", description="数据库主机（已废弃）")
+    DB_PORT: int = Field(3306, description="数据库端口（已废弃）")
+    DB_USER: str = Field("search_user", description="数据库用户名（已废弃）")
+    DB_PASSWORD: str = Field("search_password", description="数据库密码（已废弃）")
+    DB_NAME: str = Field("search_service", description="数据库名称（已废弃）")
+    DB_CHARSET: str = Field("utf8mb4", description="数据库字符集（已废弃）")
+    RAIN_EVENTS_TABLE: str = Field("rain_event", description="降雨事件原始表名（PocketBase 集合名）")
+    REPORT_REGISTRY_TABLE: str = Field("rain_reports", description="处理后报告登记表（已废弃）")
     EVENT_TIME_COLUMN: str = Field("date", description="事件发生时间列名")
     LOCATION_COLUMN: str = Field("city", description="地点名称列名")
     COUNTRY_COLUMN: str = Field("country", description="国家列名")
@@ -164,7 +191,7 @@ class Settings(BaseSettings):
 
     model_config = {
         "env_file": str(DEFAULT_ENV_PATH),
-        "env_file_encoding": "utf-8",
+        "env_file_encoding": "utf-8",  # 使用 UTF-8 编码（文件已在上方自动修复）
         "case_sensitive": False,
         "extra": "ignore",  # 忽略 .env 中未定义的字段（如 Node.js API 的配置）
         # 注意：pydantic-settings 默认优先读取系统环境变量，然后读取 .env 文件
@@ -173,11 +200,25 @@ class Settings(BaseSettings):
     }
 
 
-settings = Settings()
-
-# 调试：检查关键配置是否加载
+# 尝试加载配置，如果 .env 文件编码有问题，使用错误处理
 import logging
 _logger = logging.getLogger(__name__)
+
+try:
+    settings = Settings()
+except UnicodeDecodeError as e:
+    _logger.error(f"⚠️  .env 文件编码错误: {e}")
+    _logger.error(f"  文件路径: {DEFAULT_ENV_PATH}")
+    _logger.error(f"  错误位置: position {e.start}-{e.end}")
+    _logger.error(f"  建议：将 .env 文件保存为 UTF-8 编码（无 BOM）")
+    _logger.error(f"  或者检查 .env 文件第 {e.start // 50} 行附近是否有特殊字符")
+    # 重新抛出错误，让调用者处理
+    raise
+except Exception as e:
+    _logger.error(f"⚠️  加载配置时出错: {e}")
+    raise
+
+# 调试：检查关键配置是否加载
 if not settings.TAVILY_API_KEY or settings.TAVILY_API_KEY == "your_tavily_api_key_here":
     _logger.warning("⚠️  TAVILY_API_KEY 未正确加载（值: %s）", 
                    settings.TAVILY_API_KEY[:20] + "..." if settings.TAVILY_API_KEY and len(settings.TAVILY_API_KEY) > 20 else settings.TAVILY_API_KEY)

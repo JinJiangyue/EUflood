@@ -1,10 +1,13 @@
-# EUflood v1.0.7（本地开发版）
+# EUflood v1.1.5（本地开发版）
 
 洪水数据采集 → 处理 → 分析 → 搜索/导出 → **空间插值分析**，全流程本地可运行方案。
 
 ## 特性
 - Node.js + TypeScript + Express
-- 本地数据库：SQLite（better-sqlite3），统一路径 `apps/database/dev.db`
+- 数据库：PocketBase（BaaS，REST API）⭐ v1.1.5
+  - 支持远程部署，统一数据管理
+  - 通过环境变量配置连接信息
+  - 使用适配器模式，便于扩展
 - 多源采集（官方API/社媒/新闻，模拟）：去重（record_id）、置信度、证据链
 - 数据处理：risk_score/status/processed_at
 - 搜索接口：支持参数 country/date/severity 与关键词 q（可为空）
@@ -26,7 +29,12 @@
 ```bash
 cd apps/api
 npm install
-echo PORT=3000> .env & echo DB_FILE=./dev.db>> .env & echo LOG_LEVEL=info>> .env
+# 配置环境变量（PocketBase）
+echo PORT=3000> .env
+echo POCKETBASE_URL=your_pocketbase_url>> .env
+echo POCKETBASE_ADMIN_EMAIL=your_email>> .env
+echo POCKETBASE_ADMIN_PASSWORD=your_password>> .env
+echo LOG_LEVEL=info>> .env
 ```
 
 ### 2. 配置 Python 环境（空间插值分析和深度搜索需要）
@@ -109,17 +117,24 @@ python-embed\python.exe test_interpolation.py
 ## 代码结构
 - 见 `CODE_TREE.md`
 
-## 数据库位置
-- 默认：`apps/database/dev.db`（v1.0.5 统一）
-- 可配：项目根目录 `.env` 中 `DB_FILE`（支持相对路径，如 `apps/database/dev.db`）
+## 数据库配置 ⭐ v1.1.5
+- **类型**：PocketBase（BaaS，REST API）
+- **配置**：项目根目录 `.env` 文件中配置
+  - `POCKETBASE_URL`: PocketBase 服务器地址
+  - `POCKETBASE_ADMIN_EMAIL`: 管理员邮箱
+  - `POCKETBASE_ADMIN_PASSWORD`: 管理员密码
+  - `POCKETBASE_ADMIN_TOKEN`: 管理员 Token（可选）
+- **集合**：`rain_event`（表1）、`rain_flood_impact`（表2）
 
 ## 技术栈
 
 ### 后端
 - **运行时**：Node.js + TypeScript
 - **框架**：Express.js
-- **数据库**：SQLite (better-sqlite3)
+- **数据库**：PocketBase（BaaS，REST API）⭐ v1.1.5
+- **数据库适配器**：使用 `IDatabaseAdapter` 接口，支持未来扩展 ⭐ v1.1.5
 - **Python 集成**：嵌入式 Python 3.12 + 科学计算库（pandas, geopandas, pyproj）
+- **架构统一**：Python 脚本返回 JSON 结果，Node.js 负责数据库写入 ⭐ v1.1.5
 
 ### 前端
 - **框架**：原生 HTML + JavaScript（零构建）
@@ -140,7 +155,8 @@ python-embed\python.exe test_interpolation.py
 - 生产建议：Postgres + Docker；当前仓库用于本地迭代与验证
 
 ## 版本历史
-- **v1.0.7** (最新): 多页面架构（SPA）、全局查询系统、状态管理、路由系统、快速日期选择、代码重构优化
+- **v1.1.5** (最新): 数据库迁移至 PocketBase、统一数据流程模式、修复编码问题、清理重复代码、字段名统一（rain_event_id）、time 字段改为 date
+- **v1.0.7**: 多页面架构（SPA）、全局查询系统、状态管理、路由系统、快速日期选择、代码重构优化
 - **v1.0.5**: 多语言支持（中文/英文/西班牙语）、深度搜索功能完善、数据库路径统一、路径配置优化
 - **v1.0.4**: 搜索管线模块，LLM 驱动处理，多源采集，智能报告生成
 - **v1.0.2**: 空间插值分析增强，支持行政区解析（国家/省/市）、阈值可配置、地点列表显示

@@ -369,7 +369,7 @@ async function showRainEventDetails(eventId) {
                             </div>
                             <div>
                                 <div style="font-size: 12px; opacity: 0.9; margin-bottom: 5px;">${i18n('detail.field.time')}</div>
-                                <div style="font-size: 16px; font-weight: 600;">${event.time || i18n('common.na')}</div>
+                                <div style="font-size: 16px; font-weight: 600;">${event.date || i18n('common.na')}</div>
                             </div>
                             <div>
                                 <div style="font-size: 12px; opacity: 0.9; margin-bottom: 5px;">${i18n('detail.field.country')}</div>
