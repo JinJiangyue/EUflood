@@ -45,7 +45,7 @@ def get_rain_event_from_db(db_path: str, rain_event_id: str) -> Optional[Dict[st
         cursor = conn.cursor()
         
         # 先尝试精确匹配
-        cursor.execute("SELECT * FROM rain_event WHERE id = ?", (rain_event_id,))
+        cursor.execute("SELECT * FROM rain_event WHERE rain_event_id = ?", (rain_event_id,))
         row = cursor.fetchone()
         
         # 如果精确匹配失败，尝试模糊匹配（去掉可能的 seq 部分）
@@ -55,12 +55,12 @@ def get_rain_event_from_db(db_path: str, rain_event_id: str) -> Optional[Dict[st
             if len(parts) == 2 and parts[1].isdigit():
                 base_id = parts[0]
                 logger.debug("精确匹配失败，尝试查找基础ID: %s (原始: %s)", base_id, rain_event_id)
-                cursor.execute("SELECT * FROM rain_event WHERE id LIKE ?", (f"{base_id}_%",))
+                cursor.execute("SELECT * FROM rain_event WHERE rain_event_id LIKE ?", (f"{base_id}_%",))
                 rows = cursor.fetchall()
                 if rows:
                     # 如果有多个匹配，返回第一个
                     row = rows[0]
-                    logger.warning("使用模糊匹配找到记录: %s (查找: %s)", row['id'], rain_event_id)
+                    logger.warning("使用模糊匹配找到记录: %s (查找: %s)", row['rain_event_id'], rain_event_id)
         
         conn.close()
         
@@ -75,7 +75,7 @@ def get_rain_event_from_db(db_path: str, rain_event_id: str) -> Optional[Dict[st
             cursor = conn.cursor()
             if '_' in rain_event_id:
                 base_part = rain_event_id.rsplit('_', 1)[0]
-                cursor.execute("SELECT id FROM rain_event WHERE id LIKE ? LIMIT 5", (f"{base_part}%",))
+                cursor.execute("SELECT rain_event_id FROM rain_event WHERE rain_event_id LIKE ? LIMIT 5", (f"{base_part}%",))
                 similar = cursor.fetchall()
                 if similar:
                     logger.debug("相似的ID: %s", [r[0] for r in similar])
@@ -107,11 +107,11 @@ def fill_rain_flood_impact_table(
         成功返回True，失败返回False
     """
     try:
-        # 重要：表2的 rain_event_id 必须直接使用表1的 id（确保完全匹配）
-        # 直接从 rain_event 中获取 id，不使用任何传入的 ID 参数
-        table1_id = rain_event.get("id")
+        # 重要：表2的 rain_event_id 必须直接使用表1的 rain_event_id（确保完全匹配）
+        # 直接从 rain_event 中获取 rain_event_id，不使用任何传入的 ID 参数
+        table1_id = rain_event.get("rain_event_id")
         if not table1_id:
-            logger.error("表1记录中没有 id 字段: %s", rain_event)
+            logger.error("表1记录中没有 rain_event_id 字段: %s", rain_event)
             return False
         
         # 如果传入了 rain_event_id 参数（向后兼容），检查是否与表1的 ID 一致
@@ -195,7 +195,7 @@ def fill_rain_flood_impact_table(
         
         # 更新表1的searched字段为1（已搜索）
         try:
-            cursor.execute("UPDATE rain_event SET searched = 1 WHERE id = ?", (rain_event_id,))
+            cursor.execute("UPDATE rain_event SET searched = 1 WHERE rain_event_id = ?", (rain_event_id,))
             conn.commit()
             logger.info("✅ 已更新表1的searched字段为1: rain_event_id=%s", rain_event_id)
         except Exception as update_error:
@@ -219,7 +219,7 @@ def fill_rain_flood_impact_table(
             if 'rain_event_id' in locals() and rain_event_id:
                 conn = sqlite3.connect(db_path)
                 cursor = conn.cursor()
-                cursor.execute("UPDATE rain_event SET searched = 2 WHERE id = ?", (rain_event_id,))
+                cursor.execute("UPDATE rain_event SET searched = 2 WHERE rain_event_id = ?", (rain_event_id,))
                 conn.commit()
                 conn.close()
                 logger.warning("⚠️ 已更新表1的searched字段为2（需重搜）: rain_event_id=%s", rain_event_id)

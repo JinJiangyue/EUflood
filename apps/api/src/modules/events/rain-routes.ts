@@ -13,9 +13,9 @@ export function registerRainEventsModule(app: Express) {
 
       const detailsQuery = `
         SELECT 
-          id, date, country, province, city, 
+          rain_event_id, date, country, province, city, 
           longitude, latitude, value, threshold, 
-          return_period_band, return_period_estimate,
+          return_period_band,
           file_name, seq, searched
         FROM rain_event
         ORDER BY date DESC, country ASC, province ASC, seq ASC
@@ -122,9 +122,9 @@ export function registerRainEventsModule(app: Express) {
         // 查询分页数据
         const detailsQuery = `
           SELECT 
-            id, date, country, province, city, 
+            rain_event_id, date, country, province, city, 
             longitude, latitude, value, threshold, 
-            return_period_band, return_period_estimate,
+            return_period_band,
             file_name, seq, searched
           FROM rain_event
           ${whereClause}
@@ -188,10 +188,10 @@ export function registerRainEventsModule(app: Express) {
   app.get('/events/rain/:id', async (req: Request, res: Response) => {
     try {
       // 解码URL参数（处理特殊字符）
-      const id = decodeURIComponent(req.params.id);
+      const rainEventId = decodeURIComponent(req.params.id);
       
       // 先检查表2中是否有对应记录
-      const impact = db.prepare('SELECT * FROM rain_flood_impact WHERE rain_event_id = ?').get(id) as any;
+      const impact = db.prepare('SELECT * FROM rain_flood_impact WHERE rain_event_id = ?').get(rainEventId) as any;
       
       if (impact) {
         // 表2有数据，表示已搜索，返回表2数据
@@ -212,7 +212,6 @@ export function registerRainEventsModule(app: Express) {
           searched: true, // 标记为已搜索
           event: {
             // 表2的字段
-            id: impact.id,
             rain_event_id: impact.rain_event_id,
             time: impact.time,
             level: impact.level,
@@ -231,7 +230,7 @@ export function registerRainEventsModule(app: Express) {
         });
       } else {
         // 表2没有数据，表示未搜索，返回表1数据
-        const event = db.prepare('SELECT * FROM rain_event WHERE id = ?').get(id) as any;
+        const event = db.prepare('SELECT * FROM rain_event WHERE rain_event_id = ?').get(rainEventId) as any;
         
         if (!event) {
           return res.status(404).json({ 
@@ -262,11 +261,11 @@ export function registerRainEventsModule(app: Express) {
   app.post('/events/rain/:id/search', async (req: Request, res: Response) => {
     try {
       // 解码URL参数（处理特殊字符）
-      const id = decodeURIComponent(req.params.id);
+      const rainEventId = decodeURIComponent(req.params.id);
       const searched = req.body.searched === true || req.body.searched === 1 ? 1 : 0;
       
-      const update = db.prepare('UPDATE rain_event SET searched = ? WHERE id = ?');
-      const result = update.run(searched, id);
+      const update = db.prepare('UPDATE rain_event SET searched = ? WHERE rain_event_id = ?');
+      const result = update.run(searched, rainEventId);
       
       if (result.changes === 0) {
         return res.status(404).json({ error: '事件未找到' });
@@ -274,7 +273,7 @@ export function registerRainEventsModule(app: Express) {
       
       res.json({
         success: true,
-        id,
+        id: rainEventId,
         searched: searched === 1,
         message: searched === 1 ? '已标记为已搜索' : '已标记为未搜索'
       });
@@ -290,13 +289,13 @@ export function registerRainEventsModule(app: Express) {
   app.post('/events/rain/:id/deep-search', async (req: Request, res: Response) => {
     try {
       // 解码URL参数（处理特殊字符）
-      const id = decodeURIComponent(req.params.id);
-      console.log(`[深度搜索] 收到请求，事件ID: ${id}`);
+      const rainEventId = decodeURIComponent(req.params.id);
+      console.log(`[深度搜索] 收到请求，事件ID: ${rainEventId}`);
       
       // 检查事件是否存在
-      const event = db.prepare('SELECT * FROM rain_event WHERE id = ?').get(id) as any;
+      const event = db.prepare('SELECT * FROM rain_event WHERE rain_event_id = ?').get(rainEventId) as any;
       if (!event) {
-        console.log(`[深度搜索] 事件未找到: ${id}`);
+        console.log(`[深度搜索] 事件未找到: ${rainEventId}`);
         return res.status(404).json({ 
           success: false,
           error: '事件未找到' 
@@ -304,9 +303,9 @@ export function registerRainEventsModule(app: Express) {
       }
       
       // 检查是否已经搜索过（表2中是否有记录）
-      const existingImpact = db.prepare('SELECT * FROM rain_flood_impact WHERE rain_event_id = ?').get(id) as any;
+      const existingImpact = db.prepare('SELECT * FROM rain_flood_impact WHERE rain_event_id = ?').get(rainEventId) as any;
       if (existingImpact) {
-        console.log(`[深度搜索] 事件已搜索过: ${id}`);
+        console.log(`[深度搜索] 事件已搜索过: ${rainEventId}`);
         return res.json({
           success: true,
           message: '该事件已经进行过深度搜索',
@@ -314,14 +313,14 @@ export function registerRainEventsModule(app: Express) {
         });
       }
       
-      console.log(`[深度搜索] 开始处理事件: ${id}`);
+      console.log(`[深度搜索] 开始处理事件: ${rainEventId}`);
       
       // 调用Python搜索工作流
       // 使用Promise包装异步的spawn操作
       return new Promise<void>((resolve, reject) => {
         try {
           console.log(`[深度搜索] ========== 开始处理深度搜索请求 ==========`);
-          console.log(`[深度搜索] 事件ID: ${id}`);
+          console.log(`[深度搜索] 事件ID: ${rainEventId}`);
           
           const { spawn } = require('child_process');
           const path = require('path');
@@ -421,7 +420,7 @@ export function registerRainEventsModule(app: Express) {
           
           // 将事件数据转换为JSON格式，并保存到临时文件（与用户手动运行方式完全一致）
           const eventData = {
-            id: event.id,
+            id: event.rain_event_id, // Python脚本期望使用 id 字段
             date: event.date,
             country: event.country,
             province: event.province,
@@ -437,7 +436,7 @@ export function registerRainEventsModule(app: Express) {
           
           // 创建临时JSON文件（在项目根目录，文件名格式：temp_event_事件ID.json）
           // 例如：temp_event_20251011_Menorca_1.json
-          const safeId = id.replace(/[^a-zA-Z0-9_]/g, '_');
+          const safeId = rainEventId.replace(/[^a-zA-Z0-9_]/g, '_');
           const tempJsonFile = path.join(projectRoot, `temp_event_${safeId}.json`);
           
           console.log(`[深度搜索] 创建临时JSON文件: ${tempJsonFile}`);
@@ -547,7 +546,7 @@ export function registerRainEventsModule(app: Express) {
               const responseData = {
                 success: true,
                 message,
-                event_id: id,
+                event_id: rainEventId,
                 ...data
               };
               console.log(`[深度搜索] 响应数据:`, JSON.stringify(responseData, null, 2));
@@ -596,18 +595,18 @@ export function registerRainEventsModule(app: Express) {
               
               const checkTable2 = () => {
                 console.log(`[深度搜索] 检查表2数据 (第${checkCount + 1}次)`);
-                const impact = db.prepare('SELECT * FROM rain_flood_impact WHERE rain_event_id = ?').get(id) as any;
+                const impact = db.prepare('SELECT * FROM rain_flood_impact WHERE rain_event_id = ?').get(rainEventId) as any;
                 if (impact) {
                   console.log(`[深度搜索] ✅ 找到表2数据:`, impact);
                   
                   // 更新表1的searched字段为1（已搜索）
                   try {
-                    const updateSearched = db.prepare('UPDATE rain_event SET searched = 1 WHERE id = ?');
-                    const updateResult = updateSearched.run(id);
+                    const updateSearched = db.prepare('UPDATE rain_event SET searched = 1 WHERE rain_event_id = ?');
+                    const updateResult = updateSearched.run(rainEventId);
                     if (updateResult.changes > 0) {
-                      console.log(`[深度搜索] ✅ 已更新表1的searched字段为1: ${id}`);
+                      console.log(`[深度搜索] ✅ 已更新表1的searched字段为1: ${rainEventId}`);
                     } else {
-                      console.warn(`[深度搜索] ⚠️ 更新表1的searched字段失败（可能事件不存在）: ${id}`);
+                      console.warn(`[深度搜索] ⚠️ 更新表1的searched字段失败（可能事件不存在）: ${rainEventId}`);
                     }
                   } catch (updateError) {
                     console.error(`[深度搜索] ❌ 更新表1的searched字段时出错:`, updateError);
@@ -657,12 +656,12 @@ export function registerRainEventsModule(app: Express) {
                     
                     // 深度搜索失败，更新表1的searched字段为2（需重搜）
                     try {
-                      const updateSearched = db.prepare('UPDATE rain_event SET searched = 2 WHERE id = ?');
-                      const updateResult = updateSearched.run(id);
+                      const updateSearched = db.prepare('UPDATE rain_event SET searched = 2 WHERE rain_event_id = ?');
+                      const updateResult = updateSearched.run(rainEventId);
                       if (updateResult.changes > 0) {
-                        console.log(`[深度搜索] ⚠️ 已更新表1的searched字段为2（需重搜）: ${id}`);
+                        console.log(`[深度搜索] ⚠️ 已更新表1的searched字段为2（需重搜）: ${rainEventId}`);
                       } else {
-                        console.warn(`[深度搜索] ⚠️ 更新表1的searched字段失败（可能事件不存在）: ${id}`);
+                        console.warn(`[深度搜索] ⚠️ 更新表1的searched字段失败（可能事件不存在）: ${rainEventId}`);
                       }
                     } catch (updateError) {
                       console.error(`[深度搜索] ❌ 更新表1的searched字段时出错:`, updateError);
@@ -708,12 +707,12 @@ export function registerRainEventsModule(app: Express) {
               
               // 深度搜索失败（进程退出码非0），更新表1的searched字段为2（需重搜）
               try {
-                const updateSearched = db.prepare('UPDATE rain_event SET searched = 2 WHERE id = ?');
-                const updateResult = updateSearched.run(id);
+                const updateSearched = db.prepare('UPDATE rain_event SET searched = 2 WHERE rain_event_id = ?');
+                const updateResult = updateSearched.run(rainEventId);
                 if (updateResult.changes > 0) {
-                  console.log(`[深度搜索] ⚠️ 已更新表1的searched字段为2（需重搜）: ${id}`);
+                  console.log(`[深度搜索] ⚠️ 已更新表1的searched字段为2（需重搜）: ${rainEventId}`);
                 } else {
-                  console.warn(`[深度搜索] ⚠️ 更新表1的searched字段失败（可能事件不存在）: ${id}`);
+                  console.warn(`[深度搜索] ⚠️ 更新表1的searched字段失败（可能事件不存在）: ${rainEventId}`);
                 }
               } catch (updateError) {
                 console.error(`[深度搜索] ❌ 更新表1的searched字段时出错:`, updateError);
@@ -734,12 +733,12 @@ export function registerRainEventsModule(app: Express) {
             
             // 深度搜索失败（无法启动进程），更新表1的searched字段为2（需重搜）
             try {
-              const updateSearched = db.prepare('UPDATE rain_event SET searched = 2 WHERE id = ?');
-              const updateResult = updateSearched.run(id);
+              const updateSearched = db.prepare('UPDATE rain_event SET searched = 2 WHERE rain_event_id = ?');
+              const updateResult = updateSearched.run(rainEventId);
               if (updateResult.changes > 0) {
-                console.log(`[深度搜索] ⚠️ 已更新表1的searched字段为2（需重搜）: ${id}`);
+                console.log(`[深度搜索] ⚠️ 已更新表1的searched字段为2（需重搜）: ${rainEventId}`);
               } else {
-                console.warn(`[深度搜索] ⚠️ 更新表1的searched字段失败（可能事件不存在）: ${id}`);
+                console.warn(`[深度搜索] ⚠️ 更新表1的searched字段失败（可能事件不存在）: ${rainEventId}`);
               }
             } catch (updateError) {
               console.error(`[深度搜索] ❌ 更新表1的searched字段时出错:`, updateError);
@@ -756,12 +755,12 @@ export function registerRainEventsModule(app: Express) {
               if (!responseSent) {
                 // 深度搜索超时，更新表1的searched字段为2（需重搜）
                 try {
-                  const updateSearched = db.prepare('UPDATE rain_event SET searched = 2 WHERE id = ?');
-                  const updateResult = updateSearched.run(id);
+                  const updateSearched = db.prepare('UPDATE rain_event SET searched = 2 WHERE rain_event_id = ?');
+                  const updateResult = updateSearched.run(rainEventId);
                   if (updateResult.changes > 0) {
-                    console.log(`[深度搜索] ⚠️ 已更新表1的searched字段为2（需重搜，超时）: ${id}`);
+                    console.log(`[深度搜索] ⚠️ 已更新表1的searched字段为2（需重搜，超时）: ${rainEventId}`);
                   } else {
-                    console.warn(`[深度搜索] ⚠️ 更新表1的searched字段失败（可能事件不存在）: ${id}`);
+                    console.warn(`[深度搜索] ⚠️ 更新表1的searched字段失败（可能事件不存在）: ${rainEventId}`);
                   }
                 } catch (updateError) {
                   console.error(`[深度搜索] ❌ 更新表1的searched字段时出错:`, updateError);

@@ -226,7 +226,7 @@ class SearchWorkflow:
                         llm_result=result,
                     )
                     
-                    table1_id = rain_event_data.get("id")
+                    table1_id = rain_event_data.get("rain_event_id")
                     if success:
                         logger.info("✅ 表2数据填充成功: rain_event_id=%s (直接复制自表1)", table1_id)
                     else:
@@ -236,7 +236,7 @@ class SearchWorkflow:
                             import sqlite3
                             conn = sqlite3.connect(db_file)
                             cursor = conn.cursor()
-                            cursor.execute("UPDATE rain_event SET searched = 2 WHERE id = ?", (table1_id,))
+                            cursor.execute("UPDATE rain_event SET searched = 2 WHERE rain_event_id = ?", (table1_id,))
                             conn.commit()
                             conn.close()
                             logger.warning("⚠️ 已更新表1的searched字段为2（需重搜）: rain_event_id=%s", table1_id)
@@ -246,12 +246,12 @@ class SearchWorkflow:
                 logger.exception("填充表2数据时出错: %s", e)
                 # 填充表2时发生异常，更新表1的searched字段为2（需重搜）
                 try:
-                    table1_id = rain_event_data.get("id") if 'rain_event_data' in locals() else None
+                    table1_id = rain_event_data.get("rain_event_id") if 'rain_event_data' in locals() else None
                     if table1_id:
                         import sqlite3
                         conn = sqlite3.connect(db_file)
                         cursor = conn.cursor()
-                        cursor.execute("UPDATE rain_event SET searched = 2 WHERE id = ?", (table1_id,))
+                        cursor.execute("UPDATE rain_event SET searched = 2 WHERE rain_event_id = ?", (table1_id,))
                         conn.commit()
                         conn.close()
                         logger.warning("⚠️ 已更新表1的searched字段为2（需重搜，异常）: rain_event_id=%s", table1_id)
@@ -318,7 +318,7 @@ class SearchWorkflow:
                     llm_result=llm_result,
                 )
                 
-                table1_id = rain_event_data.get("id")
+                table1_id = rain_event_data.get("rain_event_id")
                 if success:
                     logger.info("✅ 表2数据填充成功（无数据情况）: rain_event_id=%s (直接复制自表1)", table1_id)
                 else:

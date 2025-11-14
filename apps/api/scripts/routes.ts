@@ -340,11 +340,11 @@ export function registerPythonModule(app: Express) {
         const defaultThresholdValue = data?.summary?.value_threshold ?? null;
         const points: any[] = Array.isArray(data?.points) ? data.points : [];
 
-        // 批量写入 rain_event（应用层计算 seq 与 id）
+        // 批量写入 rain_event（应用层计算 seq 与 rain_event_id）
         const insertStmt = db.prepare(`
           INSERT INTO rain_event
-          (id, date, country, province, city, longitude, latitude, value, threshold, return_period_band, return_period_estimate, file_name, seq, searched)
-          VALUES (@id, @date, @country, @province, @city, @longitude, @latitude, @value, @threshold, @return_period_band, @return_period_estimate, @file_name, @seq, @searched)
+          (rain_event_id, date, country, province, city, longitude, latitude, value, threshold, return_period_band, file_name, seq, searched)
+          VALUES (@rain_event_id, @date, @country, @province, @city, @longitude, @latitude, @value, @threshold, @return_period_band, @file_name, @seq, @searched)
         `);
         const tx = db.transaction((rows: any[]) => { rows.forEach(r => insertStmt.run(r)); });
 
@@ -367,8 +367,8 @@ export function registerPythonModule(app: Express) {
         };
         const getMaxSeqStmt = db.prepare(`SELECT COALESCE(MAX(seq), 0) AS maxSeq FROM rain_event WHERE date = ? AND province = ?`);
         
-        // 检查是否已存在相同记录（date + file_name + longitude + latitude）
-        const checkExistsStmt = db.prepare(`SELECT id FROM rain_event WHERE date = ? AND file_name = ? AND longitude = ? AND latitude = ?`);
+          // 检查是否已存在相同记录（date + file_name + longitude + latitude）
+          const checkExistsStmt = db.prepare(`SELECT rain_event_id FROM rain_event WHERE date = ? AND file_name = ? AND longitude = ? AND latitude = ?`);
 
         // 先统计各省份数量，查询现有 max seq，只查一次
         const provinceToCount = new Map<string, number>();
@@ -417,10 +417,9 @@ export function registerPythonModule(app: Express) {
           }
 
           const band = p.return_period_band != null ? String(p.return_period_band) : null;
-          const estimate = p.return_period_estimate != null && p.return_period_estimate !== '' ? Number(p.return_period_estimate) : null;
 
           rows.push({
-            id,
+            rain_event_id: id,
             date: dateStr,
             country: p.country_name ?? null,
             province, // 存储保留空格的版本
@@ -430,7 +429,6 @@ export function registerPythonModule(app: Express) {
             value: p.value != null ? Number(p.value) : null,
             threshold: rowThreshold,
             return_period_band: band,
-            return_period_estimate: estimate,
             file_name: req.file!.originalname,
             seq,
             searched: 0
@@ -752,7 +750,7 @@ export function registerPythonModule(app: Express) {
       
       // 查询数据
       const dataStmt = db.prepare(`
-        SELECT id, date, country, province, city, longitude, latitude, value, threshold, file_name, seq, searched
+        SELECT rain_event_id, date, country, province, city, longitude, latitude, value, threshold, return_period_band, file_name, seq, searched
         FROM rain_event 
         ${whereClause}
         ORDER BY date DESC, seq ASC

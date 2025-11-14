@@ -83,43 +83,6 @@ async function createTriggerRecord(
   // 暂时禁用，等待重构
   console.log(`[Trigger] Rainfall detected but not saved (refactoring in progress): ${data.precipitation}mm/h at (${data.latitude}, ${data.longitude})`);
   return 0;
-  
-  /* 注释掉：使用 flood_records 表的旧代码
-  const recordId = generateRecordId({
-    country,
-    specific_location: `${data.latitude},${data.longitude}`,
-    event_time: data.time,
-    coordinates: JSON.stringify({ type: 'Point', coordinates: [data.longitude, data.latitude] }),
-    title: `Rainfall detected: ${data.precipitation}mm/h`,
-    source_url: `https://api.open-meteo.com/v1/forecast`
-  });
-  
-  const insert = db.prepare(`
-    INSERT INTO flood_records (
-      record_id, title, description, water_level, country, specific_location, event_time,
-      coordinates, severity, type, status,
-      source_type, source_name, source_url, language_code, confidence, evidence_count, metadata, collected_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?, ?, ?, ?, 1, ?, datetime('now'))
-  `);
-  
-  const title = `${country} - Rainfall Alert (${data.precipitation}mm/h)`;
-  const description = `Triggered by ${triggerSource}. Current precipitation: ${data.precipitation}mm/h${data.precipitation24h ? `, 24h total: ${data.precipitation24h}mm` : ''}`;
-  // 根据降雨量推断严重程度（降雨量转换为类似水位的影响等级）
-  const severity = inferSeverityFromPrecipitation(data.precipitation, data.precipitation24h);
-  const confidence = calculateConfidence('sensor', true, false, true, 1); // 传感器数据，高置信度
-  
-  insert.run(
-    recordId, title, description, null, country, `${data.latitude},${data.longitude}`,
-    data.time, JSON.stringify({ type: 'Point', coordinates: [data.longitude, data.latitude] }),
-    severity, 'warning', 'sensor', triggerSource, 'https://api.open-meteo.com/v1/forecast',
-    'en', confidence, JSON.stringify({ trigger_source: triggerSource, precipitation: data.precipitation, precipitation24h: data.precipitation24h })
-  );
-  
-  // 触发对应国家数据源采集
-  await triggerCountryDataSource(country, { lat: data.latitude, lon: data.longitude });
-  
-  return 1;
-  */
 }
 
 // 根据国家调用对应数据源

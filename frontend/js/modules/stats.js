@@ -232,7 +232,7 @@ function renderRecentEvents(events) {
         const searched = event.searched === 1 ? `✅ ${processed}` : event.searched === 2 ? `🔄 ${needResearch}` : `⏳ ${unprocessed}`;
         
         return `
-            <div class="recent-event-item" data-event-id="${event.id || ''}">
+            <div class="recent-event-item" data-event-id="${event.rain_event_id || ''}">
                 <div class="event-item-header">
                     <div class="event-item-title">${country ? country + ' - ' : ''}${province}</div>
                     <div class="event-item-date">${date}</div>
@@ -585,7 +585,7 @@ function buildDashboardPopupHtml(event, isSearched, i18n) {
         return `
             <div style="min-width: 220px;">
                 <div class="map-popup-section-title">${i18n('detail.section.impactInfo') || '影响评估（表2）'}</div>
-                ${renderRow(i18n('detail.field.eventId'), safe(event.rain_event_id || event.id))}
+                ${renderRow(i18n('detail.field.eventId'), safe(event.rain_event_id))}
                 ${renderRow(i18n('detail.field.time'), safe(event.time))}
                 ${renderRow(i18n('detail.field.country'), safe(event.country))}
                 ${renderRow(i18n('detail.field.province'), safe(event.province))}
@@ -608,14 +608,12 @@ function buildDashboardPopupHtml(event, isSearched, i18n) {
             ? `<span class="map-popup-highlight">${value.toFixed(2)}</span>`
             : value.toFixed(2))
         : naText;
-    const returnPeriod = event.return_period_band || (event.return_period_estimate !== null && event.return_period_estimate !== undefined
-        ? `${formatNumber(event.return_period_estimate, 1)}y`
-        : naText);
+    const returnPeriod = event.return_period_band || naText;
     
     return `
         <div style="min-width: 220px;">
             <div class="map-popup-section-title">${i18n('detail.section.basicInfo') || '基本信息（表1）'}</div>
-            ${renderRow(i18n('detail.field.eventId'), safe(event.id))}
+            ${renderRow(i18n('detail.field.eventId'), safe(event.rain_event_id))}
             ${renderRow(i18n('detail.field.date'), safe(event.date))}
             ${renderRow(i18n('detail.field.country'), safe(event.country))}
             ${renderRow(i18n('detail.field.province'), safe(event.province))}

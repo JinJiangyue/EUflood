@@ -116,10 +116,10 @@ async function loadRainEvents(dateFrom, dateTo, country, page = 1, limit = null)
             const valueColor = event.value && event.threshold && event.value > event.threshold ? '#e74c3c' : '#3498db';
             
             // 确保使用正确的ID（URL编码）
-            const eventId = encodeURIComponent(event.id);
+            const eventId = encodeURIComponent(event.rain_event_id || '');
             
             html += `
-                <tr class="rain-event-row" data-id="${event.id}" data-index="${index}" 
+                <tr class="rain-event-row" data-id="${event.rain_event_id || ''}" data-index="${index}" 
                     style="border-bottom: 1px solid #dee2e6; cursor: pointer; transition: all 0.2s; background: white; border-left: 2px solid transparent;" 
                     onmouseover="if(!this.classList.contains('selected')) this.style.background='#e8f4f8'" 
                     onmouseout="if(!this.classList.contains('selected')) { this.style.background='white'; this.style.borderLeft='2px solid transparent'; }">
@@ -470,7 +470,7 @@ async function showRainEventDetails(eventId) {
                 <div style="margin-bottom: 20px;">
                     <h4 style="color: #1e3c72; margin-bottom: 10px; border-bottom: 2px solid #667eea; padding-bottom: 5px;">${i18n('detail.section.basicInfo')}</h4>
                     <table style="width: 100%; border-collapse: collapse;">
-                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold; width: 150px;">${i18n('detail.field.eventId')}</td><td style="padding: 8px;">${event.id}</td></tr>
+                        <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold; width: 150px;">${i18n('detail.field.eventId')}</td><td style="padding: 8px;">${event.rain_event_id || '-'}</td></tr>
                         <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">${i18n('detail.field.date')}</td><td style="padding: 8px;">${event.date}</td></tr>
                         <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">${i18n('detail.field.country')}</td><td style="padding: 8px;">${event.country || i18n('common.na')}</td></tr>
                         <tr><td style="padding: 8px; background: #f8f9fa; font-weight: bold;">${i18n('detail.field.province')}</td><td style="padding: 8px;">${(event.province || i18n('common.na')).split('/')[0].trim()}</td></tr>
@@ -507,7 +507,7 @@ async function showRainEventDetails(eventId) {
                         return text;
                     };
                     // 弹出确认框（使用自定义居中对话框）
-                    const confirmed = await customConfirm(i18n('search.deepSearch.confirm', { id: event.id }));
+                    const confirmed = await customConfirm(i18n('search.deepSearch.confirm', { id: event.rain_event_id || '' }));
                     
                     if (!confirmed) {
                         return;
@@ -899,16 +899,11 @@ function renderEventsList(results, queryParams) {
                 '>=20y': i18n('table.returnPeriod.ge20')
             };
             returnPeriodDisplay = bandMap[band] || band;
-        } else if (event.return_period_estimate !== null && event.return_period_estimate !== undefined) {
-            const est = Number(event.return_period_estimate);
-            if (!Number.isNaN(est)) {
-                returnPeriodDisplay = i18n('table.returnPeriod.approx', { years: est.toFixed(1) });
-            }
         }
         const safeReturnPeriodDisplay = typeof escapeHtml === 'function' ? escapeHtml(returnPeriodDisplay) : returnPeriodDisplay;
         
         html += `
-            <tr class="rain-event-row" data-id="${event.id}" data-index="${startIndex + index}" 
+            <tr class="rain-event-row" data-id="${event.rain_event_id || ''}" data-index="${startIndex + index}" 
                 style="border-bottom: 1px solid #dee2e6; cursor: pointer; transition: all 0.2s; background: white; border-left: 2px solid transparent;" 
                 onmouseover="if(!this.classList.contains('selected')) this.style.background='#e8f4f8'" 
                 onmouseout="if(!this.classList.contains('selected')) { this.style.background='white'; this.style.borderLeft='2px solid transparent'; }">

@@ -115,7 +115,7 @@ class RainEventWatcher:
                     f"UPDATE {self.config.RAIN_EVENTS_TABLE} "
                     f"SET {self.config.PROCESSED_FLAG_COLUMN} = 1, "
                     f"{self.config.PROCESSED_AT_COLUMN} = ? "
-                    f"WHERE id = ?"
+                    f"WHERE rain_event_id = ?"
                 )
                 cursor.execute(
                     query,
@@ -180,7 +180,7 @@ class RainEventWatcher:
         rainfall = self._parse_float(data.get(self.config.RAINFALL_COLUMN))
         
         # 获取 event_id，确保使用完整的 ID（包含 seq 部分）
-        event_id = data.get("id") or data.get("event_id")
+        event_id = data.get("rain_event_id") or data.get("id") or data.get("event_id")
         if event_id:
             logger.debug("从数据库读取 event_id: %s (类型: %s)", event_id, type(event_id).__name__)
         else:
@@ -197,6 +197,7 @@ class RainEventWatcher:
             severity=self._safe_str(data.get(self.config.SEVERITY_COLUMN)),
             data_source=self._safe_str(data.get(self.config.DATA_SOURCE_COLUMN)),
             extras={k: v for k, v in data.items() if k not in {
+                "rain_event_id",
                 "id",
                 "event_id",
                 self.config.EVENT_TIME_COLUMN,

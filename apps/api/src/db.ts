@@ -28,7 +28,7 @@ if (isNew) {
 
     -- 降雨事件表（一行=一个地点的一次降雨），主键由触发器生成：YYYYMMDD_Province_seq
     CREATE TABLE IF NOT EXISTS rain_event (
-      id TEXT PRIMARY KEY,
+      rain_event_id TEXT PRIMARY KEY,
       date TEXT NOT NULL,
       country TEXT,
       province TEXT NOT NULL,
@@ -38,7 +38,6 @@ if (isNew) {
       value REAL,
       threshold REAL,
       return_period_band TEXT,
-      return_period_estimate REAL,
       file_name TEXT NOT NULL,
       seq INTEGER,
       searched INTEGER DEFAULT 0 -- 0: 未搜索；1: 已搜索
@@ -51,7 +50,7 @@ if (isNew) {
     CREATE UNIQUE INDEX IF NOT EXISTS uniq_rain_event_dupe ON rain_event(date, file_name, longitude, latitude);
 
     -- 说明：SQLite 触发器不支持为 NEW 赋值，这里不创建触发器。
-    -- id 与 seq 改为在应用层（Node 路由）计算后写入。
+    -- rain_event_id 与 seq 改为在应用层（Node 路由）计算后写入。
 
     -- 降雨洪水影响汇总表（一行=一场降雨的影响汇总）
     CREATE TABLE IF NOT EXISTS rain_flood_impact (
@@ -90,7 +89,7 @@ try {
   if (!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='rain_event'`).get()) {
     db.exec(`
       CREATE TABLE IF NOT EXISTS rain_event (
-        id TEXT PRIMARY KEY,
+        rain_event_id TEXT PRIMARY KEY,
         date TEXT NOT NULL,
         country TEXT,
         province TEXT NOT NULL,
@@ -100,7 +99,6 @@ try {
         value REAL,
         threshold REAL,
         return_period_band TEXT,
-        return_period_estimate REAL,
         file_name TEXT NOT NULL,
         seq INTEGER,
         searched INTEGER DEFAULT 0
@@ -109,7 +107,7 @@ try {
       CREATE INDEX IF NOT EXISTS idx_re_region ON rain_event(province);
       CREATE INDEX IF NOT EXISTS idx_re_value ON rain_event(value);
       CREATE UNIQUE INDEX IF NOT EXISTS uniq_rain_event_dupe ON rain_event(date, file_name, longitude, latitude);
-      -- 不创建触发器；由应用层写入 id/seq。
+      -- 不创建触发器；由应用层写入 rain_event_id/seq。
     `);
   }
 
@@ -122,9 +120,6 @@ try {
     }
     if (!info.some(c => c.name === 'return_period_band')) {
       db.exec(`ALTER TABLE rain_event ADD COLUMN return_period_band TEXT`);
-    }
-    if (!info.some(c => c.name === 'return_period_estimate')) {
-      db.exec(`ALTER TABLE rain_event ADD COLUMN return_period_estimate REAL`);
     }
   } catch {}
 

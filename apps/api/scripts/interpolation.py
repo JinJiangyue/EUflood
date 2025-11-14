@@ -361,7 +361,6 @@ def main():
                             bands.append(band)
                             rps.append(rp)
                         df_valid['return_period_band'] = bands
-                        df_valid['return_period_estimate'] = rps
                 # 使用选择的RP阈值进行筛选（>= 阈值）
                 df_valid = df_valid[df_valid['value'] > thr_for_filter]
                 df_valid = df_valid.sort_values(by='value', ascending=False)
@@ -616,7 +615,7 @@ def main():
                 "value": float(row['value']) if pd.notna(row['value']) else None
             }
             # 附加阈值/重现期信息（如有）
-            for c in ['threshold_2y', 'threshold_5y', 'threshold_20y', f'threshold_{grid_rp_for_filter}', 'return_period_band', 'return_period_estimate']:
+            for c in ['threshold_2y', 'threshold_5y', 'threshold_20y', f'threshold_{grid_rp_for_filter}', 'return_period_band']:
                 if c in final_points.columns and pd.notna(row.get(c)):
                     v = row.get(c)
                     item[c] = float(v) if isinstance(v, (int, float)) and pd.notna(v) else (str(v) if v is not None else None)
